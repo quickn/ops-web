@@ -15,3 +15,4 @@ dist-ssr
 package-lock.json
 pnpm-lock.yaml
 stats.html
+mock
