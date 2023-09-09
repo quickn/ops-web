@@ -21,6 +21,17 @@ declare global {
     total: number;
   }
 
+  interface PageRecords<T> {
+    /**
+     * 数据列表
+     */
+    records: T;
+    /**
+     * 数据总数
+     */
+    total: number;
+  }
+
   /**
    * 弹窗属性
    */
