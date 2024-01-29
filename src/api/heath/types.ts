@@ -5,4 +5,5 @@ export interface HeathMonitor {
   id: number;
   appName: string;
   heathUrl: string;
+  serviceName: string;
 }

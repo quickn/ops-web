@@ -31,12 +31,12 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const queryParams = reactive<NginxFile>({});
+const queryParams = reactive<NginxFile>({ fileName: null });
 const deptList = ref<NginxFile[]>();
 
 const formData = reactive<NginxFile>({
   fileName: null,
-  filePath: null,
+  fileNamePath: null,
 });
 
 /** 查询 */
@@ -94,12 +94,12 @@ async function handleSubmit() {
  * @param parentId 父部门ID
  * @param deptId 部门ID
  */
-async function openDialog(filePath?: string) {
-  if (filePath) {
+async function openDialog(fileNamePath?: string) {
+  if (fileNamePath) {
     dialog.visible = true;
     initCodeContent();
     dialog.title = "编辑文档";
-    queryParams.filePath = filePath;
+    queryParams.fileNamePath = fileNamePath;
     getConfig(queryParams).then(({ data }) => {
       form.value.commandContent = data;
     });
@@ -210,8 +210,11 @@ function initCodeContent() {
 
 // 获取当前编辑器中的内容字符串
 function getCommanContent() {
+  if (editor) {
+    return null;
+  }
   let str = "";
-  editor.state.doc.children.forEach((el, index) => {
+  editor.state.doc.children.forEach((el) => {
     str += el.text.join("\n") + "\n";
   });
   return str.slice(0, -1);
@@ -222,15 +225,15 @@ function resetForm() {
   deptFormRef.value.resetFields();
   deptFormRef.value.clearValidate();
 
-  formData.id = undefined;
-  formData.parentId = 0;
-  formData.status = 1;
-  formData.sort = 1;
+  //formData.id = undefined;
+  // formData.parentId = 0;
+  // formData.status = 1;
+  //formData.sort = 1;
 }
 
 const rules = reactive({
   fileName: [{ required: true, message: "文件名", trigger: "blur" }],
-  filePath: [{ required: true, message: "文件路径", trigger: "blur" }],
+  fileNamePath: [{ required: true, message: "文件路径", trigger: "blur" }],
 });
 
 onMounted(() => {
@@ -241,9 +244,9 @@ onMounted(() => {
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="文件名" prop="keywords">
+        <el-form-item label="文件名" prop="fileName">
           <el-input
-            v-model="queryParams.keywords"
+            v-model="queryParams.fileName"
             placeholder="文件名"
             @keyup.enter="handleQuery"
           />
@@ -292,9 +295,11 @@ onMounted(() => {
       >
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column prop="fileName" label="文件名称" min-width="200" />
-        <el-table-column prop="filePath" label="文件路径" width="200" />
+        <el-table-column prop="fileNamePath" label="文件路径" width="200" />
 
+        <!--
         <el-table-column prop="sort" label="排序" width="100" />
+-->
 
         <el-table-column label="操作" fixed="right" align="left" width="200">
           <template #default="scope">
@@ -303,7 +308,7 @@ onMounted(() => {
               type="primary"
               link
               size="small"
-              @click.stop="openDialog(scope.row.filePath)"
+              @click.stop="openDialog(scope.row.fileNamePath)"
             >
               <i-ep-edit />
               编辑
@@ -356,7 +361,7 @@ onMounted(() => {
         </el-form-item>
 
         <el-form-item label="文件路径" prop="name">
-          <el-input v-model="formData.filePath" placeholder="文件路径" />
+          <el-input v-model="formData.fileNamePath" placeholder="文件路径" />
         </el-form-item>
       </el-form>
 

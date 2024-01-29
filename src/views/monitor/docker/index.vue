@@ -1,0 +1,179 @@
+<script setup lang="ts">
+import { listData, updateById, restartDocker } from "@/api/docker";
+
+import { listAll } from "@/api/monitor/service";
+
+import { DockerContainer } from "@/api/docker/types";
+import { ServiceInfo } from "@/api/monitor/service/types";
+
+const queryFormRef = ref(ElForm);
+
+const loading = ref(false);
+const ids = ref<number[]>([]);
+const total = ref(0);
+
+const queryParams = reactive<DockerContainer>({ pageSize: 10, pageNum: 1 });
+
+const dataList = ref<DockerContainer[]>();
+
+const serviceInfoList = ref<ServiceInfo[]>();
+
+const formData = reactive<DockerContainer>({
+  sort: 1,
+});
+
+/** 查询 */
+function handleQuery() {
+  loading.value = true;
+  listData(queryParams).then(({ data }) => {
+    dataList.value = data.records;
+    total.value = data.total;
+    loading.value = false;
+  });
+  listAll().then(({ data }) => {
+    serviceInfoList.value = data;
+  });
+}
+/** 重置查询 */
+function resetQuery() {
+  queryFormRef.value.resetFields();
+  queryParams.pageNum = 1;
+  handleQuery();
+}
+
+/** 行checkbox 选中事件 */
+function handleSelectionChange(selection: any) {
+  ids.value = selection.map((item: any) => item.id);
+}
+
+function updateDocker(data) {
+  formData.id = data.id;
+  formData.isMonitor = !data.isMonitor;
+  updateById(formData)
+    .then(() => {
+      ElMessage.success("修改成功");
+      resetQuery();
+    })
+    .finally(() => (loading.value = false));
+}
+
+/** 删除角色 */
+function restart(id) {
+  ElMessageBox.confirm("确定要重启docker服务?", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    restartDocker(id)
+      .then(() => {
+        ElMessage.success("重启指令已执行");
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
+onMounted(() => {
+  handleQuery();
+});
+</script>
+
+<template>
+  <div class="app-container">
+    <div class="search-container">
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
+        <el-form-item label="服务" prop="status">
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="全部"
+            clearable
+            style="width: 100px"
+          >
+            <el-option
+              v-for="item in serviceInfoList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item prop="keywords" label="" style="width: 150px">
+          <el-input
+            v-model="queryParams.names"
+            placeholder="容器名称"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" @click="handleQuery"
+            ><i-ep-search />搜索</el-button
+          >
+          <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <el-card shadow="never">
+      <el-table
+        ref="dataTableRef"
+        v-loading="loading"
+        :data="dataList"
+        highlight-current-row
+        border
+        @selection-change="handleSelectionChange"
+      >
+        <!--        <el-table-column type="selection" width="55" align="center" />-->
+        <el-table-column label="服务名" prop="serviceName" width="90" />
+        <el-table-column label="容器名称" prop="names" width="100" />
+        <el-table-column label="IP" prop="hostname" width="120" />
+        <el-table-column label="状态" prop="status" width="150" />
+        <el-table-column label="是否开启监控" align="center" width="100">
+          <template #default="scope">
+            <el-tag v-if="scope.row.isMonitor === true" type="success"
+              >已开启</el-tag
+            >
+            <el-tag v-else type="info">禁用</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="更新时间" prop="updateTime" width="160" />
+        <el-table-column
+          fixed="right"
+          label="操作"
+          width="190"
+          style="padding: 0"
+        >
+          <template #default="scope">
+            <el-button
+              type="primary"
+              size="small"
+              link
+              @click="restart(scope.row.id)"
+            >
+              <i-ep-position />重启服务
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              link
+              @click="updateDocker(scope.row)"
+            >
+              <i-ep-edit />关闭监听
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <pagination
+        v-if="total > 0"
+        v-model:total="total"
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        @pagination="handleQuery"
+      />
+    </el-card>
+  </div>
+</template>

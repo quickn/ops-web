@@ -18,13 +18,10 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const queryParams = reactive<HeathMonitor>({});
+const queryParams = reactive<HeathMonitor>({ id: null });
 const deptList = ref<HeathMonitor[]>();
 
-const formData = reactive<HeathMonitor>({
-  appName: null,
-  heathUrl: null,
-});
+const formData = reactive<HeathMonitor>({ id: null });
 
 /** 查询 */
 function handleQuery() {
@@ -175,9 +172,7 @@ onMounted(() => {
         <el-table-column type="selection" width="55" align="center" />
         <el-table-column prop="appName" label="接口名" min-width="300" />
         <el-table-column prop="heathUrl" label="链接地址" width="300" />
-
-        <el-table-column prop="sort" label="排序" width="100" />
-
+        <el-table-column prop="serviceName" label="服务名" width="300" />
         <el-table-column label="操作" fixed="right" align="left" width="200">
           <template #default="scope">
             <el-button

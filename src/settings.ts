@@ -43,7 +43,7 @@ interface DefaultSettings {
 }
 
 const defaultSettings: DefaultSettings = {
-  title: "vue3-element-admin",
+  title: "BS-Monitor",
   showSettings: true,
   tagsView: true,
   fixedHeader: false,

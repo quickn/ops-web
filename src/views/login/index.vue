@@ -130,8 +130,8 @@ const captchaBase64 = ref();
 const loginFormRef = ref(ElForm);
 
 const loginData = ref<LoginData>({
-  username: "admin",
-  password: "123456",
+  username: "",
+  password: "",
 });
 
 const loginRules = {
@@ -276,10 +276,10 @@ onMounted(() => {
 
     .el-input__inner {
       color: #fff;
+      caret-color: #fff;
       background: transparent;
       border: 0;
       border-radius: 0;
-      caret-color: #fff;
 
       &:-webkit-autofill {
         box-shadow: 0 0 0 1000px transparent inset !important;
