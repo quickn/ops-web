@@ -27,13 +27,22 @@ const options = [
 
 const dockerList = ref<String[]>();
 
+function replaceAll(str: string, find: string, replace: string) {
+  return str.replace(new RegExp(find, "g"), replace);
+}
+
 /** 查询 */
 function handleQuery() {
   loading.value = true;
   textContent.value = "";
   fileLogList(queryParams).then(({ data }) => {
-    //dataList.value = data.records;
-    textContent.value = data;
+    data = replaceAll(
+      data,
+      queryParams.keyword,
+      '<font color="red">' + queryParams.keyword + "</font>"
+    );
+    let container = document.getElementById("log_div");
+    container.innerHTML = data;
     loading.value = false;
   });
 }
@@ -151,7 +160,7 @@ function handleSelectChange(serviceId) {
       </el-form>
     </div>
     <el-card shadow="never">
-      <div v-loading="loading" class="txt" style="">{{ textContent }}</div>
+      <div v-loading="loading" class="txt" id="log_div"></div>
     </el-card>
   </div>
 </template>
