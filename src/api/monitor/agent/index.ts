@@ -1,0 +1,45 @@
+import request from "@/utils/request";
+import { AxiosPromise } from "axios";
+import { AgentConfig } from "./types";
+
+export function listPage(
+  queryParams?: AgentConfig
+): AxiosPromise<PageRecords<AgentConfig[]>> {
+  return request({
+    url: "/agent/listPage",
+    method: "get",
+    params: queryParams,
+  });
+}
+
+/**
+ * 获取部门详情
+ *
+ * @param id
+ */
+export function addData(data?: AgentConfig) {
+  return request({
+    url: "/agent/save",
+    method: "post",
+    data: data,
+  });
+}
+
+/**
+ * 删除部门
+ *
+ * @param ids
+ */
+export function deleteData(ids: number) {
+  return request({
+    url: "/agent/delete/" + ids,
+    method: "delete",
+  });
+}
+
+export function upgradeClientByServiceId(id: number) {
+  return request({
+    url: "/agent/upgradeClientByServiceId/" + id,
+    method: "get",
+  });
+}

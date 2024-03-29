@@ -17,6 +17,16 @@ export function listData(
   });
 }
 
+export function fileLogList(
+  queryParams?: LogInfo
+): AxiosPromise<PageRecords<LogInfo[]>> {
+  return request({
+    url: "/agent/getLogsByServiceId",
+    method: "get",
+    params: queryParams,
+  });
+}
+
 /**
  * 获取部门详情
  *

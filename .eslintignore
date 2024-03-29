@@ -6,6 +6,7 @@ public
 .idea
 *.sh
 *.md
+mock
 
 src/assets
 

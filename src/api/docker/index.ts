@@ -41,3 +41,10 @@ export function restartDocker(id: number) {
     method: "get",
   });
 }
+
+export function getListByServiceId(serviceId: number): AxiosPromise<String[]> {
+  return request({
+    url: "/docker/container/getListByServiceId/" + serviceId,
+    method: "get",
+  });
+}
