@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { LogInfo } from "./types";
+import {LogCmdForm, LogInfo} from "./types";
 
 /**
  * 部门树形表格
@@ -18,8 +18,8 @@ export function listData(
 }
 
 export function fileLogList(
-  queryParams?: LogInfo
-): AxiosPromise<PageRecords<LogInfo[]>> {
+  queryParams?: LogCmdForm
+): AxiosPromise<string> {
   return request({
     url: "/agent/getLogsByServiceId",
     method: "get",

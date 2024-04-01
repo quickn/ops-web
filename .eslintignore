@@ -9,7 +9,10 @@ public
 mock
 
 src/assets
+src/api
 
 .eslintrc.cjs
 .prettierrc.cjs
 .stylelintrc.cjs
+
+

@@ -12,15 +12,11 @@ const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
-const queryParams = reactive<SystemInfo>({ pageSize: 10, pageNum: 1 });
+const queryParams = reactive<SystemInfo>({ pageNum: 1, pageSize: 10 });
 
 const dataList = ref<SystemInfo[]>();
 
 const serviceInfoList = ref<ServiceInfo[]>();
-
-const formData = reactive<SystemInfo>({
-  sort: 1,
-});
 
 /** 查询 */
 function handleQuery() {

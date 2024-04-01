@@ -7,7 +7,7 @@ export default [
     response: ({ url }) => {
       const typeCode = url.match(/\/api\/v1\/dict\/(\w+)\/options/)[1];
 
-      let list = null;
+      let list = [{}];
 
       if (typeCode == "gender") {
         list = [

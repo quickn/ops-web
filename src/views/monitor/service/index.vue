@@ -15,10 +15,6 @@ const queryParams = reactive<ServiceInfo>({ pageSize: 10, pageNum: 1 });
 
 const dataList = ref<ServiceInfo[]>();
 
-const formData = reactive<ServiceInfo>({
-  sort: 1,
-});
-
 /** 查询 */
 function handleQuery() {
   loading.value = true;

@@ -25,7 +25,7 @@ const options = [
   { value: "error", text: "ERROR" },
 ];
 
-const dockerList = ref<String[]>();
+const dockerList = ref<string[]>();
 
 function replaceAll(str: string, find: string, replace: string) {
   return str.replace(new RegExp(find, "g"), replace);
@@ -36,13 +36,16 @@ function handleQuery() {
   loading.value = true;
   textContent.value = "";
   fileLogList(queryParams).then(({ data }) => {
+    if (queryParams.keyword == undefined) {
+      return;
+    }
     data = replaceAll(
       data,
       queryParams.keyword,
       '<font color="red">' + queryParams.keyword + "</font>"
     );
     let container = document.getElementById("log_div");
-    container.innerHTML = data;
+    container!.innerHTML = data;
     loading.value = false;
   });
 }
@@ -59,11 +62,13 @@ onMounted(() => {
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
     queryParams.serviceId = serviceInfoList.value[0].id;
-    handleSelectChange(queryParams.serviceId);
+    if (queryParams.serviceId != undefined) {
+      handleSelectChange(queryParams.serviceId);
+    }
   });
 });
 
-function handleSelectChange(serviceId) {
+function handleSelectChange(serviceId: number) {
   getListByServiceId(serviceId).then(({ data }) => {
     dockerList.value = data;
     queryParams.dockerName = data[0];

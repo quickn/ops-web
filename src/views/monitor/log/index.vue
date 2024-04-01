@@ -18,10 +18,6 @@ const dataList = ref<LogInfo[]>();
 
 const serviceInfoList = ref<ServiceInfo[]>();
 
-const formData = reactive<LogInfo>({
-  sort: 1,
-});
-
 /** 查询 */
 function handleQuery() {
   loading.value = true;

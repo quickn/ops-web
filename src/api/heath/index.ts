@@ -35,7 +35,7 @@ export function addData(data?: HeathMonitor) {
  *
  * @param ids
  */
-export function deleteData(ids: number) {
+export function deleteData(ids: number|undefined) {
   return request({
     url: "/heath/delete/" + ids,
     method: "delete",

@@ -3,7 +3,7 @@ import { listData, updateById, restartDocker } from "@/api/docker";
 
 import { listAll } from "@/api/monitor/service";
 
-import { DockerContainer } from "@/api/docker/types";
+import { DockerContainer, DockerContainerInfo } from "@/api/docker/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
 
 const queryFormRef = ref(ElForm);
@@ -12,15 +12,11 @@ const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
-const queryParams = reactive<DockerContainer>({ pageSize: 10, pageNum: 1 });
-
 const dataList = ref<DockerContainer[]>();
-
 const serviceInfoList = ref<ServiceInfo[]>();
 
-const formData = reactive<DockerContainer>({
-  sort: 1,
-});
+const queryParams = reactive<DockerContainer>({ pageSize: 10, pageNum: 1 });
+const formData = reactive<DockerContainerInfo>({ sort: 1 });
 
 /** 查询 */
 function handleQuery() {
@@ -46,7 +42,7 @@ function handleSelectionChange(selection: any) {
   ids.value = selection.map((item: any) => item.id);
 }
 
-function updateDocker(data) {
+function updateDocker(data: DockerContainer) {
   formData.id = data.id;
   formData.isMonitor = !data.isMonitor;
   updateById(formData)

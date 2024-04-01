@@ -8,4 +8,5 @@ public
 *.md
 
 src/assets
+src/api
 stats.html
