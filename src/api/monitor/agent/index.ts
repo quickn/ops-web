@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { AgentConfig } from "./types";
+import {AgentConfig, AgentConfigForm} from "./types";
 
 export function listPage(
   queryParams?: AgentConfig
@@ -17,7 +17,7 @@ export function listPage(
  *
  * @param id
  */
-export function addData(data?: AgentConfig) {
+export function addData(data?: AgentConfigForm) {
   return request({
     url: "/agent/save",
     method: "post",
@@ -30,7 +30,7 @@ export function addData(data?: AgentConfig) {
  *
  * @param ids
  */
-export function deleteData(ids: number) {
+export function deleteByIds(ids: number) {
   return request({
     url: "/agent/delete/" + ids,
     method: "delete",

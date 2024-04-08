@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import { listPage } from "@/api/monitor/service";
-
-import { upgradeClientByServiceId } from "@/api/monitor/agent";
-
 import { ServiceInfo } from "@/api/monitor/service/types";
 
 const queryFormRef = ref(ElForm);
@@ -34,22 +31,6 @@ function resetQuery() {
 /** 行checkbox 选中事件 */
 function handleSelectionChange(selection: any) {
   ids.value = selection.map((item: any) => item.id);
-}
-
-/** 删除角色 */
-function upgradeClient(id) {
-  ElMessageBox.confirm("确定要升级客户端?", "警告", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
-    loading.value = true;
-    upgradeClientByServiceId(id)
-      .then(() => {
-        ElMessage.success("升级成功");
-      })
-      .finally(() => (loading.value = false));
-  });
 }
 
 onMounted(() => {
@@ -96,18 +77,7 @@ onMounted(() => {
           label="操作"
           width="190"
           style="padding: 0"
-        >
-          <template #default="scope">
-            <el-button
-              type="primary"
-              size="small"
-              link
-              @click="upgradeClient(scope.row.id)"
-            >
-              <i-ep-delete />升级客户端
-            </el-button>
-          </template>
-        </el-table-column>
+        />
       </el-table>
 
       <pagination
