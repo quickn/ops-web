@@ -26,7 +26,17 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const formData = reactive<AgentConfigForm>({ id: null });
+const formData = reactive<AgentConfigForm>({
+  id: null,
+  hostname: null,
+  isMonitor: false,
+  isMail: false,
+  isDocker: false,
+  cpuWarnVal: 0,
+  memWarnVal: 0,
+  diskWarnVal: 0,
+  cpuWarnValDocker: 0,
+});
 
 /** 查询 */
 function handleQuery() {
@@ -93,8 +103,10 @@ async function openDialog(data?: AgentConfig) {
   if (data) {
     dialogEdit.visible = true;
     dialogEdit.title = "编辑文档";
-    data.updateTime = undefined;
-    Object.assign(formData, data);
+    const keys = Reflect.ownKeys(formData);
+    keys.forEach(function (value) {
+      formData[value] = data[value];
+    });
   } else {
     if (formData) {
       formData.id = undefined;
@@ -115,7 +127,6 @@ function resetForm() {
   deptFormRef.value.resetFields();
   deptFormRef.value.clearValidate();
   formData.id = null;
-  formData.sort = 1;
 }
 
 const rules = reactive({
@@ -136,7 +147,7 @@ async function handleSubmit() {
     if (valid) {
       addData(formData)
         .then(() => {
-          ElMessage.success("新增成功");
+          ElMessage.success("更新成功");
           closeDialog();
           handleQuery();
         })
@@ -186,13 +197,18 @@ async function handleSubmit() {
       >
         <!--        <el-table-column type="selection" width="55" align="center" />-->
         <el-table-column label="服务名" prop="serviceName" width="90" />
-        <el-table-column label="IP" prop="hostname" width="150" />
+        <el-table-column label="IP" prop="hostname" width="130" />
         <el-table-column label="是否监控" prop="isMonitor" width="80" />
         <el-table-column label="是否发送邮件" prop="isMail" width="80" />
         <el-table-column label="是否docker监控" prop="isDocker" width="80" />
         <el-table-column label="cpu域值" prop="cpuWarnVal" width="80" />
         <el-table-column label="内存阈值" prop="memWarnVal" width="80" />
         <el-table-column label="磁盘阈值" prop="diskWarnVal" width="80" />
+        <el-table-column
+          label="docker容器Cpu阈值"
+          prop="cpuWarnValDocker"
+          width="80"
+        />
         <el-table-column label="终端版本" prop="clientVersion" width="80" />
         <el-table-column label="更新时间" prop="updateTime" width="160" />
         <el-table-column
@@ -254,7 +270,7 @@ async function handleSubmit() {
         ref="deptFormRef"
         :model="formData"
         :rules="rules"
-        label-width="100px"
+        label-width="200px"
       >
         <el-form-item label="IP" prop="name">
           <el-input v-model="formData.hostname" disabled placeholder="IP" />
@@ -294,6 +310,13 @@ async function handleSubmit() {
 
         <el-form-item label="磁盘预警值" prop="name">
           <el-input v-model="formData.diskWarnVal" placeholder="磁盘预警值" />
+        </el-form-item>
+
+        <el-form-item label="docker容器Cpu阈值" prop="name">
+          <el-input
+            v-model="formData.cpuWarnValDocker"
+            placeholder="docker服务Cpu阈值"
+          />
         </el-form-item>
       </el-form>
 
