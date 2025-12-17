@@ -11,6 +11,9 @@ import {
   View,
   Notebook,
   Delete,
+  Document,
+  Edit,
+  Plus,
 } from "@element-plus/icons-vue";
 
 import {
@@ -22,14 +25,18 @@ import {
   getDeployRecords,
   getDeployStatus,
   deleteJar,
+  getDockerfile,
+  updateDockerfile,
 } from "@/api/monitor/jar";
-import { JarPackage } from "@/api/monitor/jar/types";
+import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
 
 const queryFormRef = ref(ElForm);
 
 const loading = ref(false);
 const uploadLoading = ref(false);
 const deployLoading = ref(false);
+const redeployLoading = ref(false);
+const dockerfileLoading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
@@ -49,10 +56,24 @@ const deployStatus = ref<any>();
 const uploadDialogVisible = ref(false);
 const selectedFile = ref<File>();
 
+// Dockerfile相关
+const dockerfileDialogVisible = ref(false);
+const dockerfileContent = ref("");
+
 // 部署相关
 const deployDialogVisible = ref(false);
+const redeployDialogVisible = ref(false);
 const currentJarId = ref<number>();
 const currentJarName = ref<string>();
+
+// 部署目标
+const deployTargets = ref<DeployTarget[]>([
+  {
+    agentId: null,
+    containerName: "",
+    port: "8080",
+  },
+]);
 
 // 日志相关
 const logsDialogVisible = ref(false);
@@ -62,7 +83,7 @@ const uploadForm = reactive({
   remark: "",
 });
 
-const deployForm = reactive({
+const redeployForm = reactive({
   agentIds: [] as number[],
   containerNames: [] as string[],
 });
@@ -82,11 +103,6 @@ function resetQuery() {
   queryFormRef.value.resetFields();
   queryParams.pageNum = 1;
   handleQuery();
-}
-
-/** 行checkbox 选中事件 */
-function handleSelectionChange(selection: any) {
-  ids.value = selection.map((item: any) => item.id);
 }
 
 /** 显示上传对话框 */
@@ -127,8 +143,91 @@ function handleUpload() {
     });
 }
 
-/** 显示部署对话框 */
+/** 显示Dockerfile对话框 */
+function showDockerfileDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+  dockerfileContent.value = "";
+
+  dockerfileLoading.value = true;
+  getDockerfile(jar.id!)
+    .then(({ data }) => {
+      dockerfileContent.value = data || getDefaultDockerfile(jar);
+      dockerfileDialogVisible.value = true;
+    })
+    .finally(() => {
+      dockerfileLoading.value = false;
+    });
+}
+
+/** 获取默认Dockerfile */
+function getDefaultDockerfile(jar: JarPackage): string {
+  return `FROM openjdk:8-jre-slim
+MAINTAINER monitor@bszn.com
+
+WORKDIR /app
+
+# 复制JAR文件
+COPY app.jar app.jar
+
+# 设置时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动命令
+ENTRYPOINT ["java", "-jar", "app.jar"]`;
+}
+
+/** 保存Dockerfile */
+function handleSaveDockerfile() {
+  if (!dockerfileContent.value.trim()) {
+    ElMessage.warning("Dockerfile内容不能为空");
+    return;
+  }
+
+  dockerfileLoading.value = true;
+  updateDockerfile(currentJarId.value!, dockerfileContent.value)
+    .then(() => {
+      ElMessage.success("Dockerfile保存成功");
+      dockerfileDialogVisible.value = false;
+      handleQuery();
+    })
+    .finally(() => {
+      dockerfileLoading.value = false;
+    });
+}
+
+/** 显示首次部署对话框 */
 function showDeployDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+
+  // 检查是否已设置Dockerfile
+  if (!jar.dockerfileContent || !jar.dockerfileContent.trim()) {
+    ElMessage.warning("请先设置Dockerfile");
+    showDockerfileDialog(jar);
+    return;
+  }
+
+  getAllAgents().then(({ data }) => {
+    agentsList.value = data;
+    // 重置部署目标
+    deployTargets.value = [
+      {
+        agentId: null,
+        containerName: "",
+        port: "8080",
+      },
+    ];
+    deployDialogVisible.value = true;
+  });
+}
+
+/** 显示重新部署对话框 */
+function showRedeployDialog(jar: JarPackage) {
   currentJarId.value = jar.id;
   currentJarName.value = jar.fileName;
 
@@ -138,21 +237,97 @@ function showDeployDialog(jar: JarPackage) {
       selected: false,
       selectedContainers: [] as string[],
     }));
-    deployForm.agentIds = [];
-    deployForm.containerNames = [];
-    deployDialogVisible.value = true;
+
+    // 如果jar已有部署目标，可以默认选中
+    if (jar.agentIds && jar.targetContainerNames) {
+      const existingAgents = jar.agentIds.split(",").map((id) => parseInt(id));
+      const existingContainers = jar.targetContainerNames.split(",");
+
+      agentsList.value.forEach((agent) => {
+        if (existingAgents.includes(agent.agentId)) {
+          agent.selected = true;
+          // 找到该agent对应的容器
+          const agentContainers = existingContainers.filter(
+            (_, index) => existingAgents[index] === agent.agentId
+          );
+          agent.selectedContainers = agentContainers;
+        }
+      });
+    }
+
+    redeployForm.agentIds = [];
+    redeployForm.containerNames = [];
+    redeployDialogVisible.value = true;
   });
 }
 
-/** 处理Agent选择 */
-function handleAgentSelection(agent: any) {
-  if (!agent.selected) {
-    agent.selectedContainers = [];
-  }
+/** 添加部署目标 */
+function addDeployTarget() {
+  deployTargets.value.push({
+    agentId: null,
+    containerName: "",
+    port: "8080",
+  });
 }
 
-/** 执行部署 */
+/** 移除部署目标 */
+function removeDeployTarget(index: number) {
+  deployTargets.value.splice(index, 1);
+}
+
+/** 执行首次部署 */
 function handleDeploy() {
+  // 验证部署目标
+  const agentIds: number[] = [];
+  const containerNames: string[] = [];
+
+  for (const target of deployTargets.value) {
+    if (!target.agentId) {
+      ElMessage.error(
+        `第 ${deployTargets.value.indexOf(target) + 1} 行：请选择Agent`
+      );
+      return;
+    }
+
+    if (!target.containerName.trim()) {
+      ElMessage.error(
+        `第 ${deployTargets.value.indexOf(target) + 1} 行：请输入容器名称`
+      );
+      return;
+    }
+
+    // 检查容器名称是否重复
+    if (containerNames.includes(target.containerName.trim())) {
+      ElMessage.error(`容器名称重复：${target.containerName}`);
+      return;
+    }
+
+    agentIds.push(target.agentId);
+    containerNames.push(target.containerName.trim());
+  }
+
+  if (agentIds.length === 0) {
+    ElMessage.error("请至少添加一个部署目标");
+    return;
+  }
+
+  deployLoading.value = true;
+  deployJar(currentJarId.value!, { agentIds, containerNames })
+    .then(() => {
+      ElMessage.success("开始部署");
+      deployDialogVisible.value = false;
+      handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("部署失败: " + error.response?.data?.msg);
+    })
+    .finally(() => {
+      deployLoading.value = false;
+    });
+}
+
+/** 执行重新部署 */
+function handleRedeploy() {
   // 收集选择的Agent和容器
   const agentIds: number[] = [];
   const containerNames: string[] = [];
@@ -166,26 +341,44 @@ function handleDeploy() {
     }
   });
 
-  if (agentIds.length === 0) {
-    ElMessage.error("请选择至少一个部署目标");
-    return;
-  }
+  // 重新部署时可以重新选择目标，也可以使用原有目标
+  redeployLoading.value = true;
 
-  deployLoading.value = true;
-  deployJar(currentJarId.value!, { agentIds, containerNames })
+  // 构建请求参数
+  const requestData = agentIds.length > 0 ? { agentIds, containerNames } : null;
+
+  rebuildJar(currentJarId.value!, requestData)
     .then(() => {
-      ElMessage.success("开始部署");
-      deployDialogVisible.value = false;
+      ElMessage.success("开始重新部署");
+      redeployDialogVisible.value = false;
       handleQuery();
     })
     .finally(() => {
-      deployLoading.value = false;
+      redeployLoading.value = false;
     });
 }
 
-/** 重新部署 */
+/** 根据Agent选择自动生成容器名称 */
+function generateContainerName(agentId: number, index: number) {
+  const agent = agentsList.value?.find((a) => a.agentId === agentId);
+  if (
+    agent &&
+    currentJarName.value &&
+    !deployTargets.value[index].containerName
+  ) {
+    const baseName = currentJarName.value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-");
+    const timestamp = new Date().getTime();
+    deployTargets.value[
+      index
+    ].containerName = `${baseName}-${agent.agentName}-${timestamp}`;
+  }
+}
+
+/** 快捷重新部署（使用原有目标） */
 function redeploy(id: number) {
-  ElMessageBox.confirm("确定要重新部署?", "提示", {
+  ElMessageBox.confirm("确定要重新部署到原有容器吗？", "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning",
@@ -257,6 +450,11 @@ function getStatusType(status: number): string {
   return map[status] || "info";
 }
 
+/** 检查是否已设置Dockerfile */
+function hasDockerfile(jar: JarPackage): boolean {
+  return !!jar.dockerfileContent && jar.dockerfileContent.trim().length > 0;
+}
+
 onMounted(() => {
   handleQuery();
 });
@@ -308,7 +506,6 @@ onMounted(() => {
         :data="dataList"
         highlight-current-row
         border
-        @selection-change="handleSelectionChange"
       >
         <el-table-column label="文件名" prop="fileName" width="180" />
         <el-table-column label="版本号" prop="version" width="100">
@@ -317,10 +514,18 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" width="150" />
+        <el-table-column label="Dockerfile" width="100" align="center">
+          <template #default="scope">
+            <el-tag v-if="hasDockerfile(scope.row)" type="success"
+              >已设置</el-tag
+            >
+            <el-tag v-else type="warning">未设置</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="部署目标" width="220">
           <template #default="scope">
             <div v-if="scope.row.agentNames">
-              <div style=" margin-bottom: 4px;font-size: 12px; color: #666">
+              <div style="margin-bottom: 4px; font-size: 12px; color: #666">
                 <el-icon><Monitor /></el-icon>
                 {{ scope.row.agentNames.split(",")[0] }}
                 <span v-if="scope.row.agentNames.split(',').length > 1">
@@ -337,7 +542,7 @@ onMounted(() => {
                 </span>
               </div>
             </div>
-            <span v-else style=" font-size: 12px;color: #999">未部署</span>
+            <span v-else style="font-size: 12px; color: #999">未部署</span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
@@ -348,25 +553,42 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column label="上传时间" prop="createTime" width="160" />
-        <el-table-column fixed="right" label="操作" width="250" align="center">
+        <el-table-column fixed="right" label="操作" width="320" align="center">
           <template #default="scope">
             <el-button
-              v-if="scope.row.status === 0"
+              v-if="!hasDockerfile(scope.row)"
+              type="warning"
+              size="small"
+              link
+              @click="showDockerfileDialog(scope.row)"
+            >
+              <el-icon><Edit /></el-icon>设置Dockerfile
+            </el-button>
+            <el-button
+              v-else-if="scope.row.status === 0"
               type="primary"
               size="small"
               link
               @click="showDeployDialog(scope.row)"
             >
-              <el-icon><Setting /></el-icon>部署
+              <el-icon><Setting /></el-icon>首次部署
             </el-button>
             <el-button
               v-if="scope.row.status === 2"
               type="warning"
               size="small"
               link
-              @click="redeploy(scope.row.id)"
+              @click="showRedeployDialog(scope.row)"
             >
               <el-icon><RefreshRight /></el-icon>重新部署
+            </el-button>
+            <el-button
+              type="info"
+              size="small"
+              link
+              @click="showDockerfileDialog(scope.row)"
+            >
+              <el-icon><Document /></el-icon>Dockerfile
             </el-button>
             <el-button
               v-if="scope.row.status !== 0"
@@ -428,20 +650,207 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <!-- 部署对话框 -->
+    <!-- Dockerfile对话框 -->
+    <el-dialog
+      v-model="dockerfileDialogVisible"
+      :title="`Dockerfile - ${currentJarName}`"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="dockerfileLoading">
+        <el-alert
+          type="info"
+          title="首次部署前需要先设置Dockerfile"
+          description="重新部署时将只替换JAR包，不需要重新构建Docker镜像"
+          show-icon
+          style="margin-bottom: 15px"
+        />
+
+        <el-form>
+          <el-form-item>
+            <el-input
+              v-model="dockerfileContent"
+              type="textarea"
+              :rows="20"
+              placeholder="请输入Dockerfile内容"
+              resize="none"
+            />
+          </el-form-item>
+        </el-form>
+
+        <div style=" margin-top: 10px;font-size: 12px; color: #666">
+          提示：JAR文件将通过下载方式提供给Agent，路径为/app/app.jar
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="dockerfileDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleSaveDockerfile"
+          :loading="dockerfileLoading"
+        >
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 首次部署对话框 -->
     <el-dialog
       v-model="deployDialogVisible"
-      :title="`部署 - ${currentJarName}`"
+      :title="`首次部署 - ${currentJarName}`"
+      width="800px"
+    >
+      <el-alert
+        type="info"
+        title="首次部署说明"
+        :description="`将根据Dockerfile自动构建镜像并创建新容器`"
+        show-icon
+        style="margin-bottom: 20px"
+      />
+
+      <div style="margin-bottom: 15px">
+        <el-button type="primary" @click="addDeployTarget" size="small">
+          <el-icon><Plus /></el-icon>添加部署目标
+        </el-button>
+        <span style="margin-left: 10px; font-size: 12px; color: #666">
+          可以选择多个Agent进行部署
+        </span>
+      </div>
+
+      <el-table :data="deployTargets" border style="margin-bottom: 20px">
+        <el-table-column label="序号" width="60" align="center">
+          <template #default="scope">
+            {{ scope.$index + 1 }}
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Agent" min-width="200">
+          <template #default="scope">
+            <el-select
+              v-model="scope.row.agentId"
+              placeholder="选择Agent"
+              style="width: 100%"
+              @change="
+                () => generateContainerName(scope.row.agentId, scope.$index)
+              "
+            >
+              <el-option
+                v-for="agent in agentsList"
+                :key="agent.agentId"
+                :label="`${agent.agentName} (${agent.agentIp}:${agent.agentPort})`"
+                :value="agent.agentId"
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                  "
+                >
+                  <span>{{ agent.agentName }}</span>
+                  <span style=" font-size: 12px;color: #999">
+                    {{ agent.agentIp }}:{{ agent.agentPort }}
+                    <el-tag
+                      v-if="!agent.hasContainers"
+                      size="small"
+                      type="warning"
+                      >无容器</el-tag
+                    >
+                    <el-tag v-else size="small" type="success"
+                      >{{ agent.containerCount }}个容器</el-tag
+                    >
+                  </span>
+                </div>
+              </el-option>
+            </el-select>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="容器名称" min-width="200">
+          <template #default="scope">
+            <el-input
+              v-model="scope.row.containerName"
+              placeholder="输入容器名称"
+              @blur="scope.row.containerName = scope.row.containerName.trim()"
+            />
+          </template>
+        </el-table-column>
+
+        <el-table-column label="端口" width="120">
+          <template #default="scope">
+            <el-input v-model="scope.row.port" placeholder="8080" />
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="scope">
+            <el-button
+              v-if="deployTargets.length > 1"
+              type="danger"
+              size="small"
+              link
+              @click="removeDeployTarget(scope.$index)"
+            >
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div
+        style="
+          padding: 15px;
+          margin-bottom: 20px;
+          background: #f5f7fa;
+          border-radius: 4px;
+        "
+      >
+        <h4 style="margin-top: 0; color: #409eff">部署说明：</h4>
+        <ul style=" padding-left: 20px; margin: 0; font-size: 13px;color: #666">
+          <li>系统将根据Dockerfile自动构建Docker镜像</li>
+          <li>在每个选中的Agent上创建新的容器</li>
+          <li>容器名称必须是唯一的</li>
+          <li>默认使用Dockerfile中EXPOSE的端口，如果没有则使用8080</li>
+          <li>可以同时部署到多个Agent</li>
+        </ul>
+      </div>
+
+      <template #footer>
+        <el-button @click="deployDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleDeploy"
+          :loading="deployLoading"
+          :disabled="deployTargets.length === 0"
+        >
+          开始部署
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 重新部署对话框 -->
+    <el-dialog
+      v-model="redeployDialogVisible"
+      :title="`重新部署 - ${currentJarName}`"
       width="700px"
     >
       <div
         v-if="!agentsList || agentsList.length === 0"
-        style=" padding: 40px 0;text-align: center"
+        style="padding: 40px 0; text-align: center"
       >
         <el-empty description="暂无可用Agent" />
       </div>
 
       <div v-else>
+        <el-alert
+          type="info"
+          title="重新部署只替换JAR包"
+          description="将替换所选容器中的/app/app.jar文件，然后重启容器"
+          show-icon
+          style="margin-bottom: 15px"
+        />
+
         <div
           v-for="agent in agentsList"
           :key="agent.agentId"
@@ -449,17 +858,24 @@ onMounted(() => {
         >
           <el-checkbox
             v-model="agent.selected"
-            @change="() => handleAgentSelection(agent)"
+            @change="
+              () => {
+                if (!agent.selected) agent.selectedContainers = [];
+              }
+            "
           >
             <strong>{{ agent.agentName }}</strong>
+            <span style="margin-left: 10px; font-size: 12px; color: #666">
+              ({{ agent.agentIp }}:{{ agent.agentPort }})
+            </span>
           </el-checkbox>
 
           <div
             v-if="agent.selected"
-            style=" margin-top: 10px;margin-left: 24px"
+            style="margin-top: 10px; margin-left: 24px"
           >
             <div style="margin-bottom: 8px; font-size: 12px; color: #666">
-              选择容器：
+              选择要更新的容器：
             </div>
             <el-checkbox-group v-model="agent.selectedContainers">
               <div
@@ -469,6 +885,14 @@ onMounted(() => {
               >
                 <el-checkbox :label="container.names">
                   {{ container.names }} ({{ container.image }})
+                  <el-tag
+                    size="mini"
+                    :type="
+                      container.status.includes('Up') ? 'success' : 'danger'
+                    "
+                  >
+                    {{ container.status.includes("Up") ? "运行中" : "已停止" }}
+                  </el-tag>
                 </el-checkbox>
               </div>
             </el-checkbox-group>
@@ -477,13 +901,13 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <el-button @click="deployDialogVisible = false">取消</el-button>
+        <el-button @click="redeployDialogVisible = false">取消</el-button>
         <el-button
           type="primary"
-          @click="handleDeploy"
-          :loading="deployLoading"
+          @click="handleRedeploy"
+          :loading="redeployLoading"
         >
-          开始部署
+          重新部署
         </el-button>
       </template>
     </el-dialog>
@@ -494,7 +918,74 @@ onMounted(() => {
       :title="`部署状态 - ${currentJarName}`"
       width="800px"
     >
-      <!-- 状态显示内容 -->
+      <div v-if="deployStatus">
+        <el-row :gutter="20" style="margin-bottom: 20px">
+          <el-col :span="6">
+            <div style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: #409eff">
+                {{ deployStatus.total || 0 }}
+              </div>
+              <div style=" font-size: 12px;color: #666">总部署数</div>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: #67c23a">
+                {{ deployStatus.success || 0 }}
+              </div>
+              <div style=" font-size: 12px;color: #666">成功</div>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: #f56c6c">
+                {{ deployStatus.failed || 0 }}
+              </div>
+              <div style=" font-size: 12px;color: #666">失败</div>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div style="text-align: center">
+              <div style="font-size: 24px; font-weight: bold; color: #e6a23c">
+                {{ deployStatus.deploying || 0 }}
+              </div>
+              <div style=" font-size: 12px;color: #666">部署中</div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-table :data="deployStatus.deployRecords" border>
+          <el-table-column label="Agent" width="150">
+            <template #default="scope">
+              {{ scope.row.agentName }}
+            </template>
+          </el-table-column>
+          <el-table-column label="容器" width="150">
+            <template #default="scope">
+              {{ scope.row.containerName }}
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="scope">
+              <el-tag :type="getStatusType(scope.row.status)">
+                {{ getStatusText(scope.row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="部署时间" width="180">
+            <template #default="scope">
+              {{ scope.row.deployTime || scope.row.createTime }}
+            </template>
+          </el-table-column>
+          <el-table-column label="日志">
+            <template #default="scope">
+              <div style="max-height: 60px; overflow-y: auto; font-size: 12px">
+                {{ scope.row.deployLog }}
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
 
     <!-- 部署日志对话框 -->
@@ -503,7 +994,66 @@ onMounted(() => {
       :title="`部署日志 - ${currentJarName}`"
       width="900px"
     >
-      <!-- 日志显示内容 -->
+      <div v-if="deployRecords && deployRecords.length > 0">
+        <el-table :data="deployRecords" border>
+          <el-table-column label="时间" width="180">
+            <template #default="scope">
+              {{ scope.row.deployTime || scope.row.createTime }}
+            </template>
+          </el-table-column>
+          <el-table-column label="Agent" width="150">
+            <template #default="scope">
+              {{ scope.row.agentName }}
+            </template>
+          </el-table-column>
+          <el-table-column label="容器" width="150">
+            <template #default="scope">
+              {{ scope.row.containerName }}
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="scope">
+              <el-tag :type="getStatusType(scope.row.status)">
+                {{ getStatusText(scope.row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="日志">
+            <template #default="scope">
+              <pre
+                style="
+                  max-height: 200px;
+                  margin: 0;
+                  overflow-y: auto;
+                  font-family: monospace;
+                  font-size: 12px;
+                "
+                >{{ scope.row.deployLog }}
+              </pre>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <div v-else style=" padding: 40px 0;text-align: center">
+        <el-empty description="暂无部署记录" />
+      </div>
     </el-dialog>
   </div>
 </template>
+
+<style scoped>
+.agent-info {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.agent-name {
+  font-weight: bold;
+}
+
+.agent-detail {
+  font-size: 12px;
+  color: #666;
+}
+</style>

@@ -1,8 +1,10 @@
+// api/monitor/jar/index.ts
 import request from "@/utils/request";
+import { DeployRequest } from "@/api/monitor/jar/types";
 
 export function listJarPackages(params: any) {
   return request({
-    url: "/jar/list",
+    url: "/jar/page",
     method: "get",
     params,
   });
@@ -19,6 +21,21 @@ export function uploadJar(data: FormData) {
   });
 }
 
+export function getDockerfile(id: number) {
+  return request({
+    url: `/jar/${id}/dockerfile`,
+    method: "get",
+  });
+}
+
+export function updateDockerfile(id: number, dockerfileContent: string) {
+  return request({
+    url: `/jar/${id}/dockerfile`,
+    method: "put",
+    data: { dockerfileContent },
+  });
+}
+
 export function getAllAgents() {
   return request({
     url: "/jar/agents",
@@ -26,7 +43,7 @@ export function getAllAgents() {
   });
 }
 
-export function deployJar(id: number, data: any) {
+export function deployJar(id: number, data: DeployRequest) {
   return request({
     url: `/jar/deploy/${id}`,
     method: "post",
@@ -34,10 +51,11 @@ export function deployJar(id: number, data: any) {
   });
 }
 
-export function rebuildJar(id: number) {
+export function rebuildJar(id: number, data?: DeployRequest) {
   return request({
     url: `/jar/redeploy/${id}`,
     method: "post",
+    data,
   });
 }
 
