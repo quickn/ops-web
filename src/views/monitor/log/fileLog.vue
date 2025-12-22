@@ -106,7 +106,7 @@ function handleSelectChange(serviceId: number) {
           </el-select>
         </el-form-item>
 
-        <el-form-item prop="keywords" label="" style="width: 150px">
+        <el-form-item prop="keywords" label="" style="width: 200px">
           <el-input
             v-model="queryParams.keyword"
             placeholder="关键字"
@@ -128,6 +128,8 @@ function handleSelectChange(serviceId: number) {
           <el-date-picker
             v-model="queryParams.createDate"
             type="date"
+            value-format="YYYY-MM-DD"
+            format="YYYY-MM-DD"
             placeholder="选择日期"
           />
         </el-form-item>
