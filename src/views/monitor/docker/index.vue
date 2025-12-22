@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { listData, updateById, restartDocker } from "@/api/docker";
+import { listData, updateById, restartDocker, stopDocker } from "@/api/docker";
 
 import { listAll } from "@/api/monitor/service";
 
@@ -64,6 +64,22 @@ function restart(id) {
     restartDocker(id)
       .then(() => {
         ElMessage.success("重启指令已执行");
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
+function stop(id) {
+  ElMessageBox.confirm("确定要关闭docker服务?", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    stopDocker(id)
+      .then(() => {
+        ElMessage.success("关闭指令已执行");
         handleQuery();
       })
       .finally(() => (loading.value = false));
@@ -139,7 +155,7 @@ onMounted(() => {
         <el-table-column
           fixed="right"
           label="操作"
-          width="190"
+          width="500"
           style="padding: 0"
         >
           <template #default="scope">
@@ -150,6 +166,14 @@ onMounted(() => {
               @click="restart(scope.row.id)"
             >
               <i-ep-position />重启服务
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              link
+              @click="stop(scope.row.id)"
+            >
+              <i-ep-position />关闭服务
             </el-button>
             <el-button
               type="primary"

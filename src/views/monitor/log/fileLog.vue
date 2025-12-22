@@ -96,12 +96,8 @@ function handleSelectChange(serviceId: number) {
           </el-select>
         </el-form-item>
 
-        <el-form-item label="容器名" style="width: 150px">
-          <el-select
-            v-model="queryParams.dockerName"
-            clearable
-            style="width: 100px"
-          >
+        <el-form-item label="容器名" style="width: 160px">
+          <el-select v-model="queryParams.dockerName" clearable>
             <el-option
               v-for="item in dockerList"
               :key="item"

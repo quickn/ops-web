@@ -42,6 +42,13 @@ export function restartDocker(id: number) {
   });
 }
 
+export function stopDocker(id: number) {
+  return request({
+    url: "/docker/container/stop/" + id,
+    method: "get",
+  });
+}
+
 export function getListByServiceId(serviceId: number): AxiosPromise<string[]> {
   return request({
     url: "/docker/container/getListByServiceId/" + serviceId,
