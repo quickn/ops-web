@@ -36,14 +36,13 @@ function handleQuery() {
   loading.value = true;
   textContent.value = "";
   fileLogList(queryParams).then(({ data }) => {
-    if (queryParams.keyword == undefined) {
-      return;
+    if (queryParams.keyword != undefined) {
+      data = replaceAll(
+        data,
+        queryParams.keyword,
+        '<font color="red">' + queryParams.keyword + "</font>"
+      );
     }
-    data = replaceAll(
-      data,
-      queryParams.keyword,
-      '<font color="red">' + queryParams.keyword + "</font>"
-    );
     let container = document.getElementById("log_div");
     container!.innerHTML = data;
     loading.value = false;
