@@ -162,17 +162,9 @@ function showDockerfileDialog(jar: JarPackage) {
 
 /** 获取默认Dockerfile */
 function getDefaultDockerfile(jar: JarPackage): string {
-  return `FROM openjdk:8-jre-slim
-MAINTAINER monitor@bszn.com
+  return `FROM adoptopenjdk:8-jdk-hotspot
 
-WORKDIR /app
-
-# 复制JAR文件
-COPY app.jar app.jar
-
-# 设置时区
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+WORKDIR /home/park
 
 # 暴露端口
 EXPOSE 8080
@@ -678,7 +670,7 @@ onMounted(() => {
           </el-form-item>
         </el-form>
 
-        <div style=" margin-top: 10px;font-size: 12px; color: #666">
+        <div style="margin-top: 10px; font-size: 12px; color: #666">
           提示：JAR文件将通过下载方式提供给Agent，路径为/app/app.jar
         </div>
       </div>
@@ -749,7 +741,7 @@ onMounted(() => {
                   "
                 >
                   <span>{{ agent.agentName }}</span>
-                  <span style=" font-size: 12px;color: #999">
+                  <span style="font-size: 12px; color: #999">
                     {{ agent.agentIp }}:{{ agent.agentPort }}
                     <el-tag
                       v-if="!agent.hasContainers"
@@ -807,7 +799,7 @@ onMounted(() => {
         "
       >
         <h4 style="margin-top: 0; color: #409eff">部署说明：</h4>
-        <ul style=" padding-left: 20px; margin: 0; font-size: 13px;color: #666">
+        <ul style="padding-left: 20px; margin: 0; font-size: 13px; color: #666">
           <li>系统将根据Dockerfile自动构建Docker镜像</li>
           <li>在每个选中的Agent上创建新的容器</li>
           <li>容器名称必须是唯一的</li>
@@ -925,7 +917,7 @@ onMounted(() => {
               <div style="font-size: 24px; font-weight: bold; color: #409eff">
                 {{ deployStatus.total || 0 }}
               </div>
-              <div style=" font-size: 12px;color: #666">总部署数</div>
+              <div style="font-size: 12px; color: #666">总部署数</div>
             </div>
           </el-col>
           <el-col :span="6">
@@ -933,7 +925,7 @@ onMounted(() => {
               <div style="font-size: 24px; font-weight: bold; color: #67c23a">
                 {{ deployStatus.success || 0 }}
               </div>
-              <div style=" font-size: 12px;color: #666">成功</div>
+              <div style="font-size: 12px; color: #666">成功</div>
             </div>
           </el-col>
           <el-col :span="6">
@@ -941,7 +933,7 @@ onMounted(() => {
               <div style="font-size: 24px; font-weight: bold; color: #f56c6c">
                 {{ deployStatus.failed || 0 }}
               </div>
-              <div style=" font-size: 12px;color: #666">失败</div>
+              <div style="font-size: 12px; color: #666">失败</div>
             </div>
           </el-col>
           <el-col :span="6">
@@ -949,7 +941,7 @@ onMounted(() => {
               <div style="font-size: 24px; font-weight: bold; color: #e6a23c">
                 {{ deployStatus.deploying || 0 }}
               </div>
-              <div style=" font-size: 12px;color: #666">部署中</div>
+              <div style="font-size: 12px; color: #666">部署中</div>
             </div>
           </el-col>
         </el-row>
@@ -1034,7 +1026,7 @@ onMounted(() => {
           </el-table-column>
         </el-table>
       </div>
-      <div v-else style=" padding: 40px 0;text-align: center">
+      <div v-else style="padding: 40px 0; text-align: center">
         <el-empty description="暂无部署记录" />
       </div>
     </el-dialog>
