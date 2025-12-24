@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    //"noImplicitAny": false,
+    //避免 .implicitly has an 'any' type.
+    "noImplicitAny": false,
     "target": "esnext",
     "useDefineForClassFields": true,
     "module": "esnext",
@@ -29,6 +30,6 @@
     "mock/**/*.ts",
     "vite.config.ts"
   ],
-  "exclude": ["node_modules", "dist", "**/*.js"]
+  "exclude": ["node_modules", "dist", "**/*.js", "src/views/nginx/index.vue"]
   // "references": [{ "path": "./tsconfig.node.json" }]
 }

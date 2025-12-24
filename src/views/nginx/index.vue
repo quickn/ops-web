@@ -55,7 +55,7 @@ function handleDelete(deptId?: number) {
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    deleteConfig(deptId).then(() => {
+    deleteConfig(deptId!).then(() => {
       ElMessage.success("删除成功");
       resetQuery();
     });
@@ -167,7 +167,7 @@ const codeData = reactive({
   form: {},
 });
 
-let editor = null;
+let editor: any;
 const { form } = toRefs(codeData);
 
 // 初始化编辑器

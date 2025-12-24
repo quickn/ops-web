@@ -1,7 +1,8 @@
 /**
  * 监控服务
  */
-export interface ServiceInfo {
-  id: number;
-  name: string;
+export interface ServiceInfo extends PageQuery {
+  id?: number;
+  name?: string;
+  sort?: number;
 }

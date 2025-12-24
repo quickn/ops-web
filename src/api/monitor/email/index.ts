@@ -1,0 +1,48 @@
+import request from "@/utils/request";
+import { AxiosPromise } from "axios";
+import { EmailSet } from "./types";
+
+/**
+ * 部门树形表格
+ *
+ * @param queryParams
+ */
+export function getLastData(): AxiosPromise<EmailSet> {
+  return request({
+    url: "/monitor/mailset/getLastData",
+    method: "get",
+  });
+}
+
+/**
+ * 获取部门详情
+ *
+ * @param id
+ */
+export function addData(data?: EmailSet) {
+  return request({
+    url: "/monitor/mailset/save",
+    method: "post",
+    data: data,
+  });
+}
+
+export function testSend(data?: EmailSet) {
+  return request({
+    url: "/monitor/mailset/test",
+    method: "post",
+    data: data,
+  });
+}
+
+/**
+ * 删除部门
+ *
+ * @param ids
+ */
+export function deleteData(ids: number) {
+  return request({
+    url: "/heath/delete/" + ids,
+    method: "delete",
+  });
+}

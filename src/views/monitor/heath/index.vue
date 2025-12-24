@@ -33,13 +33,13 @@ function handleQuery() {
 }
 
 /** 删除部门 */
-function handleDelete(deptId?: number) {
+function handleDelete(ids?: number) {
   ElMessageBox.confirm(`确认删除已选中的数据项?`, "警告", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    deleteData(deptId).then(() => {
+    deleteData(ids).then(() => {
       ElMessage.success("删除成功");
       resetQuery();
     });
@@ -103,7 +103,7 @@ function closeDialog() {
 function resetForm() {
   deptFormRef.value.resetFields();
   deptFormRef.value.clearValidate();
-  formData.id = undefined;
+  formData.id = null;
   formData.sort = 1;
 }
 

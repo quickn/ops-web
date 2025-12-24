@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { DockerContainer } from "./types";
+import {DockerContainer, DockerContainerInfo} from "./types";
 
 /**
  * 部门树形表格
@@ -22,7 +22,7 @@ export function listData(
  *
  * @param id
  */
-export function updateById(data?: DockerContainer) {
+export function updateById(data?: DockerContainerInfo) {
   return request({
     url: "/docker/container/updateById",
     method: "post",
@@ -38,6 +38,20 @@ export function updateById(data?: DockerContainer) {
 export function restartDocker(id: number) {
   return request({
     url: "/docker/container/restart/" + id,
+    method: "get",
+  });
+}
+
+export function stopDocker(id: number) {
+  return request({
+    url: "/docker/container/stop/" + id,
+    method: "get",
+  });
+}
+
+export function getListByServiceId(serviceId: number): AxiosPromise<string[]> {
+  return request({
+    url: "/docker/container/getListByServiceId/" + serviceId,
     method: "get",
   });
 }

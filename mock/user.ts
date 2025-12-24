@@ -141,7 +141,7 @@ export default [
     method: "get",
     response: ({ url }) => {
       const id = url.match(/\/api\/v1\/users\/(\d+)\/form/)[1];
-      let formData = null;
+      let formData = {};
       if (id == 2) {
         formData = {
           id: 2,
