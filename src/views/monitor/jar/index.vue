@@ -1,457 +1,3 @@
-<script setup lang="ts">
-// 引入图标组件
-import {
-  Search,
-  Refresh,
-  Upload,
-  Monitor,
-  Box,
-  Setting,
-  RefreshRight,
-  View,
-  Notebook,
-  Delete,
-  Document,
-  Edit,
-  Plus,
-} from "@element-plus/icons-vue";
-
-import {
-  listJarPackages,
-  uploadJar,
-  getAllAgents,
-  deployJar,
-  rebuildJar,
-  getDeployRecords,
-  getDeployStatus,
-  deleteJar,
-  getDockerfile,
-  updateDockerfile,
-} from "@/api/monitor/jar";
-import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
-
-const queryFormRef = ref(ElForm);
-
-const loading = ref(false);
-const uploadLoading = ref(false);
-const deployLoading = ref(false);
-const redeployLoading = ref(false);
-const dockerfileLoading = ref(false);
-const ids = ref<number[]>([]);
-const total = ref(0);
-
-const queryParams = reactive({
-  pageSize: 10,
-  pageNum: 1,
-  fileName: "",
-  status: undefined as number | undefined,
-});
-
-const dataList = ref<JarPackage[]>();
-const agentsList = ref<any[]>();
-const deployRecords = ref<any[]>();
-const deployStatus = ref<any>();
-
-// 上传相关
-const uploadDialogVisible = ref(false);
-const selectedFile = ref<File>();
-
-// Dockerfile相关
-const dockerfileDialogVisible = ref(false);
-const dockerfileContent = ref("");
-
-// 部署相关
-const deployDialogVisible = ref(false);
-const redeployDialogVisible = ref(false);
-const currentJarId = ref<number>();
-const currentJarName = ref<string>();
-
-// 部署目标
-const deployTargets = ref<DeployTarget[]>([
-  {
-    agentId: null,
-    containerName: "",
-    port: "8080",
-  },
-]);
-
-// 日志相关
-const logsDialogVisible = ref(false);
-const statusDialogVisible = ref(false);
-
-const uploadForm = reactive({
-  remark: "",
-});
-
-const redeployForm = reactive({
-  agentIds: [] as number[],
-  containerNames: [] as string[],
-});
-
-/** 查询 */
-function handleQuery() {
-  loading.value = true;
-  listJarPackages(queryParams).then(({ data }) => {
-    dataList.value = data.records;
-    total.value = data.total;
-    loading.value = false;
-  });
-}
-
-/** 重置查询 */
-function resetQuery() {
-  queryFormRef.value.resetFields();
-  queryParams.pageNum = 1;
-  handleQuery();
-}
-
-/** 显示上传对话框 */
-function showUploadDialog() {
-  uploadDialogVisible.value = true;
-  selectedFile.value = undefined;
-  uploadForm.remark = "";
-}
-
-/** 文件选择处理 */
-function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  if (input.files && input.files[0]) {
-    selectedFile.value = input.files[0];
-  }
-}
-
-/** 上传JAR包 */
-function handleUpload() {
-  if (!selectedFile.value) {
-    ElMessage.warning("请选择JAR文件");
-    return;
-  }
-
-  uploadLoading.value = true;
-  const formData = new FormData();
-  formData.append("file", selectedFile.value);
-  formData.append("remark", uploadForm.remark);
-
-  uploadJar(formData)
-    .then(() => {
-      ElMessage.success("上传成功");
-      uploadDialogVisible.value = false;
-      handleQuery();
-    })
-    .finally(() => {
-      uploadLoading.value = false;
-    });
-}
-
-/** 显示Dockerfile对话框 */
-function showDockerfileDialog(jar: JarPackage) {
-  currentJarId.value = jar.id;
-  currentJarName.value = jar.fileName;
-  dockerfileContent.value = "";
-
-  dockerfileLoading.value = true;
-  getDockerfile(jar.id!)
-    .then(({ data }) => {
-      dockerfileContent.value = data || getDefaultDockerfile(jar);
-      dockerfileDialogVisible.value = true;
-    })
-    .finally(() => {
-      dockerfileLoading.value = false;
-    });
-}
-
-/** 获取默认Dockerfile */
-function getDefaultDockerfile(jar: JarPackage): string {
-  return `FROM adoptopenjdk:8-jdk-hotspot
-
-WORKDIR /home/park
-
-# 暴露端口
-EXPOSE 8080
-
-# 启动命令
-ENTRYPOINT ["java", "-jar", "app.jar"]`;
-}
-
-/** 保存Dockerfile */
-function handleSaveDockerfile() {
-  if (!dockerfileContent.value.trim()) {
-    ElMessage.warning("Dockerfile内容不能为空");
-    return;
-  }
-
-  dockerfileLoading.value = true;
-  updateDockerfile(currentJarId.value!, dockerfileContent.value)
-    .then(() => {
-      ElMessage.success("Dockerfile保存成功");
-      dockerfileDialogVisible.value = false;
-      handleQuery();
-    })
-    .finally(() => {
-      dockerfileLoading.value = false;
-    });
-}
-
-/** 显示首次部署对话框 */
-function showDeployDialog(jar: JarPackage) {
-  currentJarId.value = jar.id;
-  currentJarName.value = jar.fileName;
-
-  // 检查是否已设置Dockerfile
-  if (!jar.dockerfileContent || !jar.dockerfileContent.trim()) {
-    ElMessage.warning("请先设置Dockerfile");
-    showDockerfileDialog(jar);
-    return;
-  }
-
-  getAllAgents().then(({ data }) => {
-    agentsList.value = data;
-    // 重置部署目标
-    deployTargets.value = [
-      {
-        agentId: null,
-        containerName: "",
-        port: "8080",
-      },
-    ];
-    deployDialogVisible.value = true;
-  });
-}
-
-/** 显示重新部署对话框 */
-function showRedeployDialog(jar: JarPackage) {
-  currentJarId.value = jar.id;
-  currentJarName.value = jar.fileName;
-
-  getAllAgents().then(({ data }) => {
-    agentsList.value = data.map((agent: any) => ({
-      ...agent,
-      selected: false,
-      selectedContainers: [] as string[],
-    }));
-
-    // 如果jar已有部署目标，可以默认选中
-    if (jar.agentIds && jar.targetContainerNames) {
-      const existingAgents = jar.agentIds.split(",").map((id) => parseInt(id));
-      const existingContainers = jar.targetContainerNames.split(",");
-
-      agentsList.value.forEach((agent) => {
-        if (existingAgents.includes(agent.agentId)) {
-          agent.selected = true;
-          // 找到该agent对应的容器
-          const agentContainers = existingContainers.filter(
-            (_, index) => existingAgents[index] === agent.agentId
-          );
-          agent.selectedContainers = agentContainers;
-        }
-      });
-    }
-
-    redeployForm.agentIds = [];
-    redeployForm.containerNames = [];
-    redeployDialogVisible.value = true;
-  });
-}
-
-/** 添加部署目标 */
-function addDeployTarget() {
-  deployTargets.value.push({
-    agentId: null,
-    containerName: "",
-    port: "8080",
-  });
-}
-
-/** 移除部署目标 */
-function removeDeployTarget(index: number) {
-  deployTargets.value.splice(index, 1);
-}
-
-/** 执行首次部署 */
-function handleDeploy() {
-  // 验证部署目标
-  const agentIds: number[] = [];
-  const containerNames: string[] = [];
-
-  for (const target of deployTargets.value) {
-    if (!target.agentId) {
-      ElMessage.error(
-        `第 ${deployTargets.value.indexOf(target) + 1} 行：请选择Agent`
-      );
-      return;
-    }
-
-    if (!target.containerName.trim()) {
-      ElMessage.error(
-        `第 ${deployTargets.value.indexOf(target) + 1} 行：请输入容器名称`
-      );
-      return;
-    }
-
-    // 检查容器名称是否重复
-    if (containerNames.includes(target.containerName.trim())) {
-      ElMessage.error(`容器名称重复：${target.containerName}`);
-      return;
-    }
-
-    agentIds.push(target.agentId);
-    containerNames.push(target.containerName.trim());
-  }
-
-  if (agentIds.length === 0) {
-    ElMessage.error("请至少添加一个部署目标");
-    return;
-  }
-
-  deployLoading.value = true;
-  deployJar(currentJarId.value!, { agentIds, containerNames })
-    .then(() => {
-      ElMessage.success("开始部署");
-      deployDialogVisible.value = false;
-      handleQuery();
-    })
-    .catch((error) => {
-      ElMessage.error("部署失败: " + error.response?.data?.msg);
-    })
-    .finally(() => {
-      deployLoading.value = false;
-    });
-}
-
-/** 执行重新部署 */
-function handleRedeploy() {
-  // 收集选择的Agent和容器
-  const agentIds: number[] = [];
-  const containerNames: string[] = [];
-
-  agentsList.value?.forEach((agent) => {
-    if (agent.selected && agent.selectedContainers.length > 0) {
-      agent.selectedContainers.forEach((container: string) => {
-        agentIds.push(agent.agentId);
-        containerNames.push(container);
-      });
-    }
-  });
-
-  // 重新部署时可以重新选择目标，也可以使用原有目标
-  redeployLoading.value = true;
-
-  // 构建请求参数
-  const requestData = agentIds.length > 0 ? { agentIds, containerNames } : null;
-
-  rebuildJar(currentJarId.value!, requestData)
-    .then(() => {
-      ElMessage.success("开始重新部署");
-      redeployDialogVisible.value = false;
-      handleQuery();
-    })
-    .finally(() => {
-      redeployLoading.value = false;
-    });
-}
-
-/** 根据Agent选择自动生成容器名称 */
-function generateContainerName(agentId: number, index: number) {
-  const agent = agentsList.value?.find((a) => a.agentId === agentId);
-  if (
-    agent &&
-    currentJarName.value &&
-    !deployTargets.value[index].containerName
-  ) {
-    const baseName = currentJarName.value
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "-");
-    const timestamp = new Date().getTime();
-    deployTargets.value[
-      index
-    ].containerName = `${baseName}-${agent.agentName}-${timestamp}`;
-  }
-}
-
-/** 快捷重新部署（使用原有目标） */
-function redeploy(id: number) {
-  ElMessageBox.confirm("确定要重新部署到原有容器吗？", "提示", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
-    loading.value = true;
-    rebuildJar(id)
-      .then(() => {
-        ElMessage.success("重新部署指令已执行");
-        handleQuery();
-      })
-      .finally(() => (loading.value = false));
-  });
-}
-
-/** 查看部署日志 */
-function viewDeployLogs(id: number) {
-  currentJarId.value = id;
-  getDeployRecords(id).then(({ data }) => {
-    deployRecords.value = data;
-    logsDialogVisible.value = true;
-  });
-}
-
-/** 查看部署状态 */
-function viewDeployStatus(id: number) {
-  currentJarId.value = id;
-  getDeployStatus(id).then(({ data }) => {
-    deployStatus.value = data;
-    statusDialogVisible.value = true;
-  });
-}
-
-/** 删除JAR包 */
-function deleteJarPackage(id: number) {
-  ElMessageBox.confirm("确定要删除该JAR包?", "警告", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
-    loading.value = true;
-    deleteJar(id)
-      .then(() => {
-        ElMessage.success("删除成功");
-        handleQuery();
-      })
-      .finally(() => (loading.value = false));
-  });
-}
-
-/** 获取状态文本 */
-function getStatusText(status: number): string {
-  const map: { [key: number]: string } = {
-    0: "未部署",
-    1: "部署中",
-    2: "部署成功",
-    3: "部署失败",
-  };
-  return map[status] || "未知";
-}
-
-/** 获取状态类型 */
-function getStatusType(status: number): string {
-  const map: { [key: number]: string } = {
-    0: "info",
-    1: "warning",
-    2: "success",
-    3: "danger",
-  };
-  return map[status] || "info";
-}
-
-/** 检查是否已设置Dockerfile */
-function hasDockerfile(jar: JarPackage): boolean {
-  return !!jar.dockerfileContent && jar.dockerfileContent.trim().length > 0;
-}
-
-onMounted(() => {
-  handleQuery();
-});
-</script>
-
 <template>
   <div class="app-container">
     <div class="search-container">
@@ -545,7 +91,7 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column label="上传时间" prop="createTime" width="160" />
-        <el-table-column fixed="right" label="操作" width="320" align="center">
+        <el-table-column fixed="right" label="操作" width="340" align="center">
           <template #default="scope">
             <el-button
               v-if="!hasDockerfile(scope.row)"
@@ -563,8 +109,20 @@ onMounted(() => {
               link
               @click="showDeployDialog(scope.row)"
             >
-              <el-icon><Setting /></el-icon>首次部署
+              <el-icon><Setting /></el-icon>部署
             </el-button>
+
+            <!-- 替换JAR包按钮 -->
+            <el-button
+              type="info"
+              size="small"
+              link
+              @click="showReplaceDialog(scope.row)"
+            >
+              <el-icon><Refresh /></el-icon>替换文件
+            </el-button>
+
+            <!-- 重新部署按钮 -->
             <el-button
               v-if="scope.row.status === 2"
               type="warning"
@@ -574,6 +132,7 @@ onMounted(() => {
             >
               <el-icon><RefreshRight /></el-icon>重新部署
             </el-button>
+
             <el-button
               type="info"
               size="small"
@@ -582,15 +141,7 @@ onMounted(() => {
             >
               <el-icon><Document /></el-icon>Dockerfile
             </el-button>
-            <el-button
-              v-if="scope.row.status !== 0"
-              type="success"
-              size="small"
-              link
-              @click="viewDeployStatus(scope.row.id)"
-            >
-              <el-icon><View /></el-icon>状态
-            </el-button>
+
             <el-button
               type="info"
               size="small"
@@ -599,6 +150,7 @@ onMounted(() => {
             >
               <el-icon><Notebook /></el-icon>日志
             </el-button>
+
             <el-button
               type="danger"
               size="small"
@@ -687,16 +239,16 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <!-- 首次部署对话框 -->
+    <!-- 部署对话框 -->
     <el-dialog
       v-model="deployDialogVisible"
-      :title="`首次部署 - ${currentJarName}`"
+      :title="`部署 - ${currentJarName}`"
       width="800px"
     >
       <el-alert
         type="info"
-        title="首次部署说明"
-        :description="`将根据Dockerfile自动构建镜像并创建新容器`"
+        title="部署说明"
+        description="系统会自动判断：容器不存在则创建新容器，容器已存在则替换JAR包"
         show-icon
         style="margin-bottom: 20px"
       />
@@ -800,8 +352,8 @@ onMounted(() => {
       >
         <h4 style="margin-top: 0; color: #409eff">部署说明：</h4>
         <ul style="padding-left: 20px; margin: 0; font-size: 13px; color: #666">
-          <li>系统将根据Dockerfile自动构建Docker镜像</li>
-          <li>在每个选中的Agent上创建新的容器</li>
+          <li>容器不存在：根据Dockerfile创建新容器</li>
+          <li>容器已存在：替换容器中的JAR包并重启</li>
           <li>容器名称必须是唯一的</li>
           <li>默认使用Dockerfile中EXPOSE的端口，如果没有则使用8080</li>
           <li>可以同时部署到多个Agent</li>
@@ -900,6 +452,33 @@ onMounted(() => {
           :loading="redeployLoading"
         >
           重新部署
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 替换JAR包对话框 -->
+    <el-dialog
+      v-model="replaceDialogVisible"
+      :title="`替换JAR包文件 - ${currentJarName}`"
+      width="400px"
+    >
+      <el-form>
+        <el-form-item label="选择JAR文件" required>
+          <input type="file" @change="handleFileChange" accept=".jar" />
+          <div style=" margin-top: 5px;font-size: 12px; color: #666">
+            请选择要替换的JAR文件
+          </div>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="replaceDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleReplace"
+          :loading="replaceLoading"
+        >
+          替换
         </el-button>
       </template>
     </el-dialog>
@@ -1032,6 +611,470 @@ onMounted(() => {
     </el-dialog>
   </div>
 </template>
+
+<script setup lang="ts">
+// 引入图标组件
+import {
+  Search,
+  Refresh,
+  Upload,
+  Monitor,
+  Box,
+  Setting,
+  RefreshRight,
+  View,
+  Notebook,
+  Delete,
+  Document,
+  Edit,
+  Plus,
+} from "@element-plus/icons-vue";
+
+import {
+  listJarPackages,
+  uploadJar,
+  getAllAgents,
+  deployJar,
+  rebuildJar,
+  getDeployRecords,
+  getDeployStatus,
+  deleteJar,
+  getDockerfile,
+  updateDockerfile,
+  replaceJarFile,
+} from "@/api/monitor/jar";
+import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
+
+const queryFormRef = ref(ElForm);
+
+const loading = ref(false);
+const uploadLoading = ref(false);
+const deployLoading = ref(false);
+const redeployLoading = ref(false);
+const dockerfileLoading = ref(false);
+const replaceLoading = ref(false);
+const ids = ref<number[]>([]);
+const total = ref(0);
+
+const queryParams = reactive({
+  pageSize: 10,
+  pageNum: 1,
+  fileName: "",
+  status: undefined as number | undefined,
+});
+
+const dataList = ref<JarPackage[]>();
+const agentsList = ref<any[]>();
+const deployRecords = ref<any[]>();
+const deployStatus = ref<any>();
+
+// 上传相关
+const uploadDialogVisible = ref(false);
+const selectedFile = ref<File>();
+
+// Dockerfile相关
+const dockerfileDialogVisible = ref(false);
+const dockerfileContent = ref("");
+
+// 部署相关
+const deployDialogVisible = ref(false);
+const redeployDialogVisible = ref(false);
+const currentJarId = ref<number>();
+const currentJarName = ref<string>();
+
+// 替换JAR包相关
+const replaceDialogVisible = ref(false);
+
+// 部署目标
+const deployTargets = ref<DeployTarget[]>([
+  {
+    agentId: null,
+    containerName: "",
+    port: "8080",
+  },
+]);
+
+// 日志相关
+const logsDialogVisible = ref(false);
+const statusDialogVisible = ref(false);
+
+const uploadForm = reactive({
+  remark: "",
+});
+
+const redeployForm = reactive({
+  agentIds: [] as number[],
+  containerNames: [] as string[],
+});
+
+/** 查询 */
+function handleQuery() {
+  loading.value = true;
+  listJarPackages(queryParams).then(({ data }) => {
+    dataList.value = data.records;
+    total.value = data.total;
+    loading.value = false;
+  });
+}
+
+/** 重置查询 */
+function resetQuery() {
+  queryFormRef.value.resetFields();
+  queryParams.pageNum = 1;
+  handleQuery();
+}
+
+/** 显示上传对话框 */
+function showUploadDialog() {
+  uploadDialogVisible.value = true;
+  selectedFile.value = undefined;
+  uploadForm.remark = "";
+}
+
+/** 文件选择处理 */
+function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (input.files && input.files[0]) {
+    selectedFile.value = input.files[0];
+  }
+}
+
+/** 上传JAR包 */
+function handleUpload() {
+  if (!selectedFile.value) {
+    ElMessage.warning("请选择JAR文件");
+    return;
+  }
+
+  uploadLoading.value = true;
+  const formData = new FormData();
+  formData.append("file", selectedFile.value);
+  formData.append("remark", uploadForm.remark);
+
+  uploadJar(formData)
+    .then(() => {
+      ElMessage.success("上传成功");
+      uploadDialogVisible.value = false;
+      handleQuery();
+    })
+    .finally(() => {
+      uploadLoading.value = false;
+    });
+}
+
+/** 显示Dockerfile对话框 */
+function showDockerfileDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+  dockerfileContent.value = "";
+
+  dockerfileLoading.value = true;
+  getDockerfile(jar.id!)
+    .then(({ data }) => {
+      dockerfileContent.value = data || getDefaultDockerfile(jar);
+      dockerfileDialogVisible.value = true;
+    })
+    .finally(() => {
+      dockerfileLoading.value = false;
+    });
+}
+
+/** 获取默认Dockerfile */
+function getDefaultDockerfile(jar: JarPackage): string {
+  return `FROM adoptopenjdk:8-jdk-hotspot
+
+WORKDIR /home/park
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动命令
+ENTRYPOINT ["java", "-jar", "app.jar"]`;
+}
+
+/** 保存Dockerfile */
+function handleSaveDockerfile() {
+  if (!dockerfileContent.value.trim()) {
+    ElMessage.warning("Dockerfile内容不能为空");
+    return;
+  }
+
+  dockerfileLoading.value = true;
+  updateDockerfile(currentJarId.value!, dockerfileContent.value)
+    .then(() => {
+      ElMessage.success("Dockerfile保存成功");
+      dockerfileDialogVisible.value = false;
+      handleQuery();
+    })
+    .finally(() => {
+      dockerfileLoading.value = false;
+    });
+}
+
+/** 显示部署对话框 */
+function showDeployDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+
+  // 检查是否已设置Dockerfile
+  if (!jar.dockerfileContent || !jar.dockerfileContent.trim()) {
+    ElMessage.warning("请先设置Dockerfile");
+    showDockerfileDialog(jar);
+    return;
+  }
+
+  getAllAgents().then(({ data }) => {
+    agentsList.value = data;
+    // 重置部署目标
+    deployTargets.value = [
+      {
+        agentId: null,
+        containerName: "",
+        port: "8080",
+      },
+    ];
+    deployDialogVisible.value = true;
+  });
+}
+
+/** 显示重新部署对话框 */
+function showRedeployDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+
+  getAllAgents().then(({ data }) => {
+    agentsList.value = data.map((agent: any) => ({
+      ...agent,
+      selected: false,
+      selectedContainers: [] as string[],
+    }));
+
+    // 如果jar已有部署目标，可以默认选中
+    if (jar.agentIds && jar.targetContainerNames) {
+      const existingAgents = jar.agentIds.split(",").map((id) => parseInt(id));
+      const existingContainers = jar.targetContainerNames.split(",");
+
+      agentsList.value.forEach((agent) => {
+        if (existingAgents.includes(agent.agentId)) {
+          agent.selected = true;
+          // 找到该agent对应的容器
+          const agentContainers = existingContainers.filter(
+            (_, index) => existingAgents[index] === agent.agentId
+          );
+          agent.selectedContainers = agentContainers;
+        }
+      });
+    }
+
+    redeployForm.agentIds = [];
+    redeployForm.containerNames = [];
+    redeployDialogVisible.value = true;
+  });
+}
+
+/** 显示替换对话框 */
+function showReplaceDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+  selectedFile.value = undefined;
+  replaceDialogVisible.value = true;
+}
+
+/** 执行替换JAR包 */
+function handleReplace() {
+  if (!selectedFile.value) {
+    ElMessage.warning("请选择JAR文件");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", selectedFile.value);
+
+  replaceLoading.value = true;
+  replaceJarFile(currentJarId.value!, formData)
+    .then(() => {
+      ElMessage.success("JAR包替换成功");
+      replaceDialogVisible.value = false;
+      handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("替换失败: " + error.response?.data?.msg);
+    })
+    .finally(() => {
+      replaceLoading.value = false;
+    });
+}
+
+/** 添加部署目标 */
+function addDeployTarget() {
+  deployTargets.value.push({
+    agentId: null,
+    containerName: "",
+    port: "8080",
+  });
+}
+
+/** 移除部署目标 */
+function removeDeployTarget(index: number) {
+  deployTargets.value.splice(index, 1);
+}
+
+/** 执行部署 */
+function handleDeploy() {
+  // 验证部署目标
+  const agentIds: number[] = [];
+  const containerNames: string[] = [];
+
+  for (const target of deployTargets.value) {
+    if (!target.agentId) {
+      ElMessage.error(
+        `第 ${deployTargets.value.indexOf(target) + 1} 行：请选择Agent`
+      );
+      return;
+    }
+
+    if (!target.containerName.trim()) {
+      ElMessage.error(
+        `第 ${deployTargets.value.indexOf(target) + 1} 行：请输入容器名称`
+      );
+      return;
+    }
+
+    agentIds.push(target.agentId);
+    containerNames.push(target.containerName.trim());
+  }
+
+  deployLoading.value = true;
+  deployJar(currentJarId.value!, { agentIds, containerNames })
+    .then(() => {
+      ElMessage.success("开始部署，系统会自动判断容器状态");
+      deployDialogVisible.value = false;
+      handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("部署失败: " + error.response?.data?.msg);
+    })
+    .finally(() => {
+      deployLoading.value = false;
+    });
+}
+
+/** 执行重新部署 */
+function handleRedeploy() {
+  // 收集选择的Agent和容器
+  const agentIds: number[] = [];
+  const containerNames: string[] = [];
+
+  agentsList.value?.forEach((agent) => {
+    if (agent.selected && agent.selectedContainers.length > 0) {
+      agent.selectedContainers.forEach((container: string) => {
+        agentIds.push(agent.agentId);
+        containerNames.push(container);
+      });
+    }
+  });
+
+  // 重新部署时可以重新选择目标，也可以使用原有目标
+  redeployLoading.value = true;
+
+  // 构建请求参数
+  const requestData = agentIds.length > 0 ? { agentIds, containerNames } : null;
+
+  rebuildJar(currentJarId.value!, requestData)
+    .then(() => {
+      ElMessage.success("开始重新部署");
+      redeployDialogVisible.value = false;
+      handleQuery();
+    })
+    .finally(() => {
+      redeployLoading.value = false;
+    });
+}
+
+/** 根据Agent选择自动生成容器名称 */
+function generateContainerName(agentId: number, index: number) {
+  const agent = agentsList.value?.find((a) => a.agentId === agentId);
+  if (
+    agent &&
+    currentJarName.value &&
+    !deployTargets.value[index].containerName
+  ) {
+    const baseName = currentJarName.value
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-");
+    const timestamp = new Date().getTime();
+    deployTargets.value[
+      index
+    ].containerName = `${baseName}-${agent.agentName}-${timestamp}`;
+  }
+}
+
+/** 查看部署日志 */
+function viewDeployLogs(id: number) {
+  currentJarId.value = id;
+  getDeployRecords(id).then(({ data }) => {
+    deployRecords.value = data;
+    logsDialogVisible.value = true;
+  });
+}
+
+/** 查看部署状态 */
+function viewDeployStatus(id: number) {
+  currentJarId.value = id;
+  getDeployStatus(id).then(({ data }) => {
+    deployStatus.value = data;
+    statusDialogVisible.value = true;
+  });
+}
+
+/** 删除JAR包 */
+function deleteJarPackage(id: number) {
+  ElMessageBox.confirm("确定要删除该JAR包?", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    deleteJar(id)
+      .then(() => {
+        ElMessage.success("删除成功");
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
+/** 获取状态文本 */
+function getStatusText(status: number): string {
+  const map: { [key: number]: string } = {
+    0: "未部署",
+    1: "部署中",
+    2: "部署成功",
+    3: "部署失败",
+  };
+  return map[status] || "未知";
+}
+
+/** 获取状态类型 */
+function getStatusType(status: number): string {
+  const map: { [key: number]: string } = {
+    0: "info",
+    1: "warning",
+    2: "success",
+    3: "danger",
+  };
+  return map[status] || "info";
+}
+
+/** 检查是否已设置Dockerfile */
+function hasDockerfile(jar: JarPackage): boolean {
+  return !!jar.dockerfileContent && jar.dockerfileContent.trim().length > 0;
+}
+
+onMounted(() => {
+  handleQuery();
+});
+</script>
 
 <style scoped>
 .agent-info {

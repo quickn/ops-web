@@ -230,6 +230,20 @@
                       <el-tag v-else type="info" size="small">离线</el-tag>
                     </template>
                   </el-table-column>
+                  <!-- 添加操作列 -->
+                  <el-table-column label="操作" width="100" fixed="right">
+                    <template #default="scope">
+                      <el-button
+                        type="primary"
+                        size="small"
+                        link
+                        @click="viewServerFiles(scope.row)"
+                      >
+                        <i-ep-folder />
+                        查看文件
+                      </el-button>
+                    </template>
+                  </el-table-column>
                 </el-table>
               </div>
 
@@ -297,65 +311,6 @@
           </el-col>
         </el-row>
       </div>
-
-      <!-- 服务器列表表格 -->
-      <el-table
-        v-loading="loading"
-        :data="dataList"
-        highlight-current-row
-        border
-      >
-        <el-table-column label="服务名" prop="serviceName" width="90" />
-        <el-table-column label="主机名" prop="hostname" width="120" />
-        <el-table-column label="是否跳板机" align="center" width="100">
-          <template #default="scope">
-            <el-tag v-if="scope.row.isJumpServer" type="success"> 是 </el-tag>
-            <el-tag v-else type="info">否</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="是否开启监控" align="center" width="100">
-          <template #default="scope">
-            <el-tag v-if="scope.row.isMonitor === true" type="success">
-              已开启
-            </el-tag>
-            <el-tag v-else type="info">禁用</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="更新时间" prop="updateTime" width="160" />
-        <el-table-column fixed="right" label="操作" width="180">
-          <template #default="scope">
-            <el-button
-              v-if="!scope.row.isJumpServer"
-              type="primary"
-              size="small"
-              link
-              @click="addToSelection(scope.row)"
-            >
-              <i-ep-select />
-              添加到同步
-            </el-button>
-            <el-button
-              v-if="scope.row.isJumpServer"
-              type="success"
-              size="small"
-              link
-              @click="selectAsJumpServer(scope.row)"
-            >
-              <i-ep-monitor />
-              设为跳板机
-            </el-button>
-            <el-button
-              type="info"
-              size="small"
-              link
-              @click="viewServerFiles(scope.row)"
-            >
-              <i-ep-folder />
-              查看文件
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
     </el-card>
   </div>
 </template>

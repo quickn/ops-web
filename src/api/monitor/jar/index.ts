@@ -79,3 +79,15 @@ export function deleteJar(id: number) {
     method: "delete",
   });
 }
+
+// 新增替换JAR包接口
+export function replaceJarFile(id: number, data: FormData) {
+  return request({
+    url: `/jar/${id}/replace`,
+    method: "post",
+    data,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
