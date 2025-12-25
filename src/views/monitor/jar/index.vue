@@ -202,7 +202,7 @@
                 <div style="font-weight: 500; color: #303133">
                   {{ selectedFile.name }}
                 </div>
-                <div style=" margin-top: 4px;font-size: 12px; color: #909399">
+                <div style="margin-top: 4px; font-size: 12px; color: #909399">
                   {{ formatFileSize(selectedFile.size) }}
                 </div>
               </div>
@@ -542,7 +542,7 @@
                 <div style="font-weight: 500; color: #303133">
                   {{ selectedFile.name }}
                 </div>
-                <div style=" margin-top: 4px;font-size: 12px; color: #909399">
+                <div style="margin-top: 4px; font-size: 12px; color: #909399">
                   {{ formatFileSize(selectedFile.size) }}
                 </div>
               </div>
@@ -868,10 +868,10 @@ function handleFileChange(event: Event) {
       return;
     }
 
-    // 验证文件大小（200MB限制）
-    const maxSize = 200 * 1024 * 1024; // 200MB
+    // 验证文件大小（500MB限制）
+    const maxSize = 500 * 1024 * 1024; // 200MB
     if (file.size > maxSize) {
-      ElMessage.warning("文件大小不能超过200MB");
+      ElMessage.warning("文件大小不能超过500MB");
       return;
     }
 
