@@ -1,50 +1,8 @@
 <template>
   <div class="app-container">
-    <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="服务" prop="status">
-          <el-select
-            v-model="queryParams.serviceId"
-            placeholder="全部"
-            clearable
-            style="width: 100px"
-          >
-            <el-option
-              v-for="item in serviceInfoList"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item prop="keywords" label="" style="width: 150px">
-          <el-input
-            v-model="queryParams.hostname"
-            placeholder="主机名"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" @click="handleQuery">
-            <i-ep-search />
-            搜索
-          </el-button>
-          <el-button @click="resetQuery">
-            <i-ep-refresh />
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-
     <el-card shadow="never">
       <!-- 文件同步控制台 -->
-      <div class="sync-console mb-6">
-        <h3 class="console-title">文件同步控制台</h3>
-
+      <div>
         <el-row :gutter="20" class="console-content">
           <!-- 左侧：跳板机配置 -->
           <el-col :span="12">
@@ -135,7 +93,7 @@
                 <el-table
                   v-loading="fileLoading"
                   :data="fileList"
-                  height="150"
+                  height="300"
                   border
                   class="file-table"
                   @row-click="handleFileClick"
