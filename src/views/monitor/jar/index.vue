@@ -103,7 +103,7 @@
               <el-icon><Edit /></el-icon>设置Dockerfile
             </el-button>
             <el-button
-              v-else-if="scope.row.status === 0"
+              v-else-if="scope.row.status === 0 || scope.row.status === 3"
               type="primary"
               size="small"
               link
@@ -465,7 +465,7 @@
       <el-form>
         <el-form-item label="选择JAR文件" required>
           <input type="file" @change="handleFileChange" accept=".jar" />
-          <div style=" margin-top: 5px;font-size: 12px; color: #666">
+          <div style="margin-top: 5px; font-size: 12px; color: #666">
             请选择要替换的JAR文件
           </div>
         </el-form-item>
