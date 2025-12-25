@@ -11,6 +11,21 @@
           />
         </el-form-item>
 
+        <el-form-item label="服务" prop="serviceId" style="width: 120px">
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="全部服务"
+            clearable
+          >
+            <el-option
+              v-for="item in serviceList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="状态" prop="status" style="width: 120px">
           <el-select v-model="queryParams.status" placeholder="全部" clearable>
             <el-option label="未部署" :value="0" />
@@ -46,6 +61,14 @@
         border
       >
         <el-table-column label="文件名" prop="fileName" width="180" />
+        <el-table-column label="服务名称" prop="serviceName" width="120">
+          <template #default="scope">
+            <el-tag v-if="scope.row.serviceName" type="info">
+              {{ scope.row.serviceName }}
+            </el-tag>
+            <span v-else style="color: #999">未关联</span>
+          </template>
+        </el-table-column>
         <el-table-column label="版本号" prop="version" width="100">
           <template #default="scope">
             <el-tag type="info">{{ scope.row.version }}</el-tag>
@@ -172,7 +195,7 @@
       />
     </el-card>
 
-    <!-- 上传对话框 - 优化后的UI -->
+    <!-- 上传对话框 - 增加服务选择（必填） -->
     <el-dialog
       v-model="uploadDialogVisible"
       title="上传JAR包"
@@ -185,6 +208,24 @@
         ref="uploadFormRef"
         :rules="uploadRules"
       >
+        <el-form-item label="关联服务" prop="serviceId" required>
+          <el-select
+            v-model="uploadForm.serviceId"
+            placeholder="请选择服务"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in serviceList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+          <div style="margin-top: 5px; font-size: 12px; color: #909399">
+            • 必须选择服务用于分类管理
+          </div>
+        </el-form-item>
+
         <el-form-item label="JAR文件" prop="file" required>
           <div class="upload-area" @click="triggerFileInput">
             <div class="upload-content" v-if="!selectedFile">
@@ -251,7 +292,7 @@
           type="primary"
           @click="handleUpload"
           :loading="uploadLoading"
-          :disabled="!selectedFile"
+          :disabled="!selectedFile || !uploadForm.serviceId"
         >
           上传
         </el-button>
@@ -750,6 +791,8 @@ import {
   replaceJarFile,
 } from "@/api/monitor/jar";
 import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
+import { listAll } from "@/api/monitor/service";
+import { ServiceInfo } from "@/api/monitor/service/types";
 
 const queryFormRef = ref(ElForm);
 const uploadFormRef = ref(ElForm);
@@ -769,6 +812,7 @@ const queryParams = reactive({
   pageSize: 10,
   pageNum: 1,
   fileName: "",
+  serviceId: undefined as number | undefined,
   status: undefined as number | undefined,
 });
 
@@ -776,6 +820,7 @@ const dataList = ref<JarPackage[]>();
 const agentsList = ref<any[]>();
 const deployRecords = ref<any[]>();
 const deployStatus = ref<any>();
+const serviceList = ref<ServiceInfo[]>([]); // 服务列表
 
 // 上传相关
 const uploadDialogVisible = ref(false);
@@ -807,6 +852,7 @@ const logsDialogVisible = ref(false);
 const statusDialogVisible = ref(false);
 
 const uploadForm = reactive({
+  serviceId: undefined as number | undefined,
   remark: "",
 });
 
@@ -817,6 +863,7 @@ const redeployForm = reactive({
 
 // 上传验证规则
 const uploadRules = {
+  serviceId: [{ required: true, message: "请选择关联服务", trigger: "change" }],
   file: [{ required: true, message: "请选择JAR文件", trigger: "change" }],
 };
 
@@ -827,6 +874,13 @@ function handleQuery() {
     dataList.value = data.records;
     total.value = data.total;
     loading.value = false;
+  });
+}
+
+/** 获取服务列表 */
+function loadServiceList() {
+  listAll().then(({ data }) => {
+    serviceList.value = data;
   });
 }
 
@@ -841,6 +895,7 @@ function resetQuery() {
 function showUploadDialog() {
   uploadDialogVisible.value = true;
   selectedFile.value = undefined;
+  uploadForm.serviceId = undefined;
   uploadForm.remark = "";
   if (uploadFormRef.value) {
     uploadFormRef.value.resetFields();
@@ -900,16 +955,35 @@ function handleUpload() {
     return;
   }
 
+  if (!uploadForm.serviceId) {
+    ElMessage.warning("请选择关联服务");
+    return;
+  }
+
+  // 根据serviceId获取服务名称
+  const selectedService = serviceList.value.find(
+    (item) => item.id === uploadForm.serviceId
+  );
+  if (!selectedService) {
+    ElMessage.warning("选择的服务不存在");
+    return;
+  }
+
   uploadLoading.value = true;
   const formData = new FormData();
   formData.append("file", selectedFile.value);
-  formData.append("remark", uploadForm.remark);
+  formData.append("serviceId", uploadForm.serviceId.toString());
+  formData.append("serviceName", selectedService.name);
+  formData.append("remark", uploadForm.remark || "");
 
   uploadJar(formData)
     .then(() => {
       ElMessage.success("上传成功");
       uploadDialogVisible.value = false;
       handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("上传失败: " + error.response?.data?.msg);
     })
     .finally(() => {
       uploadLoading.value = false;
@@ -1233,6 +1307,7 @@ function hasDockerfile(jar: JarPackage): boolean {
 
 onMounted(() => {
   handleQuery();
+  loadServiceList();
 });
 </script>
 
