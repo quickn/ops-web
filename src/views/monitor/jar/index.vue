@@ -172,22 +172,86 @@
       />
     </el-card>
 
-    <!-- 上传对话框 -->
-    <el-dialog v-model="uploadDialogVisible" title="上传JAR包" width="500px">
-      <el-form :model="uploadForm" label-width="80px">
-        <el-form-item label="文件" required>
-          <input type="file" @change="handleFileChange" accept=".jar" />
+    <!-- 上传对话框 - 优化后的UI -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="上传JAR包"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        :model="uploadForm"
+        label-width="80px"
+        ref="uploadFormRef"
+        :rules="uploadRules"
+      >
+        <el-form-item label="JAR文件" prop="file" required>
+          <div class="upload-area" @click="triggerFileInput">
+            <div class="upload-content" v-if="!selectedFile">
+              <el-icon size="48" color="#409EFF"><Upload /></el-icon>
+              <div style="margin-top: 12px; font-weight: 500; color: #409eff">
+                点击或拖拽文件到此处
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: #909399">
+                支持 .jar 格式文件
+              </div>
+            </div>
+            <div class="file-preview" v-else>
+              <el-icon size="32" color="#67C23A"><CircleCheck /></el-icon>
+              <div style="margin-top: 8px; text-align: center">
+                <div style="font-weight: 500; color: #303133">
+                  {{ selectedFile.name }}
+                </div>
+                <div style=" margin-top: 4px;font-size: 12px; color: #909399">
+                  {{ formatFileSize(selectedFile.size) }}
+                </div>
+              </div>
+              <el-button
+                size="small"
+                type="danger"
+                text
+                @click.stop="removeFile"
+                style="margin-top: 12px"
+              >
+                移除
+              </el-button>
+            </div>
+            <input
+              ref="fileInputRef"
+              type="file"
+              @change="handleFileChange"
+              accept=".jar"
+              style="display: none"
+            />
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #909399">
+            <div>• 最大文件大小：200MB</div>
+            <div>• 请确保JAR包为可执行的Spring Boot应用</div>
+          </div>
         </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="uploadForm.remark" type="textarea" :rows="2" />
+
+        <el-form-item label="备注" prop="remark">
+          <el-input
+            v-model="uploadForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入JAR包的备注信息（可选）"
+            maxlength="200"
+            show-word-limit
+          />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button
+          @click="uploadDialogVisible = false"
+          :disabled="uploadLoading"
+          >取消</el-button
+        >
         <el-button
           type="primary"
           @click="handleUpload"
           :loading="uploadLoading"
+          :disabled="!selectedFile"
         >
           上传
         </el-button>
@@ -239,11 +303,12 @@
       </template>
     </el-dialog>
 
-    <!-- 部署对话框 -->
+    <!-- 部署对话框 - 移除端口列，容器名称使用JAR包名 -->
     <el-dialog
       v-model="deployDialogVisible"
       :title="`部署 - ${currentJarName}`"
-      width="800px"
+      width="700px"
+      :close-on-click-modal="false"
     >
       <el-alert
         type="info"
@@ -269,7 +334,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Agent" min-width="200">
+        <el-table-column label="Agent" min-width="250">
           <template #default="scope">
             <el-select
               v-model="scope.row.agentId"
@@ -311,19 +376,13 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="容器名称" min-width="200">
+        <el-table-column label="容器名称" min-width="250">
           <template #default="scope">
             <el-input
               v-model="scope.row.containerName"
-              placeholder="输入容器名称"
+              :placeholder="getContainerNamePlaceholder(currentJarName)"
               @blur="scope.row.containerName = scope.row.containerName.trim()"
             />
-          </template>
-        </el-table-column>
-
-        <el-table-column label="端口" width="120">
-          <template #default="scope">
-            <el-input v-model="scope.row.port" placeholder="8080" />
           </template>
         </el-table-column>
 
@@ -355,8 +414,9 @@
           <li>容器不存在：根据Dockerfile创建新容器</li>
           <li>容器已存在：替换容器中的JAR包并重启</li>
           <li>容器名称必须是唯一的</li>
-          <li>默认使用Dockerfile中EXPOSE的端口，如果没有则使用8080</li>
+          <li>默认使用Dockerfile中EXPOSE的端口</li>
           <li>可以同时部署到多个Agent</li>
+          <li>容器名称建议使用JAR包名相关，便于识别</li>
         </ul>
       </div>
 
@@ -378,6 +438,7 @@
       v-model="redeployDialogVisible"
       :title="`重新部署 - ${currentJarName}`"
       width="700px"
+      :close-on-click-modal="false"
     >
       <div
         v-if="!agentsList || agentsList.length === 0"
@@ -456,27 +517,71 @@
       </template>
     </el-dialog>
 
-    <!-- 替换JAR包对话框 -->
+    <!-- 替换JAR包对话框 - 优化UI -->
     <el-dialog
       v-model="replaceDialogVisible"
       :title="`替换JAR包文件 - ${currentJarName}`"
-      width="400px"
+      width="500px"
+      :close-on-click-modal="false"
     >
       <el-form>
-        <el-form-item label="选择JAR文件" required>
-          <input type="file" @change="handleFileChange" accept=".jar" />
-          <div style="margin-top: 5px; font-size: 12px; color: #666">
-            请选择要替换的JAR文件
+        <el-form-item label="JAR文件" required>
+          <div class="upload-area" @click="triggerFileInput">
+            <div class="upload-content" v-if="!selectedFile">
+              <el-icon size="48" color="#409EFF"><Upload /></el-icon>
+              <div style="margin-top: 12px; font-weight: 500; color: #409eff">
+                点击或拖拽文件到此处
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: #909399">
+                支持 .jar 格式文件
+              </div>
+            </div>
+            <div class="file-preview" v-else>
+              <el-icon size="32" color="#67C23A"><CircleCheck /></el-icon>
+              <div style="margin-top: 8px; text-align: center">
+                <div style="font-weight: 500; color: #303133">
+                  {{ selectedFile.name }}
+                </div>
+                <div style=" margin-top: 4px;font-size: 12px; color: #909399">
+                  {{ formatFileSize(selectedFile.size) }}
+                </div>
+              </div>
+              <el-button
+                size="small"
+                type="danger"
+                text
+                @click.stop="removeFile"
+                style="margin-top: 12px"
+              >
+                移除
+              </el-button>
+            </div>
+            <input
+              ref="replaceFileInputRef"
+              type="file"
+              @change="handleFileChange"
+              accept=".jar"
+              style="display: none"
+            />
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #909399">
+            <div>• 替换后所有部署的容器将自动重启</div>
+            <div>• 请确保新JAR包与原有应用版本兼容</div>
           </div>
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="replaceDialogVisible = false">取消</el-button>
+        <el-button
+          @click="replaceDialogVisible = false"
+          :disabled="replaceLoading"
+          >取消</el-button
+        >
         <el-button
           type="primary"
           @click="handleReplace"
           :loading="replaceLoading"
+          :disabled="!selectedFile"
         >
           替换
         </el-button>
@@ -628,6 +733,7 @@ import {
   Document,
   Edit,
   Plus,
+  CircleCheck,
 } from "@element-plus/icons-vue";
 
 import {
@@ -646,6 +752,9 @@ import {
 import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
 
 const queryFormRef = ref(ElForm);
+const uploadFormRef = ref(ElForm);
+const fileInputRef = ref<HTMLInputElement>();
+const replaceFileInputRef = ref<HTMLInputElement>();
 
 const loading = ref(false);
 const uploadLoading = ref(false);
@@ -685,12 +794,11 @@ const currentJarName = ref<string>();
 // 替换JAR包相关
 const replaceDialogVisible = ref(false);
 
-// 部署目标
+// 部署目标 - 移除port字段
 const deployTargets = ref<DeployTarget[]>([
   {
     agentId: null,
     containerName: "",
-    port: "8080",
   },
 ]);
 
@@ -706,6 +814,11 @@ const redeployForm = reactive({
   agentIds: [] as number[],
   containerNames: [] as string[],
 });
+
+// 上传验证规则
+const uploadRules = {
+  file: [{ required: true, message: "请选择JAR文件", trigger: "change" }],
+};
 
 /** 查询 */
 function handleQuery() {
@@ -729,14 +842,55 @@ function showUploadDialog() {
   uploadDialogVisible.value = true;
   selectedFile.value = undefined;
   uploadForm.remark = "";
+  if (uploadFormRef.value) {
+    uploadFormRef.value.resetFields();
+  }
+}
+
+/** 触发文件输入框 */
+function triggerFileInput() {
+  if (uploadDialogVisible.value) {
+    fileInputRef.value?.click();
+  } else if (replaceDialogVisible.value) {
+    replaceFileInputRef.value?.click();
+  }
 }
 
 /** 文件选择处理 */
 function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
   if (input.files && input.files[0]) {
-    selectedFile.value = input.files[0];
+    const file = input.files[0];
+
+    // 验证文件类型
+    if (!file.name.toLowerCase().endsWith(".jar")) {
+      ElMessage.warning("请选择JAR格式的文件");
+      return;
+    }
+
+    // 验证文件大小（200MB限制）
+    const maxSize = 200 * 1024 * 1024; // 200MB
+    if (file.size > maxSize) {
+      ElMessage.warning("文件大小不能超过200MB");
+      return;
+    }
+
+    selectedFile.value = file;
   }
+}
+
+/** 移除文件 */
+function removeFile() {
+  selectedFile.value = undefined;
+}
+
+/** 格式化文件大小 */
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
 /** 上传JAR包 */
@@ -830,11 +984,22 @@ function showDeployDialog(jar: JarPackage) {
       {
         agentId: null,
         containerName: "",
-        port: "8080",
       },
     ];
     deployDialogVisible.value = true;
   });
+}
+
+/** 获取容器名称占位符 */
+function getContainerNamePlaceholder(jarName: string): string {
+  if (!jarName) return "输入容器名称";
+  const baseName = jarName
+    .toLowerCase()
+    .replace(/\.jar$/i, "") // 移除.jar后缀
+    .replace(/[^a-z0-9]/g, "-") // 替换特殊字符为连字符
+    .replace(/-+/g, "-") // 合并多个连字符
+    .replace(/^-|-$/g, ""); // 移除首尾连字符
+  return `${baseName}`;
 }
 
 /** 显示重新部署对话框 */
@@ -910,7 +1075,6 @@ function addDeployTarget() {
   deployTargets.value.push({
     agentId: null,
     containerName: "",
-    port: "8080",
   });
 }
 
@@ -999,13 +1163,9 @@ function generateContainerName(agentId: number, index: number) {
     currentJarName.value &&
     !deployTargets.value[index].containerName
   ) {
-    const baseName = currentJarName.value
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "-");
-    const timestamp = new Date().getTime();
-    deployTargets.value[
-      index
-    ].containerName = `${baseName}-${agent.agentName}-${timestamp}`;
+    // 使用JAR包名作为容器名称的基础
+    const baseName = getContainerNamePlaceholder(currentJarName.value);
+    deployTargets.value[index].containerName = baseName;
   }
 }
 
@@ -1090,5 +1250,56 @@ onMounted(() => {
 .agent-detail {
   font-size: 12px;
   color: #666;
+}
+
+/* 上传区域样式 */
+.upload-area {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 200px;
+  padding: 20px;
+  cursor: pointer;
+  background-color: #fafafa;
+  border: 2px dashed #dcdfe6;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  background-color: #f0f7ff;
+  border-color: #409eff;
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* 文件拖拽样式 */
+.upload-area.dragover {
+  background-color: #ecf5ff;
+  border-color: #409eff;
+  transform: scale(1.02);
+}
+
+.app-container {
+  padding: 20px;
+}
+
+.search-container {
+  margin-bottom: 20px;
 }
 </style>
