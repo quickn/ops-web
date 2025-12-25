@@ -11,6 +11,21 @@
           />
         </el-form-item>
 
+        <el-form-item label="服务" prop="serviceId" style="width: 120px">
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="全部服务"
+            clearable
+          >
+            <el-option
+              v-for="item in serviceList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="状态" prop="status" style="width: 120px">
           <el-select v-model="queryParams.status" placeholder="全部" clearable>
             <el-option label="未部署" :value="0" />
@@ -46,6 +61,14 @@
         border
       >
         <el-table-column label="文件名" prop="fileName" width="180" />
+        <el-table-column label="服务名称" prop="serviceName" width="120">
+          <template #default="scope">
+            <el-tag v-if="scope.row.serviceName" type="info">
+              {{ scope.row.serviceName }}
+            </el-tag>
+            <span v-else style="color: #999">未关联</span>
+          </template>
+        </el-table-column>
         <el-table-column label="版本号" prop="version" width="100">
           <template #default="scope">
             <el-tag type="info">{{ scope.row.version }}</el-tag>
@@ -172,7 +195,7 @@
       />
     </el-card>
 
-    <!-- 上传对话框 - 优化后的UI -->
+    <!-- 上传对话框 - 增加服务选择（必填） -->
     <el-dialog
       v-model="uploadDialogVisible"
       title="上传JAR包"
@@ -185,6 +208,24 @@
         ref="uploadFormRef"
         :rules="uploadRules"
       >
+        <el-form-item label="关联服务" prop="serviceId" required>
+          <el-select
+            v-model="uploadForm.serviceId"
+            placeholder="请选择服务"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in serviceList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+          <div style="margin-top: 5px; font-size: 12px; color: #909399">
+            • 必须选择服务用于分类管理
+          </div>
+        </el-form-item>
+
         <el-form-item label="JAR文件" prop="file" required>
           <div class="upload-area" @click="triggerFileInput">
             <div class="upload-content" v-if="!selectedFile">
@@ -225,7 +266,7 @@
             />
           </div>
           <div style="margin-top: 10px; font-size: 12px; color: #909399">
-            <div>• 最大文件大小：200MB</div>
+            <div>• 最大文件大小：500MB</div>
             <div>• 请确保JAR包为可执行的Spring Boot应用</div>
           </div>
         </el-form-item>
@@ -251,7 +292,7 @@
           type="primary"
           @click="handleUpload"
           :loading="uploadLoading"
-          :disabled="!selectedFile"
+          :disabled="!selectedFile || !uploadForm.serviceId"
         >
           上传
         </el-button>
@@ -287,7 +328,9 @@
         </el-form>
 
         <div style="margin-top: 10px; font-size: 12px; color: #666">
-          提示：JAR文件将通过下载方式提供给Agent，路径为/app/app.jar
+          提示：JAR文件将通过下载方式提供给Agent，路径为/home/park/{{
+            currentJarName || "app.jar"
+          }}
         </div>
       </div>
 
@@ -433,74 +476,76 @@
       </template>
     </el-dialog>
 
-    <!-- 重新部署对话框 -->
+    <!-- 重新部署对话框 - 修改后只显示已部署的容器 -->
     <el-dialog
       v-model="redeployDialogVisible"
       :title="`重新部署 - ${currentJarName}`"
       width="700px"
       :close-on-click-modal="false"
     >
-      <div
-        v-if="!agentsList || agentsList.length === 0"
-        style="padding: 40px 0; text-align: center"
-      >
-        <el-empty description="暂无可用Agent" />
+      <div v-if="!hasDeployedContainers">
+        <el-empty description="暂无部署记录，无法重新部署" />
       </div>
 
       <div v-else>
         <el-alert
           type="info"
           title="重新部署只替换JAR包"
-          description="将替换所选容器中的/app/app.jar文件，然后重启容器"
+          description="将替换所选容器中的JAR文件，然后重启容器"
           show-icon
           style="margin-bottom: 15px"
         />
 
         <div
-          v-for="agent in agentsList"
+          v-for="agent in redeployAgents"
           :key="agent.agentId"
           style="margin-bottom: 20px"
         >
-          <el-checkbox
-            v-model="agent.selected"
-            @change="
-              () => {
-                if (!agent.selected) agent.selectedContainers = [];
-              }
-            "
-          >
-            <strong>{{ agent.agentName }}</strong>
-            <span style="margin-left: 10px; font-size: 12px; color: #666">
+          <div style="margin-bottom: 8px; font-weight: bold">
+            <el-icon><Monitor /></el-icon>
+            {{ agent.agentName }}
+            <span
+              style="
+                margin-left: 10px;
+                font-size: 12px;
+                font-weight: normal;
+                color: #666;
+              "
+            >
               ({{ agent.agentIp }}:{{ agent.agentPort }})
             </span>
-          </el-checkbox>
+          </div>
 
-          <div
-            v-if="agent.selected"
-            style="margin-top: 10px; margin-left: 24px"
-          >
-            <div style="margin-bottom: 8px; font-size: 12px; color: #666">
-              选择要更新的容器：
-            </div>
-            <el-checkbox-group v-model="agent.selectedContainers">
-              <div
-                v-for="container in agent.containers"
-                :key="container.names"
-                style="margin-bottom: 8px"
-              >
-                <el-checkbox :label="container.names">
-                  {{ container.names }} ({{ container.image }})
-                  <el-tag
-                    size="mini"
-                    :type="
-                      container.status.includes('Up') ? 'success' : 'danger'
-                    "
-                  >
-                    {{ container.status.includes("Up") ? "运行中" : "已停止" }}
-                  </el-tag>
-                </el-checkbox>
+          <div style="margin-left: 24px">
+            <div v-if="agent.containers && agent.containers.length > 0">
+              <div style="margin-bottom: 8px; font-size: 12px; color: #666">
+                已部署的容器（默认全部选中）：
               </div>
-            </el-checkbox-group>
+              <el-checkbox-group v-model="agent.selectedContainers">
+                <div
+                  v-for="container in agent.containers"
+                  :key="container.names"
+                  style="margin-bottom: 8px"
+                >
+                  <el-checkbox :label="container.names" :value="true">
+                    {{ container.names }} ({{ container.image }})
+                    <el-tag
+                      size="mini"
+                      :type="
+                        container.status.includes('Up') ? 'success' : 'danger'
+                      "
+                    >
+                      {{
+                        container.status.includes("Up") ? "运行中" : "已停止"
+                      }}
+                    </el-tag>
+                  </el-checkbox>
+                </div>
+              </el-checkbox-group>
+            </div>
+            <div v-else style=" font-size: 12px;color: #f56c6c">
+              该Agent上暂无部署的容器
+            </div>
           </div>
         </div>
       </div>
@@ -511,6 +556,7 @@
           type="primary"
           @click="handleRedeploy"
           :loading="redeployLoading"
+          :disabled="!hasSelectedContainers"
         >
           重新部署
         </el-button>
@@ -750,6 +796,8 @@ import {
   replaceJarFile,
 } from "@/api/monitor/jar";
 import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
+import { listAll } from "@/api/monitor/service";
+import { ServiceInfo } from "@/api/monitor/service/types";
 
 const queryFormRef = ref(ElForm);
 const uploadFormRef = ref(ElForm);
@@ -769,6 +817,7 @@ const queryParams = reactive({
   pageSize: 10,
   pageNum: 1,
   fileName: "",
+  serviceId: undefined as number | undefined,
   status: undefined as number | undefined,
 });
 
@@ -776,6 +825,8 @@ const dataList = ref<JarPackage[]>();
 const agentsList = ref<any[]>();
 const deployRecords = ref<any[]>();
 const deployStatus = ref<any>();
+const serviceList = ref<ServiceInfo[]>([]);
+const redeployAgents = ref<any[]>([]);
 
 // 上传相关
 const uploadDialogVisible = ref(false);
@@ -807,6 +858,7 @@ const logsDialogVisible = ref(false);
 const statusDialogVisible = ref(false);
 
 const uploadForm = reactive({
+  serviceId: undefined as number | undefined,
   remark: "",
 });
 
@@ -817,8 +869,27 @@ const redeployForm = reactive({
 
 // 上传验证规则
 const uploadRules = {
+  serviceId: [{ required: true, message: "请选择关联服务", trigger: "change" }],
   file: [{ required: true, message: "请选择JAR文件", trigger: "change" }],
 };
+
+// 计算是否有已部署的容器
+const hasDeployedContainers = computed(() => {
+  return (
+    redeployAgents.value?.some(
+      (agent) => agent.containers && agent.containers.length > 0
+    ) || false
+  );
+});
+
+// 计算是否有选中的容器
+const hasSelectedContainers = computed(() => {
+  return (
+    redeployAgents.value?.some(
+      (agent) => agent.selectedContainers && agent.selectedContainers.length > 0
+    ) || false
+  );
+});
 
 /** 查询 */
 function handleQuery() {
@@ -827,6 +898,13 @@ function handleQuery() {
     dataList.value = data.records;
     total.value = data.total;
     loading.value = false;
+  });
+}
+
+/** 获取服务列表 */
+function loadServiceList() {
+  listAll().then(({ data }) => {
+    serviceList.value = data;
   });
 }
 
@@ -841,6 +919,7 @@ function resetQuery() {
 function showUploadDialog() {
   uploadDialogVisible.value = true;
   selectedFile.value = undefined;
+  uploadForm.serviceId = undefined;
   uploadForm.remark = "";
   if (uploadFormRef.value) {
     uploadFormRef.value.resetFields();
@@ -900,16 +979,35 @@ function handleUpload() {
     return;
   }
 
+  if (!uploadForm.serviceId) {
+    ElMessage.warning("请选择关联服务");
+    return;
+  }
+
+  // 根据serviceId获取服务名称
+  const selectedService = serviceList.value.find(
+    (item) => item.id === uploadForm.serviceId
+  );
+  if (!selectedService) {
+    ElMessage.warning("选择的服务不存在");
+    return;
+  }
+
   uploadLoading.value = true;
   const formData = new FormData();
   formData.append("file", selectedFile.value);
-  formData.append("remark", uploadForm.remark);
+  formData.append("serviceId", uploadForm.serviceId.toString());
+  formData.append("serviceName", selectedService.name);
+  formData.append("remark", uploadForm.remark || "");
 
   uploadJar(formData)
     .then(() => {
       ElMessage.success("上传成功");
       uploadDialogVisible.value = false;
       handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("上传失败: " + error.response?.data?.msg);
     })
     .finally(() => {
       uploadLoading.value = false;
@@ -925,7 +1023,13 @@ function showDockerfileDialog(jar: JarPackage) {
   dockerfileLoading.value = true;
   getDockerfile(jar.id!)
     .then(({ data }) => {
-      dockerfileContent.value = data || getDefaultDockerfile(jar);
+      // 如果已有Dockerfile内容，直接使用
+      if (data && data.trim()) {
+        dockerfileContent.value = data;
+      } else {
+        // 否则生成默认的Dockerfile，使用正确的JAR文件名
+        dockerfileContent.value = getDefaultDockerfile(jar);
+      }
       dockerfileDialogVisible.value = true;
     })
     .finally(() => {
@@ -935,15 +1039,19 @@ function showDockerfileDialog(jar: JarPackage) {
 
 /** 获取默认Dockerfile */
 function getDefaultDockerfile(jar: JarPackage): string {
+  const jarFileName = jar.fileName || "app.jar";
   return `FROM adoptopenjdk:8-jdk-hotspot
 
 WORKDIR /home/park
+
+# 复制JAR文件到容器中
+COPY ${jarFileName} /home/park/
 
 # 暴露端口
 EXPOSE 8080
 
 # 启动命令
-ENTRYPOINT ["java", "-jar", "app.jar"]`;
+ENTRYPOINT ["java", "-jar", "${jarFileName}"]`;
 }
 
 /** 保存Dockerfile */
@@ -1007,34 +1115,52 @@ function showRedeployDialog(jar: JarPackage) {
   currentJarId.value = jar.id;
   currentJarName.value = jar.fileName;
 
-  getAllAgents().then(({ data }) => {
-    agentsList.value = data.map((agent: any) => ({
-      ...agent,
-      selected: false,
-      selectedContainers: [] as string[],
-    }));
+  // 如果JAR包有已部署的目标，直接使用这些目标
+  if (jar.agentIds && jar.targetContainerNames) {
+    const existingAgents = jar.agentIds.split(",").map((id) => parseInt(id));
+    const existingContainers = jar.targetContainerNames.split(",");
 
-    // 如果jar已有部署目标，可以默认选中
-    if (jar.agentIds && jar.targetContainerNames) {
-      const existingAgents = jar.agentIds.split(",").map((id) => parseInt(id));
-      const existingContainers = jar.targetContainerNames.split(",");
+    // 按Agent分组容器
+    const agentContainerMap = new Map();
+    existingContainers.forEach((container, index) => {
+      const agentId = existingAgents[index];
+      if (!agentContainerMap.has(agentId)) {
+        agentContainerMap.set(agentId, []);
+      }
+      agentContainerMap.get(agentId).push(container);
+    });
 
-      agentsList.value.forEach((agent) => {
-        if (existingAgents.includes(agent.agentId)) {
-          agent.selected = true;
-          // 找到该agent对应的容器
-          const agentContainers = existingContainers.filter(
-            (_, index) => existingAgents[index] === agent.agentId
-          );
-          agent.selectedContainers = agentContainers;
+    // 获取Agent信息并填充容器
+    getAllAgents().then(({ data }) => {
+      const redeployAgentsData: any[] = [];
+
+      agentContainerMap.forEach((containers, agentId) => {
+        const agent = data.find((a: any) => a.agentId === agentId);
+        if (agent) {
+          redeployAgentsData.push({
+            agentId: agent.agentId,
+            agentName: agent.agentName,
+            agentIp: agent.agentIp,
+            agentPort: agent.agentPort,
+            selected: true,
+            selectedContainers: containers, // 默认选中所有已部署的容器
+            containers: containers.map((containerName: string) => ({
+              names: containerName,
+              image: agent.image || "unknown",
+              status: "Up", // 假设都是运行中
+            })),
+          });
         }
       });
-    }
 
-    redeployForm.agentIds = [];
-    redeployForm.containerNames = [];
+      redeployAgents.value = redeployAgentsData;
+      redeployDialogVisible.value = true;
+    });
+  } else {
+    // 如果没有部署记录，显示空状态
+    redeployAgents.value = [];
     redeployDialogVisible.value = true;
-  });
+  }
 }
 
 /** 显示替换对话框 */
@@ -1125,12 +1251,12 @@ function handleDeploy() {
 
 /** 执行重新部署 */
 function handleRedeploy() {
-  // 收集选择的Agent和容器
+  // 收集所有已部署的Agent和容器
   const agentIds: number[] = [];
   const containerNames: string[] = [];
 
-  agentsList.value?.forEach((agent) => {
-    if (agent.selected && agent.selectedContainers.length > 0) {
+  redeployAgents.value?.forEach((agent) => {
+    if (agent.selectedContainers && agent.selectedContainers.length > 0) {
       agent.selectedContainers.forEach((container: string) => {
         agentIds.push(agent.agentId);
         containerNames.push(container);
@@ -1138,17 +1264,21 @@ function handleRedeploy() {
     }
   });
 
-  // 重新部署时可以重新选择目标，也可以使用原有目标
+  if (agentIds.length === 0) {
+    ElMessage.warning("没有可重新部署的容器");
+    return;
+  }
+
   redeployLoading.value = true;
 
-  // 构建请求参数
-  const requestData = agentIds.length > 0 ? { agentIds, containerNames } : null;
-
-  rebuildJar(currentJarId.value!, requestData)
+  rebuildJar(currentJarId.value!, { agentIds, containerNames })
     .then(() => {
       ElMessage.success("开始重新部署");
       redeployDialogVisible.value = false;
       handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("重新部署失败: " + error.response?.data?.msg);
     })
     .finally(() => {
       redeployLoading.value = false;
@@ -1233,6 +1363,7 @@ function hasDockerfile(jar: JarPackage): boolean {
 
 onMounted(() => {
   handleQuery();
+  loadServiceList();
 });
 </script>
 
