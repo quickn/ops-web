@@ -869,7 +869,7 @@ function handleFileChange(event: Event) {
     }
 
     // 验证文件大小（500MB限制）
-    const maxSize = 500 * 1024 * 1024; // 200MB
+    const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
       ElMessage.warning("文件大小不能超过500MB");
       return;
