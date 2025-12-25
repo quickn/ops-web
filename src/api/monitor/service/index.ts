@@ -27,7 +27,7 @@ export function listPage(
  */
 export function addData(data?: ServiceInfo) {
   return request({
-    url: "/heath/save",
+    url: "/serviceInfo/save",
     method: "post",
     data: data,
   });
