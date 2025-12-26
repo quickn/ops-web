@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import {
-  listPage,
-  deleteByIds,
-  upgradeClientByServiceId,
   addData,
+  deleteByIds,
+  handleAgent,
+  listPage,
 } from "@/api/monitor/agent";
 
 import { listAll } from "@/api/monitor/service";
@@ -51,6 +51,7 @@ function handleQuery() {
     serviceInfoList.value = data;
   });
 }
+
 /** 重置查询 */
 function resetQuery() {
   queryFormRef.value.resetFields();
@@ -84,7 +85,6 @@ onMounted(() => {
   handleQuery();
 });
 
-/** 删除角色 */
 function upgradeClient(id) {
   ElMessageBox.confirm("确定要升级客户端?", "警告", {
     confirmButtonText: "确定",
@@ -92,7 +92,7 @@ function upgradeClient(id) {
     type: "warning",
   }).then(() => {
     loading.value = true;
-    upgradeClientByServiceId(id)
+    handleAgent(id, "upgrade")
       .then(() => {
         ElMessage.success("升级成功");
       })
@@ -179,10 +179,14 @@ async function handleSubmit() {
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" @click="handleQuery"
-            ><i-ep-search />搜索</el-button
-          >
-          <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
+          <el-button type="primary" @click="handleQuery">
+            <i-ep-search />
+            搜索
+          </el-button>
+          <el-button @click="resetQuery">
+            <i-ep-refresh />
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -224,7 +228,7 @@ async function handleSubmit() {
               type="primary"
               link
               size="small"
-              @click.stop="upgradeClient(scope.row.serviceId)"
+              @click.stop="upgradeClient(scope.row.id)"
             >
               <i-ep-edit />
               升级客户端
@@ -246,7 +250,8 @@ async function handleSubmit() {
               link
               @click="deleteById(scope.row.id)"
             >
-              <i-ep-delete />删除
+              <i-ep-delete />
+              删除
             </el-button>
           </template>
         </el-table-column>
