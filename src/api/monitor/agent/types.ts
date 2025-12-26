@@ -20,6 +20,7 @@ export interface AgentConfig extends PageQuery {
 
 export interface AgentConfigForm {
   id?: number | null | undefined;
+  serviceId?: number;
   hostname?: string | null;
   isMonitor?: boolean;
   isMail?: boolean;

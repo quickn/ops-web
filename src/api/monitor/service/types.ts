@@ -4,5 +4,6 @@
 export interface ServiceInfo extends PageQuery {
   id?: number;
   name?: string;
+  isMonitor: false,
   sort?: number;
 }

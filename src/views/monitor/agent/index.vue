@@ -28,6 +28,7 @@ const dialogEdit = reactive<DialogOption>({
 
 const formData = reactive<AgentConfigForm>({
   id: null,
+  serviceId: null,
   hostname: null,
   isMonitor: false,
   isMail: false,
@@ -272,6 +273,22 @@ async function handleSubmit() {
         :rules="rules"
         label-width="200px"
       >
+        <el-form-item label="服务" prop="status">
+          <el-select
+            v-model="formData.serviceId"
+            placeholder="全部"
+            clearable
+            style="width: 100px"
+          >
+            <el-option
+              v-for="item in serviceInfoList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="IP" prop="name">
           <el-input v-model="formData.hostname" disabled placeholder="IP" />
         </el-form-item>
