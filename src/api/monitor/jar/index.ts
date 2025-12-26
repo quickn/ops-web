@@ -71,7 +71,7 @@ export function rebuildContainer(id: number, data?: DeployRequest) {
 // 新增：获取所有版本接口
 export function getAllVersions(fileName: string) {
   return request({
-    url: `/jar/versions/${fileName}`,
+    url: `/jar/versions?fileName=${fileName}`,
     method: "get",
   });
 }
