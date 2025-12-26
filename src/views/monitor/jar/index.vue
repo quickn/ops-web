@@ -114,8 +114,18 @@
           </template>
         </el-table-column>
         <el-table-column label="上传时间" prop="createTime" width="160" />
-        <el-table-column fixed="right" label="操作" width="340" align="center">
+        <el-table-column fixed="right" label="操作" width="420" align="center">
           <template #default="scope">
+            <!-- 新增：版本号按钮 -->
+            <el-button
+              type="info"
+              size="small"
+              link
+              @click="showVersionsDialog(scope.row.fileName)"
+            >
+              <el-icon><Histogram /></el-icon>版本号
+            </el-button>
+
             <el-button
               v-if="!hasDockerfile(scope.row)"
               type="warning"
@@ -154,6 +164,17 @@
               @click="showRedeployDialog(scope.row)"
             >
               <el-icon><RefreshRight /></el-icon>重新部署
+            </el-button>
+
+            <!-- 新增：重新构建容器按钮 -->
+            <el-button
+              v-if="scope.row.status === 2"
+              type="success"
+              size="small"
+              link
+              @click="showRebuildDialog(scope.row)"
+            >
+              <el-icon><Setting /></el-icon>重新构建
             </el-button>
 
             <el-button
@@ -195,7 +216,7 @@
       />
     </el-card>
 
-    <!-- 上传对话框 - 增加服务选择（必填） -->
+    <!-- 上传对话框 -->
     <el-dialog
       v-model="uploadDialogVisible"
       title="上传JAR包"
@@ -346,7 +367,7 @@
       </template>
     </el-dialog>
 
-    <!-- 部署对话框 - 移除端口列，容器名称使用JAR包名 -->
+    <!-- 部署对话框 -->
     <el-dialog
       v-model="deployDialogVisible"
       :title="`部署 - ${currentJarName}`"
@@ -476,7 +497,7 @@
       </template>
     </el-dialog>
 
-    <!-- 重新部署对话框 - 修改后只显示已部署的容器 -->
+    <!-- 重新部署对话框 -->
     <el-dialog
       v-model="redeployDialogVisible"
       :title="`重新部署 - ${currentJarName}`"
@@ -543,7 +564,7 @@
                 </div>
               </el-checkbox-group>
             </div>
-            <div v-else style=" font-size: 12px;color: #f56c6c">
+            <div v-else style="font-size: 12px; color: #f56c6c">
               该Agent上暂无部署的容器
             </div>
           </div>
@@ -563,7 +584,7 @@
       </template>
     </el-dialog>
 
-    <!-- 替换JAR包对话框 - 优化UI -->
+    <!-- 替换JAR包对话框 -->
     <el-dialog
       v-model="replaceDialogVisible"
       :title="`替换JAR包文件 - ${currentJarName}`"
@@ -630,6 +651,170 @@
           :disabled="!selectedFile"
         >
           替换
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新增：版本号对话框 -->
+    <el-dialog
+      v-model="versionsDialogVisible"
+      :title="`版本列表 - ${currentFileName}`"
+      width="1200px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="versionsLoading">
+        <div style="margin-bottom: 20px">
+          <el-button type="info" @click="versionsDialogVisible = false">
+            <el-icon><ArrowLeft /></el-icon>返回
+          </el-button>
+        </div>
+
+        <el-table :data="versionsList" border>
+          <el-table-column label="版本号" prop="version" width="100">
+            <template #default="scope">
+              <el-tag type="info">{{ scope.row.version }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="文件名" prop="originalName" width="200" />
+          <el-table-column label="服务" prop="serviceName" width="120">
+            <template #default="scope">
+              <el-tag v-if="scope.row.serviceName" type="info">
+                {{ scope.row.serviceName }}
+              </el-tag>
+              <span v-else style="color: #999">未关联</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="备注"
+            prop="remark"
+            width="150"
+            show-overflow-tooltip
+          />
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="scope">
+              <el-tag :type="getStatusType(scope.row.status)">
+                {{ getStatusText(scope.row.status) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="上传时间" prop="createTime" width="160" />
+          <el-table-column label="操作" width="300" align="center">
+            <template #default="scope">
+              <el-button
+                v-if="scope.row.status === 2"
+                type="warning"
+                size="small"
+                link
+                @click="showRedeployDialog(scope.row)"
+              >
+                <el-icon><RefreshRight /></el-icon>重新部署
+              </el-button>
+              <el-button
+                v-if="scope.row.status === 2"
+                type="success"
+                size="small"
+                link
+                @click="showRebuildDialog(scope.row)"
+              >
+                <el-icon><Setting /></el-icon>重新构建
+              </el-button>
+              <el-button
+                type="info"
+                size="small"
+                link
+                @click="viewDeployLogs(scope.row.id)"
+              >
+                <el-icon><Notebook /></el-icon>日志
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
+
+    <!-- 修改：重新构建对话框 - 使用与重新部署相同的对话框 -->
+    <el-dialog
+      v-model="rebuildDialogVisible"
+      :title="`重新构建容器 - ${currentJarName}`"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="!hasDeployedContainers">
+        <el-empty description="暂无部署记录，无法重新构建容器" />
+      </div>
+
+      <div v-else>
+        <el-alert
+          type="info"
+          title="重新构建容器（使用Dockerfile重新构建镜像）"
+          description="将使用Dockerfile重新构建镜像，然后创建新容器并部署"
+          show-icon
+          style="margin-bottom: 15px"
+        />
+
+        <div
+          v-for="agent in redeployAgents"
+          :key="agent.agentId"
+          style="margin-bottom: 20px"
+        >
+          <div style="margin-bottom: 8px; font-weight: bold">
+            <el-icon><Monitor /></el-icon>
+            {{ agent.agentName }}
+            <span
+              style="
+                margin-left: 10px;
+                font-size: 12px;
+                font-weight: normal;
+                color: #666;
+              "
+            >
+              ({{ agent.agentIp }}:{{ agent.agentPort }})
+            </span>
+          </div>
+
+          <div style="margin-left: 24px">
+            <div v-if="agent.containers && agent.containers.length > 0">
+              <div style="margin-bottom: 8px; font-size: 12px; color: #666">
+                已部署的容器（默认全部选中）：
+              </div>
+              <el-checkbox-group v-model="agent.selectedContainers">
+                <div
+                  v-for="container in agent.containers"
+                  :key="container.names"
+                  style="margin-bottom: 8px"
+                >
+                  <el-checkbox :label="container.names" :value="true">
+                    {{ container.names }} ({{ container.image }})
+                    <el-tag
+                      size="mini"
+                      :type="
+                        container.status.includes('Up') ? 'success' : 'danger'
+                      "
+                    >
+                      {{
+                        container.status.includes("Up") ? "运行中" : "已停止"
+                      }}
+                    </el-tag>
+                  </el-checkbox>
+                </div>
+              </el-checkbox-group>
+            </div>
+            <div v-else style="font-size: 12px; color: #f56c6c">
+              该Agent上暂无部署的容器
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="rebuildDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleRebuild"
+          :loading="redeployLoading"
+          :disabled="!hasSelectedContainers"
+        >
+          重新构建
         </el-button>
       </template>
     </el-dialog>
@@ -773,13 +958,14 @@ import {
   Box,
   Setting,
   RefreshRight,
-  View,
   Notebook,
   Delete,
   Document,
   Edit,
   Plus,
   CircleCheck,
+  Histogram,
+  ArrowLeft,
 } from "@element-plus/icons-vue";
 
 import {
@@ -787,7 +973,9 @@ import {
   uploadJar,
   getAllAgents,
   deployJar,
-  rebuildJar,
+  redeployJar,
+  rebuildContainer,
+  getAllVersions,
   getDeployRecords,
   getDeployStatus,
   deleteJar,
@@ -810,6 +998,7 @@ const deployLoading = ref(false);
 const redeployLoading = ref(false);
 const dockerfileLoading = ref(false);
 const replaceLoading = ref(false);
+const versionsLoading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
@@ -827,6 +1016,7 @@ const deployRecords = ref<any[]>();
 const deployStatus = ref<any>();
 const serviceList = ref<ServiceInfo[]>([]);
 const redeployAgents = ref<any[]>([]);
+const versionsList = ref<JarPackage[]>([]);
 
 // 上传相关
 const uploadDialogVisible = ref(false);
@@ -839,13 +1029,18 @@ const dockerfileContent = ref("");
 // 部署相关
 const deployDialogVisible = ref(false);
 const redeployDialogVisible = ref(false);
+const rebuildDialogVisible = ref(false); // 重命名变量以区分
 const currentJarId = ref<number>();
 const currentJarName = ref<string>();
 
 // 替换JAR包相关
 const replaceDialogVisible = ref(false);
 
-// 部署目标 - 移除port字段
+// 版本列表相关
+const versionsDialogVisible = ref(false);
+const currentFileName = ref<string>("");
+
+// 部署目标
 const deployTargets = ref<DeployTarget[]>([
   {
     agentId: null,
@@ -860,11 +1055,6 @@ const statusDialogVisible = ref(false);
 const uploadForm = reactive({
   serviceId: undefined as number | undefined,
   remark: "",
-});
-
-const redeployForm = reactive({
-  agentIds: [] as number[],
-  containerNames: [] as string[],
 });
 
 // 上传验证规则
@@ -1146,7 +1336,7 @@ function showRedeployDialog(jar: JarPackage) {
             selectedContainers: containers, // 默认选中所有已部署的容器
             containers: containers.map((containerName: string) => ({
               names: containerName,
-              image: agent.image || "unknown",
+              image: jar.dockerImageName || "unknown",
               status: "Up", // 假设都是运行中
             })),
           });
@@ -1161,6 +1351,73 @@ function showRedeployDialog(jar: JarPackage) {
     redeployAgents.value = [];
     redeployDialogVisible.value = true;
   }
+}
+
+/** 显示重新构建对话框 - 复用重新部署的逻辑 */
+function showRebuildDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+
+  // 如果JAR包有已部署的目标，直接使用这些目标
+  if (jar.agentIds && jar.targetContainerNames) {
+    const existingAgents = jar.agentIds.split(",").map((id) => parseInt(id));
+    const existingContainers = jar.targetContainerNames.split(",");
+
+    // 按Agent分组容器
+    const agentContainerMap = new Map();
+    existingContainers.forEach((container, index) => {
+      const agentId = existingAgents[index];
+      if (!agentContainerMap.has(agentId)) {
+        agentContainerMap.set(agentId, []);
+      }
+      agentContainerMap.get(agentId).push(container);
+    });
+
+    // 获取Agent信息并填充容器
+    getAllAgents().then(({ data }) => {
+      const redeployAgentsData: any[] = [];
+
+      agentContainerMap.forEach((containers, agentId) => {
+        const agent = data.find((a: any) => a.agentId === agentId);
+        if (agent) {
+          redeployAgentsData.push({
+            agentId: agent.agentId,
+            agentName: agent.agentName,
+            agentIp: agent.agentIp,
+            agentPort: agent.agentPort,
+            selected: true,
+            selectedContainers: containers, // 默认选中所有已部署的容器
+            containers: containers.map((containerName: string) => ({
+              names: containerName,
+              image: jar.dockerImageName || "unknown",
+              status: "Up", // 假设都是运行中
+            })),
+          });
+        }
+      });
+
+      redeployAgents.value = redeployAgentsData;
+      rebuildDialogVisible.value = true; // 打开重新构建对话框
+    });
+  } else {
+    // 如果没有部署记录，显示空状态
+    redeployAgents.value = [];
+    rebuildDialogVisible.value = true; // 打开重新构建对话框
+  }
+}
+
+/** 显示版本号对话框 */
+function showVersionsDialog(fileName: string) {
+  currentFileName.value = fileName;
+  versionsLoading.value = true;
+  getAllVersions(fileName)
+    .then(({ data }) => {
+      versionsList.value = data;
+      versionsDialogVisible.value = true;
+    })
+    .finally(() => {
+      versionsLoading.value = false;
+    });
 }
 
 /** 显示替换对话框 */
@@ -1271,7 +1528,7 @@ function handleRedeploy() {
 
   redeployLoading.value = true;
 
-  rebuildJar(currentJarId.value!, { agentIds, containerNames })
+  redeployJar(currentJarId.value!, { agentIds, containerNames })
     .then(() => {
       ElMessage.success("开始重新部署");
       redeployDialogVisible.value = false;
@@ -1279,6 +1536,43 @@ function handleRedeploy() {
     })
     .catch((error) => {
       ElMessage.error("重新部署失败: " + error.response?.data?.msg);
+    })
+    .finally(() => {
+      redeployLoading.value = false;
+    });
+}
+
+/** 执行重新构建 - 复用重新部署的收集逻辑，只改接口调用 */
+function handleRebuild() {
+  // 收集所有已部署的Agent和容器（逻辑完全复用重新部署）
+  const agentIds: number[] = [];
+  const containerNames: string[] = [];
+
+  redeployAgents.value?.forEach((agent) => {
+    if (agent.selectedContainers && agent.selectedContainers.length > 0) {
+      agent.selectedContainers.forEach((container: string) => {
+        agentIds.push(agent.agentId);
+        containerNames.push(container);
+      });
+    }
+  });
+
+  if (agentIds.length === 0) {
+    ElMessage.warning("没有可重新构建的容器");
+    return;
+  }
+
+  redeployLoading.value = true; // 共用同一个loading状态
+
+  // 这里是唯一的区别：调用重新构建接口
+  rebuildContainer(currentJarId.value!, { agentIds, containerNames })
+    .then(() => {
+      ElMessage.success("开始重新构建容器");
+      rebuildDialogVisible.value = false;
+      handleQuery();
+    })
+    .catch((error) => {
+      ElMessage.error("重新构建失败: " + error.response?.data?.msg);
     })
     .finally(() => {
       redeployLoading.value = false;

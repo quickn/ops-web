@@ -51,11 +51,28 @@ export function deployJar(id: number, data: DeployRequest) {
   });
 }
 
-export function rebuildJar(id: number, data?: DeployRequest) {
+export function redeployJar(id: number, data?: DeployRequest) {
   return request({
     url: `/jar/redeploy/${id}`,
     method: "post",
     data,
+  });
+}
+
+// 新增：重新构建容器接口
+export function rebuildContainer(id: number, data?: DeployRequest) {
+  return request({
+    url: `/jar/rebuild/${id}`,
+    method: "post",
+    data,
+  });
+}
+
+// 新增：获取所有版本接口
+export function getAllVersions(fileName: string) {
+  return request({
+    url: `/jar/versions/${fileName}`,
+    method: "get",
   });
 }
 
@@ -80,7 +97,6 @@ export function deleteJar(id: number) {
   });
 }
 
-// 新增替换JAR包接口
 export function replaceJarFile(id: number, data: FormData) {
   return request({
     url: `/jar/${id}/replace`,
