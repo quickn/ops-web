@@ -548,7 +548,7 @@
                   :key="container.names"
                   style="margin-bottom: 8px"
                 >
-                  <el-checkbox :label="container.names" :value="true">
+                  <el-checkbox :label="container.names">
                     {{ container.names }} ({{ container.image }})
                     <el-tag
                       size="mini"
@@ -732,7 +732,7 @@
       </div>
     </el-dialog>
 
-    <!-- 修改：重新构建对话框 - 使用与重新部署相同的对话框 -->
+    <!-- 修复后的重新构建对话框 -->
     <el-dialog
       v-model="rebuildDialogVisible"
       :title="`重新构建容器 - ${currentJarName}`"
@@ -783,7 +783,7 @@
                   :key="container.names"
                   style="margin-bottom: 8px"
                 >
-                  <el-checkbox :label="container.names" :value="true">
+                  <el-checkbox :label="container.names">
                     {{ container.names }} ({{ container.image }})
                     <el-tag
                       size="mini"
@@ -811,7 +811,7 @@
         <el-button
           type="primary"
           @click="handleRebuild"
-          :loading="redeployLoading"
+          :loading="rebuildLoading"
           :disabled="!hasSelectedContainers"
         >
           重新构建
@@ -999,6 +999,7 @@ const redeployLoading = ref(false);
 const dockerfileLoading = ref(false);
 const replaceLoading = ref(false);
 const versionsLoading = ref(false);
+const rebuildLoading = ref(false); // 新增：独立的重新构建loading状态
 const ids = ref<number[]>([]);
 const total = ref(0);
 
@@ -1029,7 +1030,7 @@ const dockerfileContent = ref("");
 // 部署相关
 const deployDialogVisible = ref(false);
 const redeployDialogVisible = ref(false);
-const rebuildDialogVisible = ref(false); // 重命名变量以区分
+const rebuildDialogVisible = ref(false);
 const currentJarId = ref<number>();
 const currentJarName = ref<string>();
 
@@ -1336,11 +1337,11 @@ function showRedeployDialog(jar: JarPackage) {
             agentIp: agent.agentIp,
             agentPort: agent.agentPort,
             selected: true,
-            selectedContainers: containers, // 默认选中所有已部署的容器
+            selectedContainers: containers, // 容器名称数组
             containers: containers.map((containerName: string) => ({
               names: containerName,
               image: jar.dockerImageName || "unknown",
-              status: "Up", // 假设都是运行中
+              status: "Up",
             })),
           });
         }
@@ -1356,7 +1357,7 @@ function showRedeployDialog(jar: JarPackage) {
   }
 }
 
-/** 显示重新构建对话框 - 复用重新部署的逻辑 */
+/** 显示重新构建对话框 */
 function showRebuildDialog(jar: JarPackage) {
   currentJarId.value = jar.id;
   currentJarName.value = jar.fileName;
@@ -1389,23 +1390,23 @@ function showRebuildDialog(jar: JarPackage) {
             agentIp: agent.agentIp,
             agentPort: agent.agentPort,
             selected: true,
-            selectedContainers: containers, // 默认选中所有已部署的容器
+            selectedContainers: containers, // 容器名称数组
             containers: containers.map((containerName: string) => ({
               names: containerName,
               image: jar.dockerImageName || "unknown",
-              status: "Up", // 假设都是运行中
+              status: "Up",
             })),
           });
         }
       });
 
       redeployAgents.value = redeployAgentsData;
-      rebuildDialogVisible.value = true; // 打开重新构建对话框
+      rebuildDialogVisible.value = true;
     });
   } else {
     // 如果没有部署记录，显示空状态
     redeployAgents.value = [];
-    rebuildDialogVisible.value = true; // 打开重新构建对话框
+    rebuildDialogVisible.value = true;
   }
 }
 
@@ -1545,9 +1546,9 @@ function handleRedeploy() {
     });
 }
 
-/** 执行重新构建 - 复用重新部署的收集逻辑，只改接口调用 */
+/** 执行重新构建 */
 function handleRebuild() {
-  // 收集所有已部署的Agent和容器（逻辑完全复用重新部署）
+  // 收集所有已部署的Agent和容器
   const agentIds: number[] = [];
   const containerNames: string[] = [];
 
@@ -1565,9 +1566,9 @@ function handleRebuild() {
     return;
   }
 
-  redeployLoading.value = true; // 共用同一个loading状态
+  rebuildLoading.value = true;
 
-  // 这里是唯一的区别：调用重新构建接口
+  // 调用重新构建接口
   rebuildContainer(currentJarId.value!, { agentIds, containerNames })
     .then(() => {
       ElMessage.success("开始重新构建容器");
@@ -1575,10 +1576,12 @@ function handleRebuild() {
       handleQuery();
     })
     .catch((error) => {
-      ElMessage.error("重新构建失败: " + error.response?.data?.msg);
+      ElMessage.error(
+        "重新构建失败: " + (error.response?.data?.msg || error.message)
+      );
     })
     .finally(() => {
-      redeployLoading.value = false;
+      rebuildLoading.value = false;
     });
 }
 
