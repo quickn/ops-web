@@ -1,34 +1,24 @@
-// src/api/key/index.ts
+// src/key/index.ts
 import request from '@/utils/request'
 import { AxiosPromise } from 'axios'
 
 /**
  * 生成密钥对
  */
-export function generateKeyPair(data: { userId: string }): AxiosPromise<string> {
+export function generateKeyPair(data: { userId: number }): AxiosPromise<string> {
   return request({
-    url: '/api/encryption/keypair/generate',
+    url: '/crypto/generate',
     method: 'post',
     data: data
   })
 }
 
 /**
- * 重新生成密钥对
- */
-export function regenerateKeyPair(userId: string): AxiosPromise<string> {
-  return request({
-    url: `/api/encryption/keypair/regenerate/${userId}`,
-    method: 'post'
-  })
-}
-
-/**
  * 获取公钥
  */
-export function getPublicKey(userId: string): AxiosPromise<string> {
+export function getPublicKey(userId: number): AxiosPromise<string> {
   return request({
-    url: `/api/encryption/keypair/public-key/${userId}`,
+    url: `/crypto/publicKey/${userId}`,
     method: 'get'
   })
 }
@@ -36,9 +26,9 @@ export function getPublicKey(userId: string): AxiosPromise<string> {
 /**
  * 加密数据
  */
-export function encryptData(data: { userId: string; plainText: string }): AxiosPromise<string> {
+export function encryptData(data: { userId: number; plainText: string }): AxiosPromise<string> {
   return request({
-    url: '/api/encryption/encrypt',
+    url: '/crypto/encrypt',
     method: 'post',
     data: data
   })
@@ -47,9 +37,9 @@ export function encryptData(data: { userId: string; plainText: string }): AxiosP
 /**
  * 解密数据
  */
-export function decryptData(data: { userId: string; cipherText: string; privateKeyPassword?: string }): AxiosPromise<string> {
+export function decryptData(data: { userId: number; cipherText: string; privateKeyPassword?: string }): AxiosPromise<string> {
   return request({
-    url: '/api/encryption/decrypt',
+    url: '/crypto/decrypt',
     method: 'post',
     data: data
   })

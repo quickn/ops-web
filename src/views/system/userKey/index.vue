@@ -96,7 +96,7 @@ async function handleGenerateKeyPair(row: { [key: string]: any }) {
   )
     .then(() => {
       loading.value = true;
-      generateKeyPair({ userId: row.username })
+      generateKeyPair({ userId: row.id })
         .then(({ data }) => {
           ElMessage.success("密钥对生成成功");
         })
@@ -110,7 +110,7 @@ async function handleGenerateKeyPair(row: { [key: string]: any }) {
 /** 查看公钥 */
 async function viewPublicKey(row: { [key: string]: any }) {
   loading.value = true;
-  getPublicKey(row.username)
+  getPublicKey(row.id)
     .then(({ data }) => {
       ElMessageBox.alert(
         `<div style="word-break: break-all; max-height: 400px; overflow-y: auto;">
@@ -153,7 +153,7 @@ function regenerateKeyPair(row: { [key: string]: any }) {
   )
     .then(() => {
       loading.value = true;
-      generateKeyPair({ userId: row.username })
+      generateKeyPair({ userId: row.id })
         .then(() => {
           ElMessage.success("密钥对重新生成成功");
         })
@@ -166,7 +166,7 @@ function regenerateKeyPair(row: { [key: string]: any }) {
 
 /** 打开加密弹窗 */
 function openEncryptDialog(row: { [key: string]: any }) {
-  encryptFormData.userId = row.username;
+  encryptFormData.userId = row.id;
   encryptFormData.plainText = "";
   encryptFormData.cipherText = "";
   encryptDialog.visible = true;
@@ -179,7 +179,7 @@ function closeEncryptDialog() {
 
 /** 打开解密弹窗 */
 function openDecryptDialog(row: { [key: string]: any }) {
-  decryptFormData.userId = row.username;
+  decryptFormData.userId = row.id;
   decryptFormData.cipherText = "";
   decryptFormData.plainText = "";
   decryptFormData.password = "";
@@ -290,7 +290,6 @@ async function quickTest() {
         const { data: decrypted } = await decryptData({
           userId: value,
           cipherText: encrypted,
-          privateKeyPassword: "your_secure_password",
         });
 
         ElMessageBox.alert(
