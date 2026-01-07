@@ -1,6 +1,6 @@
 // api/monitor/jar/types.ts
 export interface JarPackage {
-  id?: number;
+  id?: string;
   fileName: string;
   originalName: string;
   version: string;
