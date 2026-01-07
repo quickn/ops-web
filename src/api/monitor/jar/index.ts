@@ -21,14 +21,14 @@ export function uploadJar(data: FormData) {
   });
 }
 
-export function getDockerfile(id: number) {
+export function getDockerfile(id: string) {
   return request({
     url: `/jar/${id}/dockerfile`,
     method: "get",
   });
 }
 
-export function updateDockerfile(id: number, dockerfileContent: string) {
+export function updateDockerfile(id: string, dockerfileContent: string) {
   return request({
     url: `/jar/${id}/dockerfile`,
     method: "put",
@@ -43,7 +43,7 @@ export function getAllAgents() {
   });
 }
 
-export function deployJar(id: number, data: DeployRequest) {
+export function deployJar(id: string, data: DeployRequest) {
   return request({
     url: `/jar/deploy/${id}`,
     method: "post",
@@ -51,7 +51,7 @@ export function deployJar(id: number, data: DeployRequest) {
   });
 }
 
-export function redeployJar(id: number, data?: DeployRequest) {
+export function redeployJar(id: string, data?: DeployRequest) {
   return request({
     url: `/jar/redeploy/${id}`,
     method: "post",
@@ -60,7 +60,7 @@ export function redeployJar(id: number, data?: DeployRequest) {
 }
 
 // 新增：重新构建容器接口
-export function rebuildContainer(id: number, data?: DeployRequest) {
+export function rebuildContainer(id: string, data?: DeployRequest) {
   return request({
     url: `/jar/rebuild/${id}`,
     method: "post",
@@ -76,28 +76,28 @@ export function getAllVersions(fileName: string) {
   });
 }
 
-export function getDeployRecords(jarPackageId: number) {
+export function getDeployRecords(jarPackageId: string) {
   return request({
     url: `/jar/deploy-records/${jarPackageId}`,
     method: "get",
   });
 }
 
-export function getDeployStatus(jarPackageId: number) {
+export function getDeployStatus(jarPackageId: string) {
   return request({
     url: `/jar/status/${jarPackageId}`,
     method: "get",
   });
 }
 
-export function deleteJar(id: number) {
+export function deleteJar(id: string) {
   return request({
     url: `/jar/${id}`,
     method: "delete",
   });
 }
 
-export function replaceJarFile(id: number, data: FormData) {
+export function replaceJarFile(id: string, data: FormData) {
   return request({
     url: `/jar/${id}/replace`,
     method: "post",
