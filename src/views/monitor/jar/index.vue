@@ -1239,13 +1239,13 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 复制JAR文件到容器中
-COPY ${jarFileName} /home/park/
+COPY ${jarFileName}.jar /home/park/
 
 # 暴露端口
 EXPOSE 8080
 
 # 启动命令
-ENTRYPOINT ["java", "-jar", "${jarFileName}"]`;
+ENTRYPOINT ["java", "-jar", "${jarFileName}.jar"]`;
 }
 
 /** 保存Dockerfile */
