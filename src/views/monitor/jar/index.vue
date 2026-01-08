@@ -74,10 +74,18 @@
             <el-tag type="info">{{ scope.row.version }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="备注" prop="remark" width="150" />
+        <!--        <el-table-column label="备注" prop="remark" width="150" />-->
         <el-table-column label="Dockerfile" width="100" align="center">
           <template #default="scope">
             <el-tag v-if="hasDockerfile(scope.row)" type="success"
+              >已设置</el-tag
+            >
+            <el-tag v-else type="warning">未设置</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="Docker Compose" width="100" align="center">
+          <template #default="scope">
+            <el-tag v-if="hasDockerCompose(scope.row)" type="success"
               >已设置</el-tag
             >
             <el-tag v-else type="warning">未设置</el-tag>
@@ -114,7 +122,7 @@
           </template>
         </el-table-column>
         <el-table-column label="上传时间" prop="createTime" width="160" />
-        <el-table-column fixed="right" label="操作" width="420" align="center">
+        <el-table-column fixed="right" label="操作" width="450" align="center">
           <template #default="scope">
             <!-- 新增：版本号按钮 -->
             <el-button
@@ -155,6 +163,26 @@
               <el-icon><Refresh /></el-icon>替换文件
             </el-button>
 
+            <!-- Dockerfile按钮 -->
+            <el-button
+              type="info"
+              size="small"
+              link
+              @click="showDockerfileDialog(scope.row)"
+            >
+              <el-icon><Document /></el-icon>Dockerfile
+            </el-button>
+
+            <!-- Docker Compose按钮 -->
+            <el-button
+              type="info"
+              size="small"
+              link
+              @click="showDockerComposeDialog(scope.row)"
+            >
+              <el-icon><DocumentCopy /></el-icon>Compose
+            </el-button>
+
             <!-- 重新部署按钮 -->
             <el-button
               v-if="scope.row.status === 2"
@@ -175,15 +203,6 @@
               @click="showRebuildDialog(scope.row)"
             >
               <el-icon><Setting /></el-icon>重新构建
-            </el-button>
-
-            <el-button
-              type="info"
-              size="small"
-              link
-              @click="showDockerfileDialog(scope.row)"
-            >
-              <el-icon><Document /></el-icon>Dockerfile
             </el-button>
 
             <el-button
@@ -361,6 +380,51 @@
           type="primary"
           @click="handleSaveDockerfile"
           :loading="dockerfileLoading"
+        >
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Docker Compose对话框 -->
+    <el-dialog
+      v-model="dockerComposeDialogVisible"
+      :title="`Docker Compose - ${currentJarName}`"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="dockerComposeLoading">
+        <el-alert
+          type="info"
+          title="Docker Compose配置文件"
+          description="用于定义和运行多容器Docker应用程序"
+          show-icon
+          style="margin-bottom: 15px"
+        />
+
+        <el-form>
+          <el-form-item>
+            <el-input
+              v-model="dockerComposeContent"
+              type="textarea"
+              :rows="20"
+              placeholder="请输入Docker Compose配置内容"
+              resize="none"
+            />
+          </el-form-item>
+        </el-form>
+
+        <div style="margin-top: 10px; font-size: 12px; color: #666">
+          提示：使用docker-compose up -d启动应用
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="dockerComposeDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleSaveDockerCompose"
+          :loading="dockerComposeLoading"
         >
           保存
         </el-button>
@@ -966,6 +1030,7 @@ import {
   CircleCheck,
   Histogram,
   ArrowLeft,
+  DocumentCopy, // 新增的Docker Compose图标
 } from "@element-plus/icons-vue";
 
 import {
@@ -982,6 +1047,8 @@ import {
   getDockerfile,
   updateDockerfile,
   replaceJarFile,
+  getDockerCompose, // 新增：获取Docker Compose
+  updateDockerCompose, // 新增：更新Docker Compose
 } from "@/api/monitor/jar";
 import { JarPackage, DeployTarget } from "@/api/monitor/jar/types";
 import { listAll } from "@/api/monitor/service";
@@ -997,6 +1064,7 @@ const uploadLoading = ref(false);
 const deployLoading = ref(false);
 const redeployLoading = ref(false);
 const dockerfileLoading = ref(false);
+const dockerComposeLoading = ref(false); // 新增：Docker Compose加载状态
 const replaceLoading = ref(false);
 const versionsLoading = ref(false);
 const rebuildLoading = ref(false); // 新增：独立的重新构建loading状态
@@ -1026,6 +1094,10 @@ const selectedFile = ref<File>();
 // Dockerfile相关
 const dockerfileDialogVisible = ref(false);
 const dockerfileContent = ref("");
+
+// Docker Compose相关
+const dockerComposeDialogVisible = ref(false); // 新增：Docker Compose对话框显示状态
+const dockerComposeContent = ref(""); // 新增：Docker Compose内容
 
 // 部署相关
 const deployDialogVisible = ref(false);
@@ -1228,6 +1300,29 @@ function showDockerfileDialog(jar: JarPackage) {
     });
 }
 
+/** 显示Docker Compose对话框 */
+function showDockerComposeDialog(jar: JarPackage) {
+  currentJarId.value = jar.id;
+  currentJarName.value = jar.fileName;
+  dockerComposeContent.value = "";
+
+  dockerComposeLoading.value = true;
+  getDockerCompose(jar.id!)
+    .then(({ data }) => {
+      // 如果已有Docker Compose内容，直接使用
+      if (data && data.trim()) {
+        dockerComposeContent.value = data;
+      } else {
+        // 否则生成默认的Docker Compose配置
+        dockerComposeContent.value = getDefaultDockerCompose(jar);
+      }
+      dockerComposeDialogVisible.value = true;
+    })
+    .finally(() => {
+      dockerComposeLoading.value = false;
+    });
+}
+
 /** 获取默认Dockerfile */
 function getDefaultDockerfile(jar: JarPackage): string {
   const jarFileName = jar.fileName || "app.jar";
@@ -1248,6 +1343,23 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "${jarFileName}.jar"]`;
 }
 
+/** 获取默认DockerCompose */
+function getDefaultDockerCompose(jar: JarPackage): string {
+  const jarFileName = jar.fileName || "app.jar";
+  const baseName = jarFileName.replace(/\.jar$/i, "");
+  return `services:
+  ${baseName}:
+    build: .
+    image: ${baseName}
+    container_name: ${baseName}
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=Asia/Shanghai
+      - JAVA_OPTS=-Xms256m -Xmx512m -Duser.timezone=Asia/Shanghai`;
+}
+
 /** 保存Dockerfile */
 function handleSaveDockerfile() {
   if (!dockerfileContent.value.trim()) {
@@ -1264,6 +1376,25 @@ function handleSaveDockerfile() {
     })
     .finally(() => {
       dockerfileLoading.value = false;
+    });
+}
+
+/** 保存Docker Compose */
+function handleSaveDockerCompose() {
+  if (!dockerComposeContent.value.trim()) {
+    ElMessage.warning("Docker Compose内容不能为空");
+    return;
+  }
+
+  dockerComposeLoading.value = true;
+  updateDockerCompose(currentJarId.value!, dockerComposeContent.value)
+    .then(() => {
+      ElMessage.success("Docker Compose保存成功");
+      dockerComposeDialogVisible.value = false;
+      handleQuery();
+    })
+    .finally(() => {
+      dockerComposeLoading.value = false;
     });
 }
 
@@ -1659,6 +1790,13 @@ function getStatusType(status: number): string {
 /** 检查是否已设置Dockerfile */
 function hasDockerfile(jar: JarPackage): boolean {
   return !!jar.dockerfileContent && jar.dockerfileContent.trim().length > 0;
+}
+
+/** 检查是否已设置Docker Compose */
+function hasDockerCompose(jar: JarPackage): boolean {
+  return (
+    !!jar.dockerComposeContent && jar.dockerComposeContent.trim().length > 0
+  );
 }
 
 onMounted(() => {

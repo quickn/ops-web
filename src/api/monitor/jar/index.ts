@@ -36,6 +36,21 @@ export function updateDockerfile(id: string, dockerfileContent: string) {
   });
 }
 
+export function getDockerCompose(id: string) {
+  return request({
+    url: `/jar/${id}/dockerCompose`,
+    method: "get",
+  });
+}
+
+export function updateDockerCompose(id: string, dockerComposeContent: string) {
+  return request({
+    url: `/jar/${id}/dockerCompose`,
+    method: "put",
+    data: { dockerComposeContent },
+  });
+}
+
 export function getAllAgents() {
   return request({
     url: "/jar/agents",
