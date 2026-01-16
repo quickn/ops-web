@@ -9,7 +9,7 @@ export interface JarPackage {
   downloadUrl: string;
   dockerImageName: string;
   dockerContainerName: string;
-  dockerfilePath: string;
+  dockerComposeContent: string;
   dockerfileContent: string;
   agentIds: string;
   agentNames: string;

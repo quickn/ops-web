@@ -1,3 +1,58 @@
+<template>
+  <div class="dashboard-container">
+    <!-- 用户信息 -->
+    <el-row class="mb-8">
+      <el-card class="w-full">
+        <div class="flex justify-between flex-wrap">
+          <div class="flex items-center">
+            <img class="user-avatar" :src="userStore.avatar + '?imageView2/1/w/80/h/80'" />
+            <span class="ml-[10px] text-[16px]">
+              {{ userStore.nickname }}
+            </span>
+          </div>
+
+          <div class="leading-[40px]">
+            {{ greetings }}
+          </div>
+        </div>
+      </el-card>
+    </el-row>
+    <el-card>
+      <template #header>
+        <el-button v-hasPerm="['sys:dept:add']" type="success" @click="openDialog()">
+          <i-ep-plus />
+          新增
+        </el-button>
+        <el-button v-hasPerm="['sys:dept:delete']" type="danger" :disabled="ids.length === 0" @click="handleDelete()">
+          <i-ep-delete />
+          删除
+        </el-button>
+      </template>
+
+      <el-table v-loading="loading" :data="deptList" row-key="id" default-expand-all
+        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column prop="appName" label="项目名" min-width="300" />
+        <el-table-column prop="heathUrl" label="链接地址" width="300" />
+        <el-table-column prop="serviceName" label="服务名" width="300" />
+        <el-table-column label="操作" fixed="right" align="left" width="200">
+          <template #default="scope">
+            <el-button v-hasPerm="['sys:dept:edit']" type="primary" link size="small"
+              @click.stop="openDialog(scope.row)">
+              <i-ep-edit />
+              编辑
+            </el-button>
+            <el-button v-hasPerm="['sys:dept:delete']" type="primary" link size="small"
+              @click.stop="handleDelete(scope.row.id)">
+              <i-ep-delete />
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
+</template>
 <script setup lang="ts">
 import { useUserStore } from "@/store/modules/user";
 import { useTransition, TransitionPresets } from "@vueuse/core";
@@ -9,7 +64,11 @@ defineOptions({
 });
 
 const userStore = useUserStore();
+const queryFormRef = ref(ElForm);
+const deptFormRef = ref(ElForm);
 
+const loading = ref(false);
+const ids = ref<number[]>([]);
 const date: Date = new Date();
 
 const greetings = computed(() => {
@@ -60,155 +119,46 @@ const orderCountOutput = useTransition(orderCount, {
   transition: TransitionPresets.easeOutExpo,
 });
 orderCount.value = 2000;
+async function openDialog(data?: HeathMonitor) {
+  if (data) {
+    dialogEdit.visible = true;
+    dialogEdit.title = "编辑文档";
+    Object.assign(formData, data);
+  } else {
+    if (formData) {
+      formData.id = undefined;
+      formData.appName = undefined;
+      formData.heathUrl = undefined;
+    }
+    dialogEdit.visible = true;
+  }
+}
+
+/** 关闭弹窗 */
+function closeDialog() {
+  dialogEdit.visible = false;
+  resetForm();
+}
+
+function handleDelete(ids?: number) {
+  ElMessageBox.confirm(`确认删除已选中的数据项?`, "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    deleteData(ids).then(() => {
+      ElMessage.success("删除成功");
+      resetQuery();
+    });
+  });
+}
+
+/**重置查询 */
+function resetQuery() {
+  queryFormRef.value.resetFields();
+  handleQuery();
+}
 </script>
-
-<template>
-  <div class="dashboard-container">
-    <!-- github角标 -->
-    <github-corner class="github-corner" />
-
-    <!-- 用户信息 -->
-    <el-row class="mb-8">
-      <el-card class="w-full">
-        <div class="flex justify-between flex-wrap">
-          <div class="flex items-center">
-            <img
-              class="user-avatar"
-              :src="userStore.avatar + '?imageView2/1/w/80/h/80'"
-            />
-            <span class="ml-[10px] text-[16px]">
-              {{ userStore.nickname }}
-            </span>
-          </div>
-
-          <div class="leading-[40px]">
-            {{ greetings }}
-          </div>
-
-          <div class="space-x-2 flex items-center justify-end">
-            <el-link
-              target="_blank"
-              type="danger"
-              href="https://blog.csdn.net/u013737132/article/details/130191394"
-              >💥官方从零到一文档</el-link
-            >
-            <el-divider direction="vertical" />
-            <el-link
-              target="_blank"
-              type="success"
-              href="https://gitee.com/youlaiorg"
-              >Gitee</el-link
-            >
-            <el-divider direction="vertical" />
-            <el-link
-              target="_blank"
-              type="primary"
-              href="https://github.com/youlaitech"
-              >GitHub
-            </el-link>
-          </div>
-        </div>
-      </el-card>
-    </el-row>
-
-    <!-- 数据卡片 -->
-    <el-row :gutter="40" class="mb-4">
-      <el-col :xs="24" :sm="12" :lg="6" class="mb-4">
-        <div class="data-box">
-          <div
-            class="text-[#40c9c6] hover:!text-white hover:bg-[#40c9c6] p-3 rounded"
-          >
-            <svg-icon icon-class="uv" size="3em" />
-          </div>
-          <div class="flex flex-col space-y-3">
-            <div class="text-[var(--el-text-color-secondary)]">访问数</div>
-            <div class="text-lg text-right">
-              {{ Math.round(visitCountOutput) }}
-            </div>
-          </div>
-        </div>
-      </el-col>
-
-      <!--消息数-->
-      <el-col :xs="24" :sm="12" :lg="6" class="mb-4">
-        <div class="data-box">
-          <div
-            class="text-[#36a3f7] hover:!text-white hover:bg-[#36a3f7] p-3 rounded"
-          >
-            <svg-icon icon-class="message" size="3em" />
-          </div>
-          <div class="flex flex-col space-y-3">
-            <div class="text-[var(--el-text-color-secondary)]">消息数</div>
-            <div class="text-lg text-right">
-              {{ Math.round(messageCountOutput) }}
-            </div>
-          </div>
-        </div>
-      </el-col>
-
-      <el-col :xs="24" :sm="12" :lg="6" class="mb-4">
-        <div class="data-box">
-          <div
-            class="text-[#f4516c] hover:!text-white hover:bg-[#f4516c] p-3 rounded"
-          >
-            <svg-icon icon-class="money" size="3em" />
-          </div>
-          <div class="flex flex-col space-y-3">
-            <div class="text-[var(--el-text-color-secondary)]">收入金额</div>
-            <div class="text-lg text-right">
-              {{ Math.round(amountOutput) }}
-            </div>
-          </div>
-        </div>
-      </el-col>
-      <el-col :xs="24" :sm="12" :lg="6" class="mb-2">
-        <div class="data-box">
-          <div
-            class="text-[#34bfa3] hover:!text-white hover:bg-[#34bfa3] p-3 rounded"
-          >
-            <svg-icon icon-class="shopping" size="3em" />
-          </div>
-          <div class="flex flex-col space-y-3">
-            <div class="text-[var(--el-text-color-secondary)]">订单数</div>
-            <div class="text-lg text-right">
-              {{ Math.round(orderCountOutput) }}
-            </div>
-          </div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- Echarts 图表 -->
-    <el-row :gutter="40">
-      <el-col :sm="24" :lg="8" class="mb-2">
-        <BarChart
-          id="barChart"
-          height="400px"
-          width="100%"
-          class="bg-[var(--el-bg-color-overlay)]"
-        />
-      </el-col>
-
-      <el-col :xs="24" :sm="12" :lg="8" class="mb-2">
-        <PieChart
-          id="pieChart"
-          height="400px"
-          width="100%"
-          class="bg-[var(--el-bg-color-overlay)]"
-        />
-      </el-col>
-
-      <el-col :xs="24" :sm="12" :lg="8" class="mb-2">
-        <RadarChart
-          id="radarChart"
-          height="400px"
-          width="100%"
-          class="bg-[var(--el-bg-color-overlay)]"
-        />
-      </el-col>
-    </el-row>
-  </div>
-</template>
 
 <style lang="scss" scoped>
 .dashboard-container {
