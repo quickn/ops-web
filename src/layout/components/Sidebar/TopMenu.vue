@@ -35,24 +35,11 @@ onMounted(() => {
 </script>
 <template>
   <el-scrollbar>
-    <el-menu
-      mode="horizontal"
-      :default-active="activePath"
-      :background-color="variables.menuBg"
-      :text-color="variables.menuText"
-      :active-text-color="variables.menuActiveText"
-      @select="selectMenu"
-    >
-      <el-menu-item
-        v-for="route in topMenu"
-        :key="route.path"
-        :index="route.path"
-      >
+    <el-menu mode="horizontal" :default-active="activePath" :background-color="variables.menuBg"
+      :text-color="variables.menuText" :active-text-color="variables.menuActiveText" @select="selectMenu">
+      <el-menu-item v-for="route in topMenu" :key="route.path" :index="route.path">
         <template #title>
-          <svg-icon
-            v-if="route.meta && route.meta.icon"
-            :icon-class="route.meta.icon"
-          />
+          <svg-icon v-if="route.meta && route.meta.icon" :icon-class="route.meta.icon" />
           <span v-if="route.path === '/'"> 首页 </span>
           <template v-else>
             <span v-if="route.meta && route.meta.title">

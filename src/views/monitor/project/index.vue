@@ -1,0 +1,32 @@
+<template>
+  <div>
+    <keep-alive>
+      <component :is="tabs[currentTab]" :info="state.info" @setData="setDataInfo" @changePage="changePage"></component>
+    </keep-alive>
+  </div>
+</template>
+<script lang="ts" setup>
+// 引入组件
+const page = defineAsyncComponent(() => import('./page.vue'));
+const deploy = defineAsyncComponent(() => import('./deploy.vue'));
+
+const currentTab = ref('page')
+const tabs = {
+  page,
+  deploy,
+}
+
+const state = reactive({
+  info: {}
+});
+
+const setDataInfo = (info) => {
+  state.info = info;
+};
+
+const changePage = (val: string) => {
+  currentTab.value = val;
+}
+
+</script>
+<style scoped></style>
