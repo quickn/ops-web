@@ -17,7 +17,7 @@
         </div>
       </el-card>
     </el-row>
-    <el-card>
+    <!-- <el-card>
       <template #header>
         <el-button v-hasPerm="['sys:dept:add']" type="success" @click="openDialog()">
           <i-ep-plus />
@@ -29,14 +29,14 @@
         </el-button>
       </template>
 
-      <el-table v-loading="loading" :data="deptList" row-key="id" default-expand-all
-        :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" @selection-change="handleSelectionChange">
-        <el-table-column type="selection" width="55" align="center" />
-        <el-table-column prop="appName" label="项目名" min-width="300" />
-        <el-table-column prop="heathUrl" label="链接地址" width="300" />
-        <el-table-column prop="serviceName" label="服务名" width="300" />
-        <el-table-column label="操作" fixed="right" align="left" width="200">
-          <template #default="scope">
+<el-table v-loading="loading" :data="deptList" row-key="id" default-expand-all
+  :tree-props="{ children: 'children', hasChildren: 'hasChildren' }" @selection-change="handleSelectionChange">
+  <el-table-column type="selection" width="55" align="center" />
+  <el-table-column prop="appName" label="项目名" min-width="300" />
+  <el-table-column prop="heathUrl" label="链接地址" width="300" />
+  <el-table-column prop="serviceName" label="服务名" width="300" />
+  <el-table-column label="操作" fixed="right" align="left" width="200">
+    <template #default="scope">
             <el-button v-hasPerm="['sys:dept:edit']" type="primary" link size="small"
               @click.stop="openDialog(scope.row)">
               <i-ep-edit />
@@ -48,9 +48,9 @@
               删除
             </el-button>
           </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+  </el-table-column>
+</el-table>
+</el-card> -->
   </div>
 </template>
 <script setup lang="ts">
