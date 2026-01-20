@@ -72,10 +72,13 @@ export function jarData(data?: ServiceInfo) {
   });
 }
 
-export function agentList(id: number) {
+export function agentList(
+  queryParams?: LogInfo
+): AxiosPromise<PageRecords<LogInfo[]>> {
   return request({
     url: "/agent/list",
     method: "get",
+    params: queryParams,
   });
 }
 
@@ -84,5 +87,15 @@ export function deploy(data) {
     url: "/project/deploy/" + data.id,
     method: "post",
     data: data
+  });
+}
+
+export function deployList(
+  queryParams?: LogInfo
+): AxiosPromise<PageRecords<LogInfo[]>> {
+  return request({
+    url: "/project/deploy-records/" + queryParams?.id,
+    method: "get",
+    params: queryParams,
   });
 }
