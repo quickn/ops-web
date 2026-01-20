@@ -9,11 +9,12 @@
 // 引入组件
 const page = defineAsyncComponent(() => import('./page.vue'));
 const deploy = defineAsyncComponent(() => import('./deploy.vue'));
-
+const set = defineAsyncComponent(() => import('./set.vue'));
 const currentTab = ref('page')
 const tabs = {
   page,
   deploy,
+  set
 }
 
 const state = reactive({

@@ -2,138 +2,63 @@
   <div class="app-container">
     <div class="top-title">
       <div>应用管理 / {{ props.info.index ? "应用部署" : "查看配置" }}</div>
-      <el-button type="primary" @click="goBack">返回</el-button>
+      <div>
+        <el-button v-if="step == 2" type="primary" @click="seeRecord">查看部署日志</el-button>
+        <el-button type="primary" @click="goBack">返回</el-button>
+      </div>
     </div>
     <el-card shadow="never">
-      <el-form
-        ref="deptFormRef"
-        label-width="120px"
-        :model="formData"
-        :rules="rules"
-      >
+      <el-form ref="deptFormRef" label-width="120px" :model="formData" :rules="rules">
         <div v-if="step == 0">
           <el-form-item label="Dockerfile：" prop="dockerfileContent">
-            <el-input
-              v-model="formData.dockerfileContent"
-              :disabled="!props.info.index"
-              style="width: 90%"
-              type="textarea"
-              :rows="15"
-              placeholder="请输入Dockerfile内容"
-              resize="none"
-            />
+            <el-input v-model="formData.dockerfileContent" :disabled="!props.info.index" style="width: 90%"
+              type="textarea" :rows="15" placeholder="请输入Dockerfile内容" resize="none" />
           </el-form-item>
           <el-form-item label="DockerCompose:" prop="dockerComposeContent">
-            <el-input
-              v-model="formData.dockerComposeContent"
-              :disabled="!props.info.index"
-              style="width: 90%"
-              type="textarea"
-              :rows="15"
-              placeholder="请输入Docker Compose配置内容"
-              resize="none"
-            />
+            <el-input v-model="formData.dockerComposeContent" :disabled="!props.info.index" style="width: 90%"
+              type="textarea" :rows="15" placeholder="请输入Docker Compose配置内容" resize="none" />
           </el-form-item>
         </div>
         <div v-if="step == 1">
           <el-form-item label="同步方式:" required>
-            <el-radio-group
-              v-model="formData.fileType"
-              @change="handleFileTypeChange"
-              size="default"
-              fill="#409eff"
-            >
+            <el-radio-group v-model="formData.fileType" @change="handleFileTypeChange" size="default" fill="#409eff">
               <el-radio-button label="源服务器" :value="1" />
               <el-radio-button label="jar包" :value="2" />
             </el-radio-group>
           </el-form-item>
-          <el-form-item
-            label="源文件服务:"
-            prop="sourceAgentId"
-            v-if="formData.fileType == 1"
-          >
-            <el-select
-              v-model="formData.sourceAgentId"
-              filterable
-              size="default"
-              style="width: 400px"
-            >
-              <el-option
-                v-for="(item, index) in hostList"
-                :value="item.id"
-                :label="item.label"
-                :key="index"
-              />
+          <el-form-item label="源文件服务:" prop="sourceAgentId" v-if="formData.fileType == 1">
+            <el-select v-model="formData.sourceAgentId" filterable size="default" style="width: 400px">
+              <el-option v-for="(item, index) in hostList" :value="item.id" :label="item.label" :key="index" />
             </el-select>
           </el-form-item>
           <el-form-item label="jar包:" prop="sourceAgentId" v-else>
-            <el-select
-              v-model="formData.sourceAgentId"
-              filterable
-              size="default"
-              style="width: 400px"
-            >
-              <el-option
-                v-for="(item, index) in jarList"
-                :value="item.id"
-                :label="item.fileName"
-                :key="index"
-              />
+            <el-select v-model="formData.sourceAgentId" filterable size="default" style="width: 400px">
+              <el-option v-for="(item, index) in jarList" :value="item.id" :label="item.fileName" :key="index" />
             </el-select>
           </el-form-item>
           <el-form-item label="源文件目录:">
             <div>/home/park/docker/{{ props.info.name }}</div>
           </el-form-item>
           <el-form-item label="选择环境服务:" prop="serviceId">
-            <el-select
-              v-model="formData.serviceId"
-              filterable
-              size="default"
-              style="width: 400px"
-            >
-              <el-option
-                v-for="(item, index) in serviceInfoList"
-                :value="item.id"
-                :label="item.name"
-                :key="index"
-              />
+            <el-select v-model="formData.serviceId" filterable size="default" style="width: 400px">
+              <el-option v-for="(item, index) in serviceInfoList" :value="item.id" :label="item.name" :key="index" />
             </el-select>
           </el-form-item>
         </div>
         <div v-if="step == 2">
           <el-form-item label="选择部署服务器:">
-            <el-table
-              ref="dataTableRef"
-              v-loading="loading"
-              :data="dataList"
-              highlight-current-row
-              border
-              @selection-change="handleSelectionChange"
-            >
+            <el-table ref="dataTableRef" v-loading="loading" :data="dataList" highlight-current-row border
+              @selection-change="handleSelectionChange">
               <el-table-column type="selection" width="55" />
-              <el-table-column
-                label="主机名称"
-                prop="hostname"
-                align="center"
-              />
+              <el-table-column label="主机名称" prop="hostname" align="center" />
               <el-table-column label="服务" prop="serviceName" align="center" />
-              <el-table-column
-                label="部署状态"
-                prop="createTime"
-                align="center"
-              >
+              <el-table-column label="部署状态" prop="createTime" align="center">
                 <template #default="scope">
-                  <el-tag v-if="scope.row.status" type="success"
-                    >部署成功</el-tag
-                  >
+                  <el-tag v-if="scope.row.status" type="success">部署成功</el-tag>
                   <el-tag v-else type="info">未部署</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column
-                label="网络状态"
-                prop="createTime"
-                align="center"
-              >
+              <el-table-column label="网络状态" prop="createTime" align="center">
                 <template #default="scope">
                   <el-tag v-if="scope.row.online" type="success">在线</el-tag>
                   <el-tag v-else type="info">离线</el-tag>
@@ -145,14 +70,33 @@
       </el-form>
       <div v-if="props.info.index" style="width: 100%; text-align: center">
         <el-button v-if="step > 0" @click="lastStep">上一步</el-button>
-        <el-button type="primary" v-if="step < 2" @click="nextStep"
-          >下一步</el-button
-        >
-        <el-button type="primary" v-if="step == 2" @click="deployBtn"
-          >部署</el-button
-        >
+        <el-button type="primary" v-if="step < 2" @click="nextStep">下一步</el-button>
+        <el-button type="primary" v-if="step == 2" @click="deployBtn">部署</el-button>
       </div>
     </el-card>
+    <el-dialog v-model="deployEdit.visible" title="日志" width="1400px">
+      <el-table ref="dataTableRef" :data="deployArr" highlight-current-row border height="600px">
+        <!-- <el-table-column label="操作人" prop="hostname" align="center" /> -->
+        <el-table-column label="创建时间" prop="createTime" align="center" width="180" />
+        <el-table-column label="Agent" prop="agentIp" align="center" width="120" />
+        <el-table-column label="容器" prop="containerName" align="center" width="80" />
+        <el-table-column label="状态" align="center" width="100">
+          <template #default="scope">
+            <el-tag v-if="scope.row.status == 2" type="success">部署成功</el-tag>
+            <el-tag v-if="scope.row.status == 0" type="info">待部署</el-tag>
+            <el-tag v-if="scope.row.status == 1" type="warning">部署中</el-tag>
+            <el-tag v-if="scope.row.status == 3" type="danger">部署失败</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="日志" prop="deployLog" align="center" />
+      </el-table>
+      <template #footer>
+        <div class="dialog-footer" style="text-align: center">
+          <el-button type="primary" @click="deployEdit.visible = false">
+            确 定</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <script setup lang="ts">
@@ -165,6 +109,7 @@ import {
   jarData,
   agentList,
   deploy,
+  deployList
 } from "@/api/monitor/project";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
@@ -199,6 +144,10 @@ const serviceInfoList = ref<ServiceInfo[]>([]);
 const jarList = ref<any[]>([]);
 const loading = ref(false);
 const dataList = ref<any[]>([]);
+const deployArr = ref<LogInfo[]>();
+const deployEdit = reactive<DialogOption>({
+  visible: false,
+});
 const rules = reactive({
   dockerfileContent: [
     { required: true, message: "Dockerfile内容不能为空", trigger: "blur" },
@@ -340,6 +289,10 @@ function nextStep() {
         });
       }
       if (step.value == 1) {
+        localStorage.setItem(
+          "formDataServiceId",
+          JSON.stringify(formData.serviceId)
+        );
         const loadings = ElLoading.service({
           lock: true,
           text: "同步中...",
@@ -461,7 +414,20 @@ function fetchServiceList() {
   // 假设有一个API可以获取主机列表
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
-    formData.serviceId = data[0]?.id;
+    setTimeout(() => {
+      if (localStorage.getItem("formDataServiceId")) {
+        formData.serviceId = Number(localStorage.getItem("formDataServiceId"))
+      } else {
+        formData.serviceId = data[0]?.id;
+      }
+      console.log(formData.serviceId);
+    }, 500);
+  });
+}
+function seeRecord() {
+  deployList({ id: props.info.id }).then(({ data }) => {
+    deployArr.value = data;
+    deployEdit.visible = true;
   });
 }
 function goBack() {
@@ -469,7 +435,11 @@ function goBack() {
 }
 onActivated(() => {
   console.log("Deploy component activated with info:", props.info);
-  step.value = 0;
+  if (props.info.dockerComposeContent) {
+    step.value = 1;
+  } else {
+    step.value = 0;
+  }
   createDockerfile(props.info);
   createDockerCompose(props.info);
   fetchHostList();
