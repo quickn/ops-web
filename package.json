@@ -6,7 +6,7 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "vite serve --mode development",
     "build": "vite build --mode production && vue-tsc --noEmit",
-    "prepare": "husky install",
+    "prepare": "HUSKY=0 husky install",
     "lint:eslint": "eslint  --fix --ext .ts,.js,.vue ./src ",
     "lint:prettier": "prettier --write \"**/*.{js,cjs,ts,json,tsx,css,less,scss,vue,html,md}\"",
     "lint:stylelint": "stylelint  \"**/*.{css,scss,vue}\" --fix",
@@ -18,6 +18,7 @@
       "path": "node_modules/cz-git"
     }
   },
+  "type": "module",
   "lint-staged": {
     "*.{js,ts}": [
       "eslint --fix",
