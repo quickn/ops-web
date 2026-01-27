@@ -12,6 +12,15 @@ export function listPage(
   });
 }
 
+export function originServerList(
+  queryParams?: AgentConfig
+): AxiosPromise<PageRecords<AgentConfig[]>> {
+  return request({
+    url: "/agent/list",
+    method: "get",
+    params: queryParams
+  });
+}
 /**
  * 获取部门详情
  *

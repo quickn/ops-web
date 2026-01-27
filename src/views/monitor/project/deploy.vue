@@ -221,7 +221,7 @@ import {
 } from "@/api/monitor/project";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { listPage } from "@/api/monitor/agent";
+import { listPage, originServerList } from "@/api/monitor/agent";
 import { listAll } from "@/api/monitor/service";
 import { de, el } from "element-plus/es/locale";
 import { ElLoading } from "element-plus";
@@ -502,11 +502,12 @@ function handleSelectionChange(val) {
 }
 function fetchHostList() {
   // 假设有一个API可以获取主机列表
-  listPage({
+  originServerList({
     pageNum: 1,
     pageSize: 10000,
+    isOriginServer: true,
   }).then((response) => {
-    hostList.value = response.data.records;
+    hostList.value = response.data;
     hostList.value.forEach((item) => {
       item.label = item.hostname + " (" + item.serviceName + ")";
       if (item.isOriginServer) {
