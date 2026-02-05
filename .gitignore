@@ -3,6 +3,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.vacode
+.env.development
+.env.production
 
 # Editor directories and files
 .idea
