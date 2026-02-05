@@ -17,6 +17,16 @@ export function listData(
   });
 }
 
+export function dockerStats(
+  queryParams?: LogInfo
+): AxiosPromise<PageRecords<LogInfo[]>> {
+  return request({
+    url: "/dockerStats/page",
+    method: "get",
+    params: queryParams,
+  });
+}
+
 export function fileLogList(
   queryParams?: LogCmdForm
 ): AxiosPromise<string> {
