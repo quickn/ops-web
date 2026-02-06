@@ -11,7 +11,7 @@ export function listData(
   queryParams?: HeathMonitor
 ): AxiosPromise<PageRecords<HeathMonitor[]>> {
   return request({
-    url: "/heath/listHeaths",
+    url: "/apiHeathMonitor/listHeaths",
     method: "get",
     params: queryParams,
   });
@@ -24,20 +24,20 @@ export function listData(
  */
 export function addData(data?: HeathMonitor) {
   return request({
-    url: "/heath/save",
+    url: "/apiHeathMonitor/save",
     method: "post",
     data: data,
   });
 }
 
 /**
- * 删除部门
+ * 删除
  *
  * @param ids
  */
 export function deleteData(ids: number|undefined) {
   return request({
-    url: "/heath/delete/" + ids,
+    url: "/apiHeathMonitor/delete/" + ids,
     method: "delete",
   });
 }

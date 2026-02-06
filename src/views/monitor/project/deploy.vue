@@ -50,6 +50,7 @@
             >
               <el-radio-button label="源服务器" :value="1" />
               <el-radio-button label="jar包" :value="2" />
+              <el-radio-button label="手动同步" :value="3" />
             </el-radio-group>
           </el-form-item>
           <el-form-item
@@ -71,7 +72,11 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="jar包:" prop="sourceAgentId" v-else>
+          <el-form-item
+            label="jar包:"
+            prop="sourceAgentId"
+            v-if="formData.fileType == 2"
+          >
             <el-select
               v-model="formData.sourceAgentId"
               filterable
@@ -431,7 +436,7 @@ function nextStep() {
             .catch(() => {
               loadings.close();
             });
-        } else {
+        } else if (formData.fileType == 2) {
           jarList.value.forEach((item) => {
             if (item.id == formData.sourceAgentId) {
               formData.jarDownloadUrl = item.downloadUrl;
@@ -443,6 +448,29 @@ function nextStep() {
             // sourceAgentId: formData.sourceAgentId,
             serviceId: formData.serviceId,
             jarDownloadUrl: formData.jarDownloadUrl,
+            projectId: props.info.id,
+          })
+            .then(({ data }) => {
+              if (data) {
+                loadings.close();
+                console.log("Sync data response:", data);
+                agentList({
+                  serviceId: formData.serviceId,
+                  dockerName: props.info.name,
+                }).then(({ data }) => {
+                  dataList.value = data;
+                });
+                step.value = step.value + 1;
+                console.log("Proceeding to step:", step.value, dataList.value);
+              }
+            })
+            .catch(() => {
+              loadings.close();
+            });
+        } else if (formData.fileType == 3) {
+          syncData({
+            type: formData.fileType,
+            serviceId: formData.serviceId,
             projectId: props.info.id,
           })
             .then(({ data }) => {
