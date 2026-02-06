@@ -1,39 +1,5 @@
 <template>
   <div class="app-container">
-    <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="环境Id">
-          <el-select
-            v-model="queryParams.serviceId"
-            placeholder="请输入"
-            clearable
-            style="width: 160px"
-          >
-            <el-option
-              v-for="item in serviceInfoList"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="服务Id" style="width: 220px">
-          <el-input
-            v-model="queryParams.agentId"
-            placeholder="请输入"
-            clearable
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleQuery"
-            ><i-ep-search />搜索</el-button
-          >
-          <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-
     <el-card shadow="never">
       <el-table
         ref="dataTableRef"
@@ -45,7 +11,7 @@
         show-overflow-tooltip
       >
         <el-table-column label="名称" prop="names" width="180" />
-        <el-table-column label="服务器id" prop="agentId" width="180" />
+        <el-table-column label="服务器名称" prop="serviceName" width="180" />
         <el-table-column label="服务器地址" prop="hostname" width="180" />
         <el-table-column label="cpu使用率" prop="cpu" />
         <el-table-column label="内存使用率" prop="mem" />
