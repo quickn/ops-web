@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { addData, getLastData, testSend } from "@/api/monitor/email";
 
-import { EmailSet } from "@/api/monitor/email/types";
+import { EmailConfig } from "@/api/monitor/email/types";
 
 defineOptions({
   name: "EmailSet",
@@ -17,7 +17,7 @@ const dialogEdit = reactive<DialogOption>({
   visible: true,
 });
 
-const formData = reactive<EmailSet>({ id: null });
+const formData = reactive<EmailConfig>({ id: null });
 
 /** 查询 */
 function handleQuery() {
@@ -126,7 +126,7 @@ onMounted(() => {
 
         <el-form-item label="接口预警最大时间间隔" prop="name">
           <el-input
-            v-model="formData.heathInterval"
+            v-model="formData.timeInterval"
             placeholder="接口预警最大时间间隔"
           />
         </el-form-item>
