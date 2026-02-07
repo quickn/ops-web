@@ -130,6 +130,14 @@ onMounted(() => {
           />
         </el-form-item>
 
+        <el-form-item label="是否开启邮件通知" prop="isSendMail">
+          <el-switch
+            v-model="formData.isSendMail"
+            :active-value="true"
+            :inactive-value="false"
+          />
+        </el-form-item>
+
         <div style="margin: 60px auto; text-align: center">
           <el-button type="primary" @click="handleTestSubmit"> 测试</el-button>
           <el-button type="primary" @click="handleSubmit"> 保存</el-button>

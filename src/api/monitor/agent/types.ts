@@ -25,6 +25,7 @@ export interface AgentConfigForm {
   isMonitor?: boolean;
   isMail?: boolean;
   isDocker?: boolean;
+  isDockerStats?: boolean;
   cpuWarnVal?: number;
   memWarnVal?: number;
   diskWarnVal?: number;

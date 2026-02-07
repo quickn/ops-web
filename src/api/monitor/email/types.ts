@@ -10,5 +10,5 @@ export interface EmailConfig {
   toMail?: string;
   smtpSsl?: string;
   timeInterval?: number;
-  isSendMail?: number;
+  isSendMail?: Boolean;
 }
