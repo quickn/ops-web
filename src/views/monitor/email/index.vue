@@ -35,7 +35,7 @@ async function handleSubmit() {
     if (valid) {
       addData(formData)
         .then(() => {
-          ElMessage.success("报错成功");
+          ElMessage.success("成功");
         })
         .finally(() => (loading.value = false));
     }
@@ -47,7 +47,7 @@ async function handleTestSubmit() {
     if (valid) {
       testSend(formData)
         .then(() => {
-          ElMessage.success("报错成功");
+          ElMessage.success("成功");
         })
         .finally(() => (loading.value = false));
     }
@@ -65,7 +65,6 @@ function resetForm() {
   deptFormRef.value.resetFields();
   deptFormRef.value.clearValidate();
   formData.id = undefined;
-  formData.sort = 1;
 }
 
 const rules = reactive({
