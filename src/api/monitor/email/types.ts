@@ -1,7 +1,7 @@
 /**
  * 登录用户信息
  */
-export interface EmailSet {
+export interface EmailConfig {
   id?: number | null;
   fromMailName?: string;
   fromPwd?: string;
@@ -9,6 +9,6 @@ export interface EmailSet {
   smtpPort?: string;
   toMail?: string;
   smtpSsl?: string;
-  heathInterval?: number;
-  sort?: number;
+  timeInterval?: number;
+  isSendMail?: Boolean;
 }

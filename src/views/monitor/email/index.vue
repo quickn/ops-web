@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { addData, getLastData, testSend } from "@/api/monitor/email";
 
-import { EmailSet } from "@/api/monitor/email/types";
+import { EmailConfig } from "@/api/monitor/email/types";
 
 defineOptions({
   name: "EmailSet",
@@ -17,7 +17,7 @@ const dialogEdit = reactive<DialogOption>({
   visible: true,
 });
 
-const formData = reactive<EmailSet>({ id: null });
+const formData = reactive<EmailConfig>({ id: null });
 
 /** 查询 */
 function handleQuery() {
@@ -35,7 +35,7 @@ async function handleSubmit() {
     if (valid) {
       addData(formData)
         .then(() => {
-          ElMessage.success("报错成功");
+          ElMessage.success("成功");
         })
         .finally(() => (loading.value = false));
     }
@@ -47,7 +47,7 @@ async function handleTestSubmit() {
     if (valid) {
       testSend(formData)
         .then(() => {
-          ElMessage.success("报错成功");
+          ElMessage.success("成功");
         })
         .finally(() => (loading.value = false));
     }
@@ -65,7 +65,6 @@ function resetForm() {
   deptFormRef.value.resetFields();
   deptFormRef.value.clearValidate();
   formData.id = undefined;
-  formData.sort = 1;
 }
 
 const rules = reactive({
@@ -126,8 +125,16 @@ onMounted(() => {
 
         <el-form-item label="接口预警最大时间间隔" prop="name">
           <el-input
-            v-model="formData.heathInterval"
+            v-model="formData.timeInterval"
             placeholder="接口预警最大时间间隔"
+          />
+        </el-form-item>
+
+        <el-form-item label="是否开启邮件通知" prop="isSendMail">
+          <el-switch
+            v-model="formData.isSendMail"
+            :active-value="true"
+            :inactive-value="false"
           />
         </el-form-item>
 

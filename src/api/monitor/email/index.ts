@@ -1,15 +1,15 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { EmailSet } from "./types";
+import { EmailConfig } from "./types";
 
 /**
  * 部门树形表格
  *
  * @param queryParams
  */
-export function getLastData(): AxiosPromise<EmailSet> {
+export function getLastData(): AxiosPromise<EmailConfig> {
   return request({
-    url: "/monitor/mailset/getLastData",
+    url: "/monitor/mailConfig/getLastData",
     method: "get",
   });
 }
@@ -19,17 +19,17 @@ export function getLastData(): AxiosPromise<EmailSet> {
  *
  * @param id
  */
-export function addData(data?: EmailSet) {
+export function addData(data?: EmailConfig) {
   return request({
-    url: "/monitor/mailset/save",
+    url: "/monitor/mailConfig/save",
     method: "post",
     data: data,
   });
 }
 
-export function testSend(data?: EmailSet) {
+export function testSend(data?: EmailConfig) {
   return request({
-    url: "/monitor/mailset/test",
+    url: "/monitor/mailConfig/test",
     method: "post",
     data: data,
   });
@@ -42,7 +42,7 @@ export function testSend(data?: EmailSet) {
  */
 export function deleteData(ids: number) {
   return request({
-    url: "/heath/delete/" + ids,
+    url: "/monitor/mailConfig/delete/" + ids,
     method: "delete",
   });
 }

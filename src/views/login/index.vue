@@ -83,10 +83,10 @@
       </el-button>
 
       <!-- 账号密码提示 -->
-      <div class="mt-4 text-white text-sm">
+      <!--      <div class="mt-4 text-white text-sm">
         <span>{{ $t("login.username") }}: admin</span>
         <span class="ml-4"> {{ $t("login.password") }}: 123456</span>
-      </div>
+      </div>-->
     </el-form>
   </div>
 </template>
