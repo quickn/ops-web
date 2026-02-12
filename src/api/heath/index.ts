@@ -30,6 +30,14 @@ export function addData(data?: HeathMonitor) {
   });
 }
 
+export function testApi(data?: HeathMonitor) {
+  return request({
+    url: "/apiHeathMonitor/testApi",
+    method: "post",
+    data: data,
+  });
+}
+
 /**
  * 删除
  *

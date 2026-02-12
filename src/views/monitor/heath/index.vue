@@ -162,6 +162,7 @@
 
       <template #footer>
         <div class="dialog-footer">
+          <el-button type="warning" @click="handleTestApi"> 测试</el-button>
           <el-button type="primary" @click="handleSubmit"> 确 定</el-button>
           <el-button @click="closeDialog"> 取 消</el-button>
         </div>
@@ -171,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import { addData, deleteData, listData } from "@/api/heath";
+import { addData, deleteData, listData, testApi } from "@/api/heath";
 import { listAll } from "@/api/monitor/service";
 import { HeathMonitor } from "@/api/heath/types";
 
@@ -249,6 +250,23 @@ function handleSelectionChange(selection: any) {
 }
 
 /** 添加数据  */
+async function handleTestApi() {
+  deptFormRef.value.validate((valid: any) => {
+    if (valid) {
+      testApi(formData)
+        .then((res) => {
+          let data = res.data;
+          if (data.heathStatus == 200) {
+            ElMessage.success("测试成功 结果：" + data.body);
+          } else {
+            ElMessage.error("测试失败 状态:" + data.heathStatus);
+          }
+        })
+        .finally(() => (loading.value = false));
+    }
+  });
+}
+
 async function handleSubmit() {
   deptFormRef.value.validate((valid: any) => {
     if (valid) {
@@ -305,12 +323,14 @@ function resetForm() {
   formData.id = null;
   formData.sort = 1;
 }
+
 function fetchServiceList() {
   // 假设有一个API可以获取主机列表
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
   });
 }
+
 onMounted(() => {
   handleQuery();
   fetchServiceList();

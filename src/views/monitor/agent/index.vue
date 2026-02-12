@@ -87,6 +87,15 @@
               升级客户端
             </el-button>
             <el-button
+              type="primary"
+              link
+              size="small"
+              @click.stop="restartAgent(scope.row.id)"
+            >
+              <i-ep-edit />
+              重启
+            </el-button>
+            <el-button
               v-hasPerm="['sys:dept:edit']"
               type="primary"
               link
@@ -335,6 +344,21 @@ function upgradeClient(id) {
     handleAgent(id, "upgrade")
       .then(() => {
         ElMessage.success("升级成功");
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
+function restartAgent(id) {
+  ElMessageBox.confirm("确定要重启客户端?", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    handleAgent(id, "restart")
+      .then(() => {
+        ElMessage.success("重启成功");
       })
       .finally(() => (loading.value = false));
   });
