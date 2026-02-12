@@ -4,8 +4,8 @@
       <div>应用管理 / {{ props.info.index ? "应用部署" : "查看配置" }}</div>
       <div>
         <el-button v-if="step == 2" type="primary" @click="seeRecord"
-          >查看部署日志</el-button
-        >
+          >查看部署日志
+        </el-button>
         <el-button type="primary" @click="goBack">返回</el-button>
       </div>
     </div>
@@ -111,6 +111,23 @@
           </el-form-item>
         </div>
         <div v-if="step == 2">
+          <el-form-item label="部署方式:" prop="requestMethod">
+            <el-select
+              v-model="formData.deployType"
+              filterable
+              size="default"
+              style="width: 400px"
+              @change="handleChange"
+            >
+              <el-option
+                v-for="item in deployTypeOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+
           <el-form-item label="选择部署服务器:">
             <el-table
               ref="dataTableRef"
@@ -134,8 +151,8 @@
               >
                 <template #default="scope">
                   <el-tag v-if="scope.row.status" type="success"
-                    >部署成功</el-tag
-                  >
+                    >部署成功
+                  </el-tag>
                   <el-tag v-else type="info">未部署</el-tag>
                 </template>
               </el-table-column>
@@ -156,11 +173,11 @@
       <div v-if="props.info.index" style="width: 100%; text-align: center">
         <el-button v-if="step > 0" @click="lastStep">上一步</el-button>
         <el-button type="primary" v-if="step < 2" @click="nextStep"
-          >下一步</el-button
-        >
+          >下一步
+        </el-button>
         <el-button type="primary" v-if="step == 2" @click="deployBtn"
-          >部署</el-button
-        >
+          >部署
+        </el-button>
       </div>
     </el-card>
     <el-dialog v-model="deployEdit.visible" title="日志" width="1400px">
@@ -193,8 +210,8 @@
         <el-table-column label="状态" align="center" width="100">
           <template #default="scope">
             <el-tag v-if="scope.row.status == 2" type="success"
-              >部署成功</el-tag
-            >
+              >部署成功
+            </el-tag>
             <el-tag v-if="scope.row.status == 0" type="info">待部署</el-tag>
             <el-tag v-if="scope.row.status == 1" type="warning">部署中</el-tag>
             <el-tag v-if="scope.row.status == 3" type="danger">部署失败</el-tag>
@@ -205,8 +222,8 @@
       <template #footer>
         <div class="dialog-footer" style="text-align: center">
           <el-button type="primary" @click="deployEdit.visible = false">
-            确 定</el-button
-          >
+            确 定
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -214,22 +231,19 @@
 </template>
 <script setup lang="ts">
 import {
-  listData,
-  deleteByIds,
-  addData,
-  putData,
-  syncData,
-  jarData,
   agentList,
   deploy,
   deployList,
+  jarData,
+  putData,
+  syncData,
 } from "@/api/monitor/project";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { listPage, originServerList } from "@/api/monitor/agent";
+import { originServerList } from "@/api/monitor/agent";
 import { listAll } from "@/api/monitor/service";
-import { de, el } from "element-plus/es/locale";
 import { ElLoading } from "element-plus";
+
 const props = defineProps({
   info: {
     type: Object,
@@ -261,6 +275,11 @@ const deployArr = ref<LogInfo[]>();
 const deployEdit = reactive<DialogOption>({
   visible: false,
 });
+const deployTypeOptions = [
+  { value: 1, label: "重新构建" },
+  { value: 2, label: "直接替换源文件" },
+];
+
 const selectedRows = ref<any[]>([]);
 const rules = reactive({
   dockerfileContent: [
@@ -279,6 +298,7 @@ const rules = reactive({
     { required: true, message: "环境服务不能为空", trigger: "change" },
   ],
 });
+
 /** 保存Dockerfile */
 function handleSaveDockerfile() {
   if (!dockerfileContent.value.trim()) {
@@ -297,6 +317,7 @@ function handleSaveDockerfile() {
       dockerfileLoading.value = false;
     });
 }
+
 /** 保存Docker Compose */
 function handleSaveDockerCompose() {
   if (!dockerComposeContent.value.trim()) {
@@ -315,6 +336,7 @@ function handleSaveDockerCompose() {
       dockerComposeLoading.value = false;
     });
 }
+
 function showDockerfileDialog(row) {
   dockerfileContent.value = "";
   dockerfileLoading.value = true;
@@ -327,9 +349,11 @@ function showDockerfileDialog(row) {
   dockerfileDialogVisible.value = true;
   dockerfileLoading.value = false;
 }
+
 function handleFileTypeChange(value) {
   formData.sourceAgentId = "";
 }
+
 /** 获取默认Dockerfile */
 function getDefaultDockerfile(jar: JarPackage): string {
   const jarFileName = props.info.name || "app.jar";
@@ -366,6 +390,7 @@ function getDefaultDockerCompose(jar: JarPackage): string {
       - TZ=Asia/Shanghai
       - JAVA_OPTS=-Xms256m -Xmx512m -Duser.timezone=Asia/Shanghai`;
 }
+
 function createDockerfile(row) {
   dockerfileContent.value = "";
   dockerfileLoading.value = true;
@@ -377,6 +402,7 @@ function createDockerfile(row) {
   }
   dockerfileLoading.value = false;
 }
+
 function createDockerCompose(row) {
   dockerComposeContent.value = "";
   dockerComposeContent.value = true;
@@ -390,6 +416,7 @@ function createDockerCompose(row) {
   }
   dockerfileLoading.value = false;
 }
+
 function nextStep() {
   deptFormRef.value.validate((valid: any) => {
     if (valid) {
@@ -497,6 +524,7 @@ function nextStep() {
     }
   });
 }
+
 function deployBtn() {
   if (selectedRows.value.length == 0) {
     ElMessage.warning("请至少选择一台部署服务器");
@@ -511,6 +539,7 @@ function deployBtn() {
   deploy({
     id: props.info.id,
     agentIds: agentIds,
+    deployType: parseInt(formData.deployType),
   })
     .then(({ data }) => {
       deployLoading.close();
@@ -521,13 +550,16 @@ function deployBtn() {
       deployLoading.close();
     });
 }
+
 function lastStep() {
   step.value = step.value - 1;
 }
+
 function handleSelectionChange(val) {
   console.log("Selected rows:", val);
   selectedRows.value = val;
 }
+
 function fetchHostList() {
   // 假设有一个API可以获取主机列表
   originServerList({
@@ -548,6 +580,7 @@ function fetchHostList() {
     console.log("Fetched jar list:", jarList.value);
   });
 }
+
 function fetchServiceList() {
   // 假设有一个API可以获取主机列表
   listAll().then(({ data }) => {
@@ -562,15 +595,23 @@ function fetchServiceList() {
     }, 500);
   });
 }
+
 function seeRecord() {
   deployList({ id: props.info.id }).then(({ data }) => {
     deployArr.value = data;
     deployEdit.visible = true;
   });
 }
+
 function goBack() {
   emit("changePage", "page");
 }
+
+function handleChange(value) {
+  console.log(value);
+  localStorage.setItem("deployType", JSON.stringify(value));
+}
+
 onActivated(() => {
   console.log("Deploy component activated with info:", props.info);
   if (props.info.dockerComposeContent) {
@@ -582,6 +623,15 @@ onActivated(() => {
   createDockerCompose(props.info);
   fetchHostList();
   fetchServiceList();
+});
+
+onMounted(() => {
+  let deployType = localStorage.getItem("deployType");
+  if (deployType) {
+    formData.deployType = Number(localStorage.getItem("deployType"));
+  } else {
+    formData.deployType = 1;
+  }
 });
 </script>
 <style>
