@@ -1,5 +1,41 @@
 <template>
   <div class="app-container">
+    <div class="search-container">
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
+        <el-form-item label="名称">
+          <el-input
+            v-model="queryParams.names"
+            placeholder="接口名称"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="服务">
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="全部"
+            clearable
+            style="width: 200px"
+          >
+            <el-option
+              v-for="item in serviceInfoList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button class="filter-item" type="primary" @click="handleQuery">
+            <i-ep-search />
+            搜索
+          </el-button>
+          <el-button @click="resetQuery">
+            <i-ep-refresh />
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </div>
     <el-card shadow="never">
       <el-table
         ref="dataTableRef"
@@ -58,7 +94,8 @@ function handleQuery() {
 }
 /** 重置查询 */
 function resetQuery() {
-  queryFormRef.value.resetFields();
+  queryParams.names = "";
+  queryParams.serviceId = "";
   queryParams.pageNum = 1;
   handleQuery();
 }
