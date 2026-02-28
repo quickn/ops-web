@@ -181,7 +181,10 @@ onMounted(() => {
               link
               @click="updateDocker(scope.row)"
             >
-              <i-ep-edit />关闭监听
+              <el-tag v-if="scope.row.isMonitor === true" type="info"
+                >关闭监听</el-tag
+              >
+              <el-tag v-else type="success">开启监听</el-tag>
             </el-button>
           </template>
         </el-table-column>

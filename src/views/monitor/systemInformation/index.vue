@@ -57,6 +57,7 @@
         </el-table-column>
         <el-table-column label="备注" prop="remark" />
         <el-table-column label="创建时间" prop="createTime" width="180" />
+        <el-table-column label="更新时间" prop="updateTime" width="180" />
       </el-table>
 
       <pagination
