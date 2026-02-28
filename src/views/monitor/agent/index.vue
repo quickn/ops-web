@@ -41,22 +41,23 @@
         @selection-change="handleSelectionChange"
       >
         <!--        <el-table-column type="selection" width="55" align="center" />-->
+        <el-table-column label="ID" prop="id" width="90" />
         <el-table-column label="服务名" prop="serviceName" width="90" />
-        <el-table-column label="是否为跳板机" prop="isJumpServer" width="120">
+        <el-table-column label="是否为跳板机" prop="isJumpServer" width="80">
           <template #default="scope">
             <el-tag v-if="scope.row.isJumpServer" type="success">是</el-tag>
             <el-tag v-else type="info">否</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="remoteIp" prop="remoteIp" width="90" />
-        <el-table-column label="是否为源服务" prop="isOriginServer" width="120">
+        <el-table-column label="是否为源服务" prop="isOriginServer" width="80">
           <template #default="scope">
             <el-tag v-if="scope.row.isOriginServer" type="success">是</el-tag>
             <el-tag v-else type="info">否</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="IP" prop="hostname" width="130" />
-        <el-table-column label="是否监控" prop="isMonitor" width="120" />
+        <el-table-column label="是否监控" prop="isMonitor" width="80" />
         <el-table-column label="是否发送邮件" prop="isMail" width="80" />
         <el-table-column label="是否docker监控" prop="isDocker" width="100" />
         <el-table-column label="cpu域值" prop="cpuWarnVal" width="80" />
@@ -67,6 +68,13 @@
           prop="cpuWarnValDocker"
           width="100"
         />
+        <el-table-column label="是否在线" prop="state">
+          <template #default="{ row }">
+            <el-tag :type="row.online == 1 ? 'success' : 'danger'">{{
+              row.online == 1 ? "在线" : "下线"
+            }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="终端版本" prop="clientVersion" width="100" />
         <el-table-column label="更新时间" prop="updateTime" width="160" />
         <el-table-column
