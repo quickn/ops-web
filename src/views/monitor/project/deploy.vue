@@ -126,6 +126,12 @@
                 :value="item.value"
               />
             </el-select>
+            <el-button
+              type="primary"
+              @click="loadAgentList"
+              style="margin-left: auto"
+              >刷新</el-button
+            >
           </el-form-item>
 
           <el-form-item label="选择部署服务器:">
@@ -138,24 +144,12 @@
               @selection-change="handleSelectionChange"
             >
               <el-table-column type="selection" width="55" />
+              <el-table-column label="主机名" prop="hostname" align="center" />
               <el-table-column
-                label="主机名称"
-                prop="hostname"
+                label="服务名"
+                prop="serviceName"
                 align="center"
               />
-              <el-table-column label="服务" prop="serviceName" align="center" />
-              <el-table-column
-                label="部署状态"
-                prop="createTime"
-                align="center"
-              >
-                <template #default="scope">
-                  <el-tag v-if="scope.row.status" type="success"
-                    >部署成功
-                  </el-tag>
-                  <el-tag v-else type="info">未部署</el-tag>
-                </template>
-              </el-table-column>
               <el-table-column
                 label="网络状态"
                 prop="createTime"
@@ -166,6 +160,17 @@
                   <el-tag v-else type="info">离线</el-tag>
                 </template>
               </el-table-column>
+              <el-table-column
+                label="容器名"
+                prop="dockerName"
+                align="center"
+              />
+              <el-table-column label="容器状态" prop="status" align="center" />
+              <el-table-column
+                label="容器更新时间"
+                prop="updateTime"
+                align="center"
+              />
             </el-table>
           </el-form-item>
         </div>
@@ -417,6 +422,15 @@ function createDockerCompose(row) {
   dockerfileLoading.value = false;
 }
 
+function loadAgentList() {
+  agentList({
+    serviceId: formData.serviceId,
+    dockerName: props.info.name,
+  }).then(({ data }) => {
+    dataList.value = data;
+  });
+}
+
 function nextStep() {
   deptFormRef.value.validate((valid: any) => {
     if (valid) {
@@ -450,12 +464,7 @@ function nextStep() {
             .then(({ data }) => {
               if (data) {
                 loadings.close();
-                agentList({
-                  serviceId: formData.serviceId,
-                  dockerName: props.info.name,
-                }).then(({ data }) => {
-                  dataList.value = data;
-                });
+                loadAgentList();
                 step.value = step.value + 1;
                 console.log("Proceeding to step:", step.value, dataList.value);
               }

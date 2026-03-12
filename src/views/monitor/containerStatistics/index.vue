@@ -2,13 +2,6 @@
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="名称">
-          <el-input
-            v-model="queryParams.names"
-            placeholder="接口名称"
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
         <el-form-item label="服务">
           <el-select
             v-model="queryParams.serviceId"
@@ -23,6 +16,13 @@
               :value="item.id"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item label="名称">
+          <el-input
+            v-model="queryParams.names"
+            placeholder="接口名称"
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item>
           <el-button class="filter-item" type="primary" @click="handleQuery">
