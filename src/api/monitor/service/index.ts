@@ -1,7 +1,7 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
 import { ServiceInfo } from "./types";
-import { SystemInfo } from "@/api/monitor/system/types";
+import { SystemInfo } from "@/api/monitor/systemInformation/types";
 
 export function listAll(): AxiosPromise<ServiceInfo[]> {
   return request({

@@ -17,13 +17,27 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="名称">
+        <el-form-item label="服务名称">
           <el-input
             v-model="queryParams.names"
-            placeholder="接口名称"
+            placeholder="服务名称"
             @keyup.enter="handleQuery"
           />
         </el-form-item>
+
+        <el-form-item label="时间范围">
+          <el-date-picker
+            size="default"
+            v-model="queryParams.time"
+            type="daterange"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+          />
+        </el-form-item>
+
         <el-form-item>
           <el-button class="filter-item" type="primary" @click="handleQuery">
             <i-ep-search />
@@ -82,12 +96,22 @@ const dataList = ref<LogInfo[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 /** 查询 */
 function handleQuery() {
+  if (queryParams.time && queryParams.time.length == 2) {
+    queryParams.startTime = queryParams.time[0] + " 00:00:00";
+    queryParams.endTime = queryParams.time[1] + " 23:59:59";
+  } else {
+    queryParams.startTime = null;
+    queryParams.endTime = null;
+  }
+  let time = queryParams.time;
+  queryParams.time = null;
   loading.value = true;
   dockerStats(queryParams).then(({ data }) => {
     dataList.value = data.records;
     total.value = data.total;
     loading.value = false;
   });
+  queryParams.time = time;
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
   });
@@ -95,6 +119,7 @@ function handleQuery() {
 /** 重置查询 */
 function resetQuery() {
   queryParams.names = "";
+  queryParams.time = null;
   queryParams.serviceId = "";
   queryParams.pageNum = 1;
   handleQuery();

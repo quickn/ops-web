@@ -50,14 +50,32 @@
         <el-table-column label="系统版本详细信息" prop="versionDetail" />
         <el-table-column label="主机状态" prop="state">
           <template #default="{ row }">
-            <el-tag :type="row.state == 1 ? 'success' : 'danger'">{{
-              row.state == 1 ? "正常" : "下线"
-            }}</el-tag>
+            <el-tag :type="row.state == 1 ? 'success' : 'danger'"
+              >{{ row.state == 1 ? "正常" : "下线" }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="备注" prop="remark" />
         <el-table-column label="创建时间" prop="createTime" width="180" />
         <el-table-column label="更新时间" prop="updateTime" width="180" />
+        <el-table-column
+          fixed="right"
+          label="操作"
+          width="190"
+          style="padding: 0"
+        >
+          <template #default="scope">
+            <el-button
+              type="primary"
+              size="small"
+              link
+              @click="deleteById(scope.row.id)"
+            >
+              <i-ep-delete />
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <pagination
@@ -71,19 +89,20 @@
   </div>
 </template>
 <script setup lang="ts">
-import { dockerStats, deleteByIds } from "@/api/monitor/instruction";
+import { deleteByIds, listPage } from "@/api/monitor/systemInformation";
 import { listAll } from "@/api/monitor/service";
-import { listPage } from "@/api/monitor/systemInformation";
-import { LogInfo } from "@/api/monitor/log/types";
+import { SystemInfo } from "@/api/monitor/systemInformation/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
+
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
-const queryParams = reactive<LogInfo>({ pageSize: 10, pageNum: 1 });
-const dataList = ref<LogInfo[]>();
+const queryParams = reactive<SystemInfo>({ pageSize: 10, pageNum: 1 });
+const dataList = ref<SystemInfo[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
+
 /** 查询 */
 function handleQuery() {
   loading.value = true;
@@ -96,6 +115,7 @@ function handleQuery() {
     serviceInfoList.value = data;
   });
 }
+
 /** 重置查询 */
 function resetQuery() {
   queryParams.serviceId = "";
@@ -107,10 +127,23 @@ function resetQuery() {
 function handleSelectionChange(selection: any) {
   ids.value = selection.map((item: any) => item.id);
 }
-function handleEdit(row: LogInfo) {
-  emit("setData", row);
-  emit("changePage", "detail");
+
+function deleteById(id) {
+  ElMessageBox.confirm("确定要删除服务?", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    deleteByIds(id)
+      .then(() => {
+        ElMessage.success("删除成功");
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
+  });
 }
+
 onMounted(() => {
   handleQuery();
 });

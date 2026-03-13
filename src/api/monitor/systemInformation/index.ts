@@ -1,18 +1,11 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { ServiceInfo } from "./types";
-import { SystemInfo } from "@/api/monitor/system/types";
+import { SystemInfo } from "@/api/monitor/systemInformation/types";
 
-export function listAll(): AxiosPromise<ServiceInfo[]> {
-  return request({
-    url: "/serviceInfo/listAll",
-    method: "get",
-  });
-}
 
 export function listPage(
-  queryParams?: ServiceInfo
-): AxiosPromise<PageRecords<ServiceInfo[]>> {
+  queryParams?: SystemInfo
+): AxiosPromise<PageRecords<SystemInfo[]>> {
   return request({
     url: "/monitor/systemInfo/listPage",
     method: "get",
@@ -21,33 +14,13 @@ export function listPage(
 }
 
 /**
- * 获取部门详情
- *
- * @param id
- */
-export function addData(data?: ServiceInfo) {
-  return request({
-    url: "/serviceInfo/save",
-    method: "post",
-    data: data,
-  });
-}
-
-/**
  * 删除部门
  *
  * @param ids
  */
-export function deleteData(ids: number) {
+export function deleteByIds(ids: number) {
   return request({
-    url: "/serviceInfo/delete/" + ids,
+    url: "/monitor/systemInfo/deleteById/" + ids,
     method: "delete",
-  });
-}
-
-export function upgradeClientByServiceId(id: number) {
-  return request({
-    url: "/serviceInfo/upgradeClientByServiceId/" + id,
-    method: "get",
   });
 }

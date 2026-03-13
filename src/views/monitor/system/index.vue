@@ -3,7 +3,7 @@ import { listData, deleteByIds } from "@/api/monitor/system";
 
 import { listAll } from "@/api/monitor/service";
 
-import { SystemInfo } from "@/api/monitor/system/types";
+import { SystemInfo } from "@/api/monitor/systemInformation/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
 
 const queryFormRef = ref(ElForm);
