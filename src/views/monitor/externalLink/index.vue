@@ -60,6 +60,11 @@
         <el-table-column label="服务器名称" prop="serviceName" width="180" />
         <el-table-column label="标题" prop="title" width="180" />
         <el-table-column label="地址" prop="url" width="180" />
+        <el-table-column
+          label="是否内部打开"
+          prop="isInternalOpen"
+          width="180"
+        />
         <el-table-column label="创建时间" prop="createTime" width="180" />
         <el-table-column label="更新时间" prop="updateTime" width="180" />
         <el-table-column
@@ -73,7 +78,7 @@
               type="primary"
               size="small"
               link
-              @click="openPage(scope.row.url)"
+              @click="openPage(scope.row)"
             >
               访问
             </el-button>
@@ -143,6 +148,16 @@
         </el-form-item>
         <el-form-item label="URL" prop="url">
           <el-input v-model="formData.url" placeholder="URL" />
+        </el-form-item>
+        <el-form-item label="是否内部打开" prop="isInternalOpen">
+          <el-select
+            v-model="formData.isInternalOpen"
+            filterable
+            size="default"
+          >
+            <el-option :value="true" label="是" />
+            <el-option :value="false" label="否" />
+          </el-select>
         </el-form-item>
       </el-form>
 
@@ -234,7 +249,6 @@ async function handleSubmit() {
 }
 
 function handleServiceChange(val) {
-  console.log(serviceInfoList);
   const selectedService = serviceInfoList.value.find((item) => item.id === val);
   if (selectedService) {
     formData.serviceName = selectedService.name;
@@ -271,13 +285,13 @@ function deleteById(id) {
 
 const router = useRouter();
 
-function openPage(url) {
-  // 内部路由
-  const route = router.resolve({
-    path: "/monitor/externalLinkPage",
-    query: { url: url },
-  });
-  window.open(route.href, "_blank");
+//打开内部页面
+function openPage(row) {
+  if (row.isInternalOpen) {
+    router.push("/monitor/externalLinkPage?url=" + row.url);
+  } else {
+    window.open(row.url, "_blank");
+  }
   return false; // 阻止默认的路由跳转
 }
 

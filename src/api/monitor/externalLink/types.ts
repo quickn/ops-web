@@ -4,5 +4,6 @@ export interface ExternalLink extends PageQuery {
   serviceName?: string;
   title?: string;
   url?: string;
+  isInternalOpen?: boolean;
   updateTime?: string;
 }
