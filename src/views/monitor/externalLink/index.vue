@@ -17,6 +17,13 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="标题" prop="keywords">
+          <el-input
+            v-model="queryParams.title"
+            placeholder="标题"
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button class="filter-item" type="primary" @click="handleQuery">
             <i-ep-search />
@@ -25,6 +32,17 @@
           <el-button @click="resetQuery">
             <i-ep-refresh />
             重置
+          </el-button>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button
+            v-hasPerm="['sys:dept:add']"
+            type="success"
+            @click="openDialog()"
+          >
+            <i-ep-plus />
+            新增
           </el-button>
         </el-form-item>
       </el-form>
@@ -61,6 +79,17 @@
             </el-button>
 
             <el-button
+              v-hasPerm="['sys:dept:edit']"
+              type="primary"
+              link
+              size="small"
+              @click.stop="openDialog(scope.row)"
+            >
+              <i-ep-edit />
+              编辑
+            </el-button>
+
+            <el-button
               type="primary"
               size="small"
               link
@@ -81,10 +110,53 @@
         @pagination="handleQuery"
       />
     </el-card>
+
+    <el-dialog
+      v-model="dialogEdit.visible"
+      :title="dialogEdit.title"
+      width="900px"
+      @closed="closeDialog"
+    >
+      <el-form
+        ref="deptFormRef"
+        :model="formData"
+        :rules="rules"
+        label-width="150px"
+      >
+        <el-form-item label="服务" prop="serviceId">
+          <el-select
+            v-model="formData.serviceId"
+            filterable
+            size="default"
+            @change="handleServiceChange"
+          >
+            <el-option
+              v-for="(item, index) in serviceInfoList"
+              :value="item.id"
+              :label="item.name"
+              :key="index"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标题" prop="title">
+          <el-input v-model="formData.title" placeholder="标题" />
+        </el-form-item>
+        <el-form-item label="URL" prop="url">
+          <el-input v-model="formData.url" placeholder="URL" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="handleSubmit"> 确 定</el-button>
+          <el-button @click="closeDialog"> 取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <script setup lang="ts">
-import { deleteByIds, listPage } from "@/api/monitor/externalLink";
+import { addData, deleteByIds, listPage } from "@/api/monitor/externalLink";
 import { listAll } from "@/api/monitor/service";
 import { ExternalLink } from "@/api/monitor/externalLink/types";
 import { useRouter } from "vue-router";
@@ -97,6 +169,19 @@ const total = ref(0);
 const queryParams = reactive<ExternalLink>({ pageSize: 10, pageNum: 1 });
 const dataList = ref<ExternalLink[]>();
 const serviceInfoList = ref<ExternalLink[]>();
+
+const dialogEdit = reactive<DialogOption>({
+  visible: false,
+});
+
+const deptFormRef = ref(ElForm);
+
+const formData = reactive<ExternalLink>({
+  serviceId: null,
+  serviceName: null,
+  title: null,
+  url: null,
+});
 
 /** 查询 */
 function handleQuery() {
@@ -111,9 +196,54 @@ function handleQuery() {
   });
 }
 
+async function openDialog(data?: ExternalLink) {
+  if (data) {
+    dialogEdit.visible = true;
+    dialogEdit.title = "编辑";
+    Object.assign(formData, data);
+  } else {
+    if (formData) {
+      dialogEdit.title = "新增";
+      formData.serviceName = "";
+      formData.serviceId = null;
+      formData.id = null;
+      formData.title = "";
+      formData.url = "";
+    }
+    dialogEdit.visible = true;
+  }
+}
+
+/** 关闭弹窗 */
+function closeDialog() {
+  dialogEdit.visible = false;
+}
+
+async function handleSubmit() {
+  deptFormRef.value.validate((valid: any) => {
+    if (valid) {
+      addData(formData)
+        .then(() => {
+          ElMessage.success("新增成功");
+          closeDialog();
+          handleQuery();
+        })
+        .finally(() => (loading.value = false));
+    }
+  });
+}
+
+function handleServiceChange(val) {
+  console.log(serviceInfoList);
+  const selectedService = serviceInfoList.value.find((item) => item.id === val);
+  if (selectedService) {
+    formData.serviceName = selectedService.name;
+  }
+}
+
 /** 重置查询 */
 function resetQuery() {
-  queryParams.serviceId = "";
+  queryParams.serviceId = null;
   queryParams.pageNum = 1;
   handleQuery();
 }

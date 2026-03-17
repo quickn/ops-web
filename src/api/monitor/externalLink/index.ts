@@ -9,18 +9,21 @@ export function listPage(
   return request({
     url: "/externalLink/page",
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
-/**
- * 删除部门
- *
- * @param ids
- */
 export function deleteByIds(ids: number) {
   return request({
-    url: "/systemInfo/deleteById/" + ids,
-    method: "delete",
+    url: "/externalLink/delete/" + ids,
+    method: "delete"
+  });
+}
+
+export function addData(data?: ExternalLink) {
+  return request({
+    url: "/externalLink/save",
+    method: "post",
+    data: data
   });
 }
