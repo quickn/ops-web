@@ -63,7 +63,7 @@ export const constantRoutes: RouteRecordRaw[] = [
   //   path: "/external-link",
   //   component: Layout,
   //   children: [ {
-  //       component: () => import("@/views/external-link/index.vue"),
+  //       component: () => import("@/views/external-link/compareTableStructure.vue"),
   //       path: "https://www.cnblogs.com/haoxianrui/",
   //       meta: { title: "外部链接", icon: "link" },
   //     },
@@ -79,14 +79,14 @@ export const constantRoutes: RouteRecordRaw[] = [
          children: [
              {
                  path: 'level1',
-                 component: () => import('@/views/nested/level1/index.vue'),
+                 component: () => import('@/views/nested/level1/compareTableStructure.vue'),
                  name: 'Level1',
                  meta: {title: '菜单一级'},
                  redirect: '/nested/level1/level2',
                  children: [
                      {
                          path: 'level2',
-                         component: () => import('@/views/nested/level1/level2/index.vue'),
+                         component: () => import('@/views/nested/level1/level2/compareTableStructure.vue'),
                          name: 'Level2',
                          meta: {title: '菜单二级'},
                          redirect: '/nested/level1/level2/level3',
