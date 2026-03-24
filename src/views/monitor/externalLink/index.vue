@@ -59,7 +59,7 @@
       >
         <el-table-column label="服务器名称" prop="serviceName" width="180" />
         <el-table-column label="标题" prop="title" width="180" />
-        <el-table-column label="地址" prop="url" width="180" />
+        <el-table-column label="地址" prop="url" width="350" />
         <el-table-column
           label="是否内部打开"
           prop="isInternalOpen"

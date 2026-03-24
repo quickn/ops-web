@@ -11,10 +11,14 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleQuery"
-            ><i-ep-search />搜索</el-button
-          >
-          <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
+          <el-button type="primary" @click="handleQuery">
+            <i-ep-search />
+            搜索
+          </el-button>
+          <el-button @click="resetQuery">
+            <i-ep-refresh />
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -56,8 +60,8 @@
             <el-tag v-if="scope.row.status == 0" type="info">未部署</el-tag>
             <el-tag v-if="scope.row.status == 1" type="warning">部署中</el-tag>
             <el-tag v-if="scope.row.status == 2" type="success"
-              >部署成功</el-tag
-            >
+              >部署成功
+            </el-tag>
             <el-tag v-if="scope.row.status == 3" type="danger">部署失败</el-tag>
           </template>
         </el-table-column>
@@ -111,7 +115,8 @@
               link
               @click="deleteById(scope.row.id)"
             >
-              <i-ep-delete />删除
+              <i-ep-delete />
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -181,6 +186,13 @@
           />
         </el-form-item>
 
+        <el-form-item label="应用类型" prop="type">
+          <el-select v-model="formData.type" filterable size="default">
+            <el-option :value="1" label="Java" />
+            <el-option :value="2" label="docker" />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="描述" prop="remark">
           <el-input
             v-model="formData.remark"
@@ -228,8 +240,8 @@
         <el-table-column label="状态" align="center" width="100">
           <template #default="scope">
             <el-tag v-if="scope.row.status == 2" type="success"
-              >部署成功</el-tag
-            >
+              >部署成功
+            </el-tag>
             <el-tag v-if="scope.row.status == 0" type="info">待部署</el-tag>
             <el-tag v-if="scope.row.status == 1" type="warning">部署中</el-tag>
             <el-tag v-if="scope.row.status == 3" type="danger">部署失败</el-tag>
@@ -240,8 +252,8 @@
       <template #footer>
         <div class="dialog-footer" style="text-align: center">
           <el-button type="primary" @click="deployEdit.visible = false">
-            确 定</el-button
-          >
+            确 定
+          </el-button>
         </div>
       </template>
     </el-dialog>
@@ -249,15 +261,15 @@
 </template>
 <script setup lang="ts">
 import {
-  listData,
-  deleteByIds,
   addData,
-  putData,
+  deleteByIds,
   deployList,
+  listData,
+  putData,
 } from "@/api/monitor/project";
-import { LogInfo } from "@/api/monitor/log/types";
+import { Project } from "@/api/monitor/project/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { de } from "element-plus/es/locale";
+
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
@@ -265,12 +277,12 @@ const addStatus = ref(true);
 const ids = ref<number[]>([]);
 const total = ref(0);
 const deptFormRef = ref(ElForm);
-const queryParams = reactive<LogInfo>({ pageSize: 10, pageNum: 1 });
+const queryParams = reactive<Project>({ pageSize: 10, pageNum: 1 });
 const deployEdit = reactive<DialogOption>({
   visible: false,
 });
-const deployArr = ref<LogInfo[]>();
-const dataList = ref<LogInfo[]>();
+const deployArr = ref<Project[]>();
+const dataList = ref<Project[]>();
 // Dockerfile相关
 const dockerfileDialogVisible = ref(false);
 const dockerfileLoading = ref(false);
@@ -279,14 +291,16 @@ const serviceInfoList = ref<ServiceInfo[]>();
 const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
-const formData = reactive<HeathMonitor>({
+const formData = reactive<Project>({
   name: undefined,
+  type: undefined,
   remark: undefined,
 });
 const rules = reactive({
   name: [{ required: true, message: "请输入应用名称", trigger: "blur" }],
   remark: [{ required: false, message: "请输入描述", trigger: "blur" }],
 });
+
 /** 查询 */
 function handleQuery() {
   loading.value = true;
@@ -296,6 +310,7 @@ function handleQuery() {
     loading.value = false;
   });
 }
+
 /** 重置查询 */
 function resetQuery() {
   queryFormRef.value.resetFields();
@@ -309,7 +324,8 @@ function resetQuery() {
 function handleSelectionChange(selection: any) {
   ids.value = selection.map((item: any) => item.id);
 }
-async function openDialog(data?: HeathMonitor) {
+
+async function openDialog(data?: Project) {
   if (data) {
     addStatus.value = false;
     dialogEdit.visible = true;
@@ -331,12 +347,14 @@ function closeDialog() {
   dialogEdit.visible = false;
   resetForm();
 }
+
 function resetForm() {
   deptFormRef.value.resetFields();
   deptFormRef.value.clearValidate();
   formData.name = "";
   formData.remark = "";
 }
+
 /** 删除角色 */
 function deleteById(id) {
   ElMessageBox.confirm("确定要删除服务?", "警告", {
@@ -353,6 +371,7 @@ function deleteById(id) {
       .finally(() => (loading.value = false));
   });
 }
+
 async function handleSubmit() {
   deptFormRef.value.validate((valid: any) => {
     if (valid) {
@@ -376,6 +395,7 @@ async function handleSubmit() {
     }
   });
 }
+
 /** 保存Dockerfile */
 function handleSaveDockerfile() {
   if (!dockerfileContent.value.trim()) {
@@ -413,6 +433,7 @@ function handleSaveDockerCompose() {
       dockerComposeLoading.value = false;
     });
 }
+
 function showDockerfileDialog(row, index) {
   // dockerfileContent.value = "";
   // dockerfileLoading.value = true;
@@ -433,11 +454,13 @@ function showDockerfileDialog(row, index) {
   emit("setData", _param);
   emit("changePage", "deploy");
 }
+
 function setDockerfileDialog(row) {
   let _param = row;
   emit("setData", _param);
   emit("changePage", "set");
 }
+
 /** 获取默认Dockerfile */
 function getDefaultDockerfile(jar: JarPackage): string {
   const jarFileName = (jar && jar.fileName) || "app.jar";
@@ -474,12 +497,14 @@ function getDefaultDockerCompose(jar: JarPackage): string {
       - TZ=Asia/Shanghai
       - JAVA_OPTS=-Xms256m -Xmx512m -Duser.timezone=Asia/Shanghai`;
 }
+
 function openDeployDialog(row) {
   deployList({ id: row.id }).then(({ data }) => {
     deployArr.value = data;
     deployEdit.visible = true;
   });
 }
+
 onActivated(() => {
   handleQuery();
 });
