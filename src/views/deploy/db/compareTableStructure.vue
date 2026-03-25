@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import hljs from "highlight.js";
+import "highlight.js/styles/default.css"; // 引入样式，可替换其他主题
 import { compareTableStructure } from "@/api/deploy/db";
 
 import { listAll } from "@/api/monitor/service";
@@ -23,28 +25,21 @@ const options = [
 ];
 
 const share_options = [
-  { value: true, text: "主库" },
-  { value: false, text: "分库" },
+  { value: false, text: "主库" },
+  { value: true, text: "分库" },
 ];
-
-function replaceAll(str: string, find: string, replace: string) {
-  return str.replace(new RegExp(find, "g"), replace);
-}
 
 /** 查询 */
 function handleQuery() {
   loading.value = true;
   textContent.value = "";
   compareTableStructure(queryParams).then(({ data }) => {
-    if (queryParams.keyword != undefined) {
-      data = replaceAll(
-        data,
-        queryParams.keyword,
-        '<font color="red">' + queryParams.keyword + "</font>"
-      );
-    }
-    let container = document.getElementById("log_div");
-    container!.innerHTML = data;
+    let container = document.getElementById("sql_code");
+    const formattedData = data.replace(/;/g, ";\n");
+    container!.innerHTML = formattedData;
+    document.querySelectorAll("pre code").forEach((block) => {
+      hljs.highlightBlock(block);
+    });
     loading.value = false;
   });
 }
@@ -70,6 +65,23 @@ onMounted(() => {
 
 function handleSelectChange(label: string) {
   queryParams.env = label;
+}
+
+function copyCommand() {
+  let container = document.getElementById("sql_code");
+  let text = container?.innerText;
+  if (!text) {
+    ElMessage.warning("没有命令可复制");
+    return;
+  }
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      ElMessage.success("命令已复制到剪贴板");
+    })
+    .catch(() => {
+      ElMessage.error("复制失败");
+    });
 }
 </script>
 
@@ -133,21 +145,21 @@ function handleSelectChange(label: string) {
             重置
           </el-button>
         </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="copyCommand" size="small">
+            <i-ep-document-copy />
+            复制
+          </el-button>
+        </el-form-item>
       </el-form>
     </div>
     <el-card shadow="never">
-      <div v-loading="loading" class="txt" id="log_div"></div>
+      <div v-loading="loading" id="log_div">
+        <pre>
+        <code class="sql" id="sql_code">
+        </code>
+        </pre>
+      </div>
     </el-card>
   </div>
 </template>
-
-<style>
-.txt {
-  min-height: 400px;
-  font-family: Arial, "Microsoft YaHei", "黑体", "宋体", sans-serif;
-  font-size: 10px;
-  color: white;
-  white-space: pre-wrap;
-  background-color: #0a0a0a;
-}
-</style>

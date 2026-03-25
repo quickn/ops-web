@@ -1,16 +1,11 @@
-import axios, { AxiosPromise } from "axios";
-
-const requestPy = axios.create({
-  baseURL: import.meta.env.VITE_APP_BASE_API_PY,
-  timeout: 50000,
-  headers: { "Content-Type": "application/json;charset=utf-8" },
-});
+import { AxiosPromise } from "axios";
+import request from "@/utils/request";
 
 export function compareTableStructure(
   queryParams?: string
 ): AxiosPromise<string> {
-  return requestPy({
-    url: "/db/compareTableStructure",
+  return request({
+    url: "/pyApi/db/compareTableStructure",
     method: "get",
     params: queryParams
   });

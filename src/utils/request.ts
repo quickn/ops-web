@@ -1,4 +1,4 @@
-import axios, { InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { useUserStoreHook } from "@/store/modules/user";
 
 // 创建 axios 实例
@@ -14,6 +14,12 @@ service.interceptors.request.use(
     const userStore = useUserStoreHook();
     if (userStore.token) {
       config.headers.Authorization = userStore.token;
+    }
+    // 根据条件动态设置 baseURL
+    if (config.url.startsWith("/pyApi/")) {
+      config.baseURL = import.meta.env.VITE_APP_BASE_API_PY;
+    } else {
+      config.baseURL = import.meta.env.VITE_APP_BASE_API;
     }
     return config;
   },
@@ -31,6 +37,10 @@ service.interceptors.response.use(
     }
     // 响应数据为二进制流处理(Excel导出)
     if (response.data instanceof ArrayBuffer) {
+      return response;
+    }
+
+    if ((response.status == 200) & (response.data != null)) {
       return response;
     }
 
