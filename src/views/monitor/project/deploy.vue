@@ -92,7 +92,10 @@
             </el-select>
           </el-form-item>
           <el-form-item label="源文件目录:">
-            <div>/home/park/docker/{{ props.info.name }}</div>
+            <div>{{ props.info.sourceDir }}/{{ props.info.name }}</div>
+          </el-form-item>
+          <el-form-item label="指向目录:">
+            <div>{{ props.info.targetDir }}/{{ props.info.name }}</div>
           </el-form-item>
           <el-form-item label="选择环境服务:" prop="serviceId">
             <el-select

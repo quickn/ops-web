@@ -49,6 +49,8 @@
           width="150"
           align="center"
         />
+        <el-table-column label="源文件目录" prop="sourceDir" align="center" />
+        <el-table-column label="指向目录" prop="targetDir" align="center" />
         <el-table-column label="描述" prop="remark" align="center" />
         <el-table-column
           label="状态"
@@ -129,6 +131,7 @@
         @pagination="handleQuery"
       />
     </el-card>
+
     <el-dialog
       v-model="dialogEdit.visible"
       :title="dialogEdit.title"
@@ -139,7 +142,7 @@
         ref="deptFormRef"
         :model="formData"
         :rules="rules"
-        label-width="80px"
+        label-width="100px"
       >
         <el-form-item label="应用名称" prop="name">
           <el-input
@@ -149,41 +152,12 @@
           />
         </el-form-item>
 
-        <el-form-item label="描述" prop="remark">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            :rows="4"
-            placeholder="链接"
-          />
+        <el-form-item label="源文件目录" prop="sourceDir">
+          <el-input v-model="formData.sourceDir" placeholder="源文件目录" />
         </el-form-item>
-      </el-form>
 
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="handleSubmit"> 确 定</el-button>
-          <el-button @click="closeDialog"> 取 消</el-button>
-        </div>
-      </template>
-    </el-dialog>
-    <el-dialog
-      v-model="dialogEdit.visible"
-      :title="dialogEdit.title"
-      width="900px"
-      @closed="closeDialog"
-    >
-      <el-form
-        ref="deptFormRef"
-        :model="formData"
-        :rules="rules"
-        label-width="80px"
-      >
-        <el-form-item label="应用名称" prop="name">
-          <el-input
-            v-model="formData.name"
-            :disabled="!addStatus"
-            placeholder="接口名"
-          />
+        <el-form-item label="指向目录" prop="targetDir">
+          <el-input v-model="formData.targetDir" placeholder="指向目录" />
         </el-form-item>
 
         <el-form-item label="应用类型" prop="type">
@@ -198,7 +172,7 @@
             v-model="formData.remark"
             type="textarea"
             :rows="4"
-            placeholder="链接"
+            placeholder="描述"
           />
         </el-form-item>
       </el-form>
@@ -218,7 +192,6 @@
         border
         height="600px"
       >
-        <!-- <el-table-column label="操作人" prop="hostname" align="center" /> -->
         <el-table-column
           label="时间"
           prop="deployTime"
@@ -268,7 +241,6 @@ import {
   putData,
 } from "@/api/monitor/project";
 import { Project } from "@/api/monitor/project/types";
-import { ServiceInfo } from "@/api/monitor/service/types";
 
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
@@ -286,8 +258,6 @@ const dataList = ref<Project[]>();
 // Dockerfile相关
 const dockerfileDialogVisible = ref(false);
 const dockerfileLoading = ref(false);
-const currentJarName = ref<string>();
-const serviceInfoList = ref<ServiceInfo[]>();
 const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
@@ -295,6 +265,8 @@ const formData = reactive<Project>({
   name: undefined,
   type: undefined,
   remark: undefined,
+  sourceDir: undefined,
+  targetDir: undefined,
 });
 const rules = reactive({
   name: [{ required: true, message: "请输入应用名称", trigger: "blur" }],
