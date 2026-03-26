@@ -37,11 +37,11 @@ function handleQuery() {
   textContent.value = "";
   fileLogList(queryParams).then(({ data }) => {
     if (queryParams.keyword != undefined) {
-      data = replaceAll(
-        data,
-        queryParams.keyword,
-        '<font color="red">' + queryParams.keyword + "</font>"
-      );
+      // data = replaceAll(
+      //   data,
+      //   queryParams.keyword,
+      //   '<font color="red">' + queryParams.keyword + "</font>"
+      // );
     }
     let container = document.getElementById("log_div");
     container!.innerHTML = data;
@@ -115,6 +115,15 @@ function handleSelectChange(serviceId: number) {
           />
         </el-form-item>
 
+        <el-form-item prop="keyword1" label="" style="width: 200px">
+          <el-input
+            v-model="queryParams.keyword1"
+            placeholder="关键字1"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+
         <el-form-item prop="keywords" label="" style="width: 150px">
           <el-input
             v-model="queryParams.grepPara"
@@ -161,19 +170,28 @@ function handleSelectChange(serviceId: number) {
         </el-form-item>
       </el-form>
     </div>
-    <el-card shadow="never">
-      <div v-loading="loading" class="txt" id="log_div"></div>
-    </el-card>
+    <div v-loading="loading" class="txt" id="log_div"></div>
   </div>
 </template>
 
 <style>
 .txt {
-  min-height: 400px;
+  min-height: 750px;
+  padding-left: 8px;
   font-family: Arial, "Microsoft YaHei", "黑体", "宋体", sans-serif;
   font-size: 10px;
   color: white;
   white-space: pre-wrap;
   background-color: #0a0a0a;
+}
+
+.hostname {
+  padding-top: 10px;
+  padding-left: 10px;
+  margin: 0 auto;
+  font-size: 15px;
+  color: #f7ba2a;
+  text-align: center;
+  border-bottom: 1px solid #905;
 }
 </style>

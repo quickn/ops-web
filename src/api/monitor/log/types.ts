@@ -14,6 +14,7 @@ export interface LogCmdForm {
   serviceId?: number | undefined;
   dockerName?: string;
   keyword?: string | undefined;
+  keyword1?: string | undefined;
   createDate?: string;
   logLevel?: string;
   timeout?: number;

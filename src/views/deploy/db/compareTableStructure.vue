@@ -56,9 +56,9 @@ onMounted(() => {
   queryParams.is_inside = options[0].value;
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
-    queryParams.label = serviceInfoList.value[0].label;
-    if (queryParams.label != undefined) {
-      handleSelectChange(queryParams.label);
+    queryParams.env = serviceInfoList.value[0].label;
+    if (queryParams.env != undefined) {
+      handleSelectChange(queryParams.env);
     }
   });
 });
@@ -91,7 +91,7 @@ function copyCommand() {
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
         <el-form-item label="服务" prop="status">
           <el-select
-            v-model="queryParams.label"
+            v-model="queryParams.env"
             clearable
             style="width: 100px"
             @change="handleSelectChange"

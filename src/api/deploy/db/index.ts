@@ -10,3 +10,15 @@ export function compareTableStructure(
     params: queryParams
   });
 }
+
+
+
+export function syncDataMenu(
+  queryParams?: string
+): AxiosPromise<string> {
+  return request({
+    url: "/pyApi/db/syncDataMenu",
+    method: "get",
+    params: queryParams
+  });
+}
