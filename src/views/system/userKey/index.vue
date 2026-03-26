@@ -29,7 +29,7 @@ const decryptDialog = reactive<DialogOption>({
 
 const queryParams = reactive<UserQuery>({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 15,
 });
 const userList = ref<UserPageVO[]>();
 const total = ref(0);

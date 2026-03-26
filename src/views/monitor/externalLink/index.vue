@@ -181,7 +181,7 @@ const queryFormRef = ref(ElForm);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
-const queryParams = reactive<ExternalLink>({ pageSize: 10, pageNum: 1 });
+const queryParams = reactive<ExternalLink>({ pageSize: 15, pageNum: 1 });
 const dataList = ref<ExternalLink[]>();
 const serviceInfoList = ref<ExternalLink[]>();
 

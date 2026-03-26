@@ -2,6 +2,17 @@
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
+        <el-form-item>
+          <el-button
+            v-hasPerm="['sys:dept:add']"
+            type="success"
+            @click="openDialog()"
+          >
+            <i-ep-plus />
+            新增
+          </el-button>
+        </el-form-item>
+
         <el-form-item prop="keywords" label="" style="width: 150px">
           <el-input
             v-model="queryParams.name"
@@ -24,16 +35,6 @@
     </div>
 
     <el-card shadow="never">
-      <template #header>
-        <el-button
-          v-hasPerm="['sys:dept:add']"
-          type="success"
-          @click="openDialog()"
-        >
-          <i-ep-plus />
-          新增
-        </el-button>
-      </template>
       <el-table
         ref="dataTableRef"
         v-loading="loading"
@@ -249,7 +250,7 @@ const addStatus = ref(true);
 const ids = ref<number[]>([]);
 const total = ref(0);
 const deptFormRef = ref(ElForm);
-const queryParams = reactive<Project>({ pageSize: 10, pageNum: 1 });
+const queryParams = reactive<Project>({ pageSize: 15, pageNum: 1 });
 const deployEdit = reactive<DialogOption>({
   visible: false,
 });

@@ -26,7 +26,7 @@ const total = ref(0);
 
 const queryParams = reactive<DictTypeQuery>({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 15,
 });
 
 const dictTypeList = ref<DictTypePageVO[]>();

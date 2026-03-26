@@ -1072,7 +1072,7 @@ const ids = ref<number[]>([]);
 const total = ref(0);
 
 const queryParams = reactive({
-  pageSize: 10,
+  pageSize: 15,
   pageNum: 1,
   fileName: "",
   serviceId: undefined as number | undefined,

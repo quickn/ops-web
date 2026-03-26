@@ -1,7 +1,7 @@
 /**
  * 登录用户信息
  */
-export interface HeathMonitor {
+export interface HeathMonitor extends PageQuery {
   id?: number | null;
   appName?: string;
   heathUrl?: string;

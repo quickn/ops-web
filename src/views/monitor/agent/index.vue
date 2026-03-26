@@ -269,7 +269,7 @@ const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
-const queryParams = reactive<AgentConfig>({ pageNum: 1, pageSize: 10 });
+const queryParams = reactive<AgentConfig>({ pageNum: 1, pageSize: 15 });
 
 const dataList = ref<AgentConfig[]>();
 

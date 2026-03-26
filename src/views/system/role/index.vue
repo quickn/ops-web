@@ -27,7 +27,7 @@ const total = ref(0);
 
 const queryParams = reactive<RoleQuery>({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 15,
 });
 
 const roleList = ref<RolePageVO[]>();

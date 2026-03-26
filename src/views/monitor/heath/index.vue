@@ -2,17 +2,37 @@
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
+        <el-form-item>
+          <el-button
+            v-hasPerm="['sys:dept:add']"
+            type="success"
+            @click="openDialog()"
+          >
+            <i-ep-plus />
+            新增
+          </el-button>
+        </el-form-item>
+
+        <el-form-item label="服务">
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="全部"
+            clearable
+            style="width: 200px"
+          >
+            <el-option
+              v-for="item in serviceInfoList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="接口名" prop="keywords">
           <el-input
             v-model="queryParams.apiName"
             placeholder="接口名称"
-            @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-        <el-form-item label="环境ID" prop="keywords">
-          <el-input
-            v-model="queryParams.serviceId"
-            placeholder="环境ID"
             @keyup.enter="handleQuery"
           />
         </el-form-item>
@@ -30,26 +50,6 @@
     </div>
 
     <el-card>
-      <template #header>
-        <el-button
-          v-hasPerm="['sys:dept:add']"
-          type="success"
-          @click="openDialog()"
-        >
-          <i-ep-plus />
-          新增
-        </el-button>
-        <el-button
-          v-hasPerm="['sys:dept:delete']"
-          type="danger"
-          :disabled="ids.length === 0"
-          @click="handleDelete()"
-        >
-          <i-ep-delete />
-          删除
-        </el-button>
-      </template>
-
       <el-table
         v-loading="loading"
         :data="deptList"
@@ -59,6 +59,7 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" align="center" />
+        <el-table-column prop="serviceName" label="服务名" min-width="200" />
         <el-table-column prop="apiName" label="接口名" min-width="200" />
         <el-table-column prop="apiUrl" label="接口地址" width="300" />
         <el-table-column prop="requestMethod" label="请求方式" width="100" />
@@ -98,6 +99,13 @@
           </template>
         </el-table-column>
       </el-table>
+      <pagination
+        v-if="total > 0"
+        v-model:total="total"
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        @pagination="handleQuery"
+      />
     </el-card>
 
     <el-dialog
@@ -113,7 +121,12 @@
         label-width="150px"
       >
         <el-form-item label="服务" prop="serviceId">
-          <el-select v-model="formData.serviceId" filterable size="default">
+          <el-select
+            v-model="formData.serviceId"
+            filterable
+            size="default"
+            @change="handleServiceChange"
+          >
             <el-option
               v-for="(item, index) in serviceInfoList"
               :value="item.id"
@@ -201,7 +214,8 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const queryParams = reactive<HeathMonitor>({ id: null });
+const total = ref(0);
+const queryParams = reactive<HeathMonitor>({ pageSize: 15, pageNum: 1 });
 const deptList = ref<HeathMonitor[]>();
 
 const formData = reactive<HeathMonitor>({
@@ -220,9 +234,16 @@ function handleQuery() {
   loading.value = true;
   listData(queryParams).then(({ data }) => {
     deptList.value = data.records;
+    total.value = data.total;
     loading.value = false;
   });
 }
+
+// 方法1：监听变化并查找 name
+const handleServiceChange = (selectedId) => {
+  const selected = serviceInfoList.value.find((item) => item.id === selectedId);
+  formData.serviceName = selected ? selected.name : "";
+};
 
 /** 删除部门 */
 function handleDelete(ids?: number) {

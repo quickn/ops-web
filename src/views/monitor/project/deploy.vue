@@ -576,7 +576,7 @@ function fetchHostList() {
   // 假设有一个API可以获取主机列表
   originServerList({
     pageNum: 1,
-    pageSize: 10000,
+    pageSize: 15000,
     isOriginServer: true,
   }).then((response) => {
     hostList.value = response.data;

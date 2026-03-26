@@ -15,7 +15,7 @@ const total = ref(0);
 const dataList = ref<DockerContainer[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 
-const queryParams = reactive<DockerContainer>({ pageSize: 10, pageNum: 1 });
+const queryParams = reactive<DockerContainer>({ pageSize: 15, pageNum: 1 });
 const formData = reactive<DockerContainerInfo>({ sort: 1 });
 
 /** 查询 */

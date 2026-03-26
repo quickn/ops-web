@@ -8,12 +8,26 @@
           </el-select>
         </el-form-item> -->
         <el-form-item label="服务">
-          <el-select v-model="queryParams.serviceId" placeholder="全部" style="width: 100px">
-            <el-option v-for="item in serviceInfoList" :key="item.id" :label="item.name" :value="item.id" />
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="全部"
+            style="width: 100px"
+          >
+            <el-option
+              v-for="item in serviceInfoList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="IP">
-          <el-input v-model="queryParams.hostname" placeholder="IP" clearable @keyup.enter="handleQuery" />
+          <el-input
+            v-model="queryParams.hostname"
+            placeholder="IP"
+            clearable
+            @keyup.enter="handleQuery"
+          />
         </el-form-item>
         <el-form-item label="时间">
           <el-radio-group v-model="timeType" size="default" fill="#409eff">
@@ -29,12 +43,21 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="时间范围" v-if="timeType == 9">
-          <el-date-picker size="default" v-model="queryParams.time" type="daterange" format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期">
-          </el-date-picker>
+          <el-date-picker
+            size="default"
+            v-model="queryParams.time"
+            type="daterange"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+          />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleQuery"><i-ep-search />搜索</el-button>
+          <el-button type="primary" @click="handleQuery"
+            ><i-ep-search />搜索</el-button
+          >
           <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
         </el-form-item>
       </el-form>
@@ -42,33 +65,76 @@
 
     <el-card shadow="never">
       <div v-if="cpuListLength != 0">
-        <div style="display: flex;justify-content: space-between;margin-bottom: 20px;"
-          v-for="(item, index) in cpuListLength" :key="index">
-          <div :id="'cpuCharts' + index" style="width: 750px; height: 420px;background: #e5e5e5;border-radius: 10px;">
-          </div>
-          <div :id="'memCharts' + index" style="width: 750px; height: 420px;background: #e5e5e5;border-radius: 10px;">
-          </div>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+          "
+          v-for="(item, index) in cpuListLength"
+          :key="index"
+        >
+          <div
+            :id="'cpuCharts' + index"
+            style="
+              width: 750px;
+              height: 420px;
+              background: #e5e5e5;
+              border-radius: 10px;
+            "
+          ></div>
+          <div
+            :id="'memCharts' + index"
+            style="
+              width: 750px;
+              height: 420px;
+              background: #e5e5e5;
+              border-radius: 10px;
+            "
+          ></div>
         </div>
       </div>
-      <div v-else style="text-align: center;">暂无数据</div>
+      <div v-else style="text-align: center">暂无数据</div>
     </el-card>
 
-    <el-dialog v-model="dialogEdit.visible" :title="dialogEdit.title" width="900px" @closed="closeDialog">
-      <el-form ref="deptFormRef" :model="formData" :rules="rules" label-width="200px">
+    <el-dialog
+      v-model="dialogEdit.visible"
+      :title="dialogEdit.title"
+      width="900px"
+      @closed="closeDialog"
+    >
+      <el-form
+        ref="deptFormRef"
+        :model="formData"
+        :rules="rules"
+        label-width="200px"
+      >
         <el-form-item label="IP" prop="name">
           <el-input v-model="formData.hostname" disabled placeholder="IP" />
         </el-form-item>
 
         <el-form-item label="是否开启监控" prop="isMonitor">
-          <el-switch v-model="formData.isMonitor" :active-value="true" :inactive-value="false" />
+          <el-switch
+            v-model="formData.isMonitor"
+            :active-value="true"
+            :inactive-value="false"
+          />
         </el-form-item>
 
         <el-form-item label="是否发送邮件" prop="name">
-          <el-switch v-model="formData.isMail" :active-value="true" :inactive-value="false" />
+          <el-switch
+            v-model="formData.isMail"
+            :active-value="true"
+            :inactive-value="false"
+          />
         </el-form-item>
 
         <el-form-item label="是否开启docker监控" prop="name">
-          <el-switch v-model="formData.isDocker" :active-value="true" :inactive-value="false" />
+          <el-switch
+            v-model="formData.isDocker"
+            :active-value="true"
+            :inactive-value="false"
+          />
         </el-form-item>
 
         <el-form-item label="cpu预警值" prop="name">
@@ -84,7 +150,10 @@
         </el-form-item>
 
         <el-form-item label="docker容器Cpu阈值" prop="name">
-          <el-input v-model="formData.cpuWarnValDocker" placeholder="docker服务Cpu阈值" />
+          <el-input
+            v-model="formData.cpuWarnValDocker"
+            placeholder="docker服务Cpu阈值"
+          />
         </el-form-item>
       </el-form>
 
@@ -105,10 +174,7 @@ import {
   addData,
 } from "@/api/monitor/agent";
 
-import {
-  cpuList,
-  memList
-} from "@/api/monitor/cpuOrmemory";
+import { cpuList, memList } from "@/api/monitor/cpuOrmemory";
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { AgentConfig, AgentConfigForm } from "@/api/monitor/agent/types";
@@ -119,7 +185,7 @@ const queryFormRef = ref(ElForm);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
-const queryParams = reactive<AgentConfig>({ pageNum: 1, pageSize: 10 });
+const queryParams = reactive<AgentConfig>({ pageNum: 1, pageSize: 15 });
 const timeType = ref<number>(1);
 const cpuListLength = ref<number>(0);
 const dataList = ref<AgentConfig[]>();
@@ -154,45 +220,69 @@ function handleQuery() {
     queryParams.endTime = null;
   }
   if (timeType.value == 1) {
-    queryParams.startTime = formatDD(new Date().getTime() - 1 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 1 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 2) {
-    queryParams.startTime = formatDD(new Date().getTime() - 3 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 3 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 3) {
-    queryParams.startTime = formatDD(new Date().getTime() - 6 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 6 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 4) {
-    queryParams.startTime = formatDD(new Date().getTime() - 12 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 12 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 5) {
-    queryParams.startTime = formatDD(new Date().getTime() - 1 * 24 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 1 * 24 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 6) {
-    queryParams.startTime = formatDD(new Date().getTime() - 3 * 24 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 3 * 24 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 7) {
-    queryParams.startTime = formatDD(new Date().getTime() - 7 * 24 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 7 * 24 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   if (timeType.value == 8) {
-    queryParams.startTime = formatDD(new Date().getTime() - 14 * 24 * 60 * 60 * 1000, 'YYYY-MM-DD HH:mm:ss')
-    queryParams.endTime = formatDD(new Date().getTime(), 'YYYY-MM-DD HH:mm:ss')
+    queryParams.startTime = formatDD(
+      new Date().getTime() - 14 * 24 * 60 * 60 * 1000,
+      "YYYY-MM-DD HH:mm:ss"
+    );
+    queryParams.endTime = formatDD(new Date().getTime(), "YYYY-MM-DD HH:mm:ss");
   }
   setTimeout(() => {
     let Data1: any = [];
     let Data2: any = [];
     cpuList(queryParams).then(({ data }) => {
       cpuListLength.value = data.length;
-      Data1 = data
+      Data1 = data;
       memList(queryParams).then(({ data }) => {
-        Data2 = data
+        Data2 = data;
         if (cpuListLength.value != 0) {
           initPowerLineChart(Data1, Data2);
         }
@@ -231,8 +321,12 @@ function deleteById(id) {
 
 function initPowerLineChart(arr1, arr2) {
   for (let i = 0; i < cpuListLength.value; i++) {
-    const cpuChart: any = echarts.init(document.getElementById('cpuCharts' + i)!);
-    const memChart: any = echarts.init(document.getElementById('memCharts' + i)!);
+    const cpuChart: any = echarts.init(
+      document.getElementById("cpuCharts" + i)!
+    );
+    const memChart: any = echarts.init(
+      document.getElementById("memCharts" + i)!
+    );
     let cpuData1: any = [];
     let cpuData2: any = [];
     let memData1: any = [];
@@ -246,83 +340,83 @@ function initPowerLineChart(arr1, arr2) {
       memData2.push(item.value);
     });
     const option1 = {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
+        left: "3%",
+        right: "4%",
+        bottom: "3%",
         containLabel: true,
       },
       legend: {
         show: true,
-        right: 'auto'
+        right: "auto",
       },
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: "axis" },
       xAxis: {
         data: cpuData1,
       },
       yAxis: [
         {
-          type: 'value',
-          name: 'CPU负载(%)',
+          type: "value",
+          name: "CPU负载(%)",
           splitLine: {
             show: true,
-            lineStyle: { type: 'dashed', color: '#f5f5f5' },
+            lineStyle: { type: "dashed", color: "#f5f5f5" },
           },
         },
       ],
       series: [
         {
-          name: arr1[i].ip + ' 服务CPU负载',
-          type: 'line',
+          name: arr1[i].ip + " 服务CPU负载",
+          type: "line",
           data: cpuData2,
           showSymbol: false,
-          lineStyle: { color: '#1DC39E' },
-          itemStyle: { color: '#1DC39E', borderColor: '#1DC39E' },
-        }
+          lineStyle: { color: "#1DC39E" },
+          itemStyle: { color: "#1DC39E", borderColor: "#1DC39E" },
+        },
       ],
     };
     cpuChart.setOption(option1, true);
     const option2 = {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
+        left: "3%",
+        right: "4%",
+        bottom: "3%",
         containLabel: true,
       },
       legend: {
         show: true,
-        right: 'auto'
+        right: "auto",
       },
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: "axis" },
       xAxis: {
         data: memData1,
       },
       yAxis: [
         {
-          type: 'value',
-          name: '内存使用率(%)',
+          type: "value",
+          name: "内存使用率(%)",
           splitLine: {
             show: true,
-            lineStyle: { type: 'dashed', color: '#f5f5f5' },
+            lineStyle: { type: "dashed", color: "#f5f5f5" },
           },
         },
       ],
       series: [
         {
-          name: arr2[i].ip + ' 服务内存使用率',
-          type: 'line',
+          name: arr2[i].ip + " 服务内存使用率",
+          type: "line",
           data: memData2,
           showSymbol: false,
-          lineStyle: { color: '#1DC39E' },
-          itemStyle: { color: '#1DC39E', borderColor: '#1DC39E' },
-        }
+          lineStyle: { color: "#1DC39E" },
+          itemStyle: { color: "#1DC39E", borderColor: "#1DC39E" },
+        },
       ],
     };
     memChart.setOption(option2, true);
   }
-};
+}
 
 /** 删除角色 */
 function upgradeClient(id) {

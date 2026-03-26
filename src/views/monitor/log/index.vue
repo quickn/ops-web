@@ -12,7 +12,7 @@ const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
-const queryParams = reactive<LogInfo>({ pageSize: 10, pageNum: 1 });
+const queryParams = reactive<LogInfo>({ pageSize: 15, pageNum: 1 });
 
 const dataList = ref<LogInfo[]>();
 
