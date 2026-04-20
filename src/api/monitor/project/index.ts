@@ -99,3 +99,11 @@ export function deployList(
     params: queryParams,
   });
 }
+
+export function backup(data?: ServiceInfo) {
+  return request({
+    url: "/project/backup",
+    method: "post",
+    data: data,
+  });
+}
