@@ -12,13 +12,10 @@ export function listPage(
   });
 }
 
-export function originServerList(
-  queryParams?: AgentConfig
-): AxiosPromise<PageRecords<AgentConfig[]>> {
+export function listAll(): AxiosPromise<ServiceInfo[]> {
   return request({
-    url: "/agent/list",
+    url: "/serviceInfo/listAll",
     method: "get",
-    params: queryParams
   });
 }
 /**

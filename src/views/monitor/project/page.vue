@@ -208,9 +208,9 @@
             style="width: 300px"
           >
             <el-option
-              v-for="(item, index) in hostList"
+              v-for="(item, index) in serviceInfoList"
               :value="item.id"
-              :label="item.label"
+              :label="item.name"
               :key="index"
             />
           </el-select>
@@ -325,7 +325,7 @@ import {
 } from "@/api/monitor/project";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { originServerList } from "@/api/monitor/agent";
+import { listAll } from "@/api/monitor/agent";
 import { de } from "element-plus/es/locale";
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
@@ -389,18 +389,8 @@ function resetQuery() {
 }
 function fetchHostList() {
   // 假设有一个API可以获取主机列表
-  originServerList({
-    pageNum: 1,
-    pageSize: 10000,
-    isOriginServer: true,
-  }).then((response) => {
-    hostList.value = response.data;
-    hostList.value.forEach((item) => {
-      item.label = item.hostname + " (" + item.serviceName + ")";
-      if (item.isOriginServer) {
-        formData.sourceAgentId = item.id;
-      }
-    });
+  listAll().then(({ data }) => {
+    serviceInfoList.value = data;
   });
 }
 /** 行checkbox 选中事件 */
