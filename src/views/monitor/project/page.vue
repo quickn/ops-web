@@ -138,43 +138,6 @@
       />
     </el-card>
     <el-dialog
-      v-model="dialogEdit.visible"
-      :title="dialogEdit.title"
-      width="900px"
-      @closed="closeDialog"
-    >
-      <el-form
-        ref="deptFormRef"
-        :model="formData"
-        :rules="rules"
-        label-width="80px"
-      >
-        <el-form-item label="应用名称" prop="name">
-          <el-input
-            v-model="formData.name"
-            :disabled="!addStatus"
-            placeholder="接口名"
-          />
-        </el-form-item>
-
-        <el-form-item label="描述" prop="remark">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            :rows="4"
-            placeholder="链接"
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="handleSubmit"> 确 定</el-button>
-          <el-button @click="closeDialog"> 取 消</el-button>
-        </div>
-      </template>
-    </el-dialog>
-    <el-dialog
       v-model="backupEdit.visible"
       title="备份"
       width="500px"
@@ -238,7 +201,7 @@
         ref="deptFormRef"
         :model="formData"
         :rules="rules"
-        label-width="80px"
+        label-width="100px"
       >
         <el-form-item label="应用名称" prop="name">
           <el-input
@@ -247,7 +210,18 @@
             placeholder="接口名"
           />
         </el-form-item>
-
+        <el-form-item label="源文件目录" prop="sourceDir">
+          <el-input v-model="formData.sourceDir" placeholder="源文件目录" />
+        </el-form-item>
+        <el-form-item label="指向目录" prop="targetDir">
+          <el-input v-model="formData.targetDir" placeholder="指向目录" />
+        </el-form-item>
+        <el-form-item label="应用类型" prop="type">
+          <el-select v-model="formData.type" filterable size="default">
+            <el-option :value="1" label="Java" />
+            <el-option :value="2" label="docker" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="描述" prop="remark">
           <el-input
             v-model="formData.remark"
@@ -354,7 +328,10 @@ const backupEdit = reactive<DialogOption>({
 });
 const formData = reactive<HeathMonitor>({
   name: undefined,
+  type: undefined,
   remark: undefined,
+  sourceDir: undefined,
+  targetDir: undefined,
 });
 const formBackupData = reactive<HeathMonitor>({
   sourceDir: "/home/park/docker",
