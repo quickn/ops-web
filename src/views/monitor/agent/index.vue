@@ -32,6 +32,16 @@
     </div>
 
     <el-card shadow="never">
+      <div class="mb-2">
+        <el-button
+          type="primary"
+          :disabled="ids.length === 0"
+          @click="batchUpgradeClients"
+        >
+          <i-ep-upload />
+          批量升级客户端
+        </el-button>
+      </div>
       <el-table
         ref="dataTableRef"
         v-loading="loading"
@@ -40,7 +50,7 @@
         border
         @selection-change="handleSelectionChange"
       >
-        <!--        <el-table-column type="selection" width="55" align="center" />-->
+        <el-table-column type="selection" width="55" align="center" />
         <el-table-column label="ID" prop="id" width="90" />
         <el-table-column label="服务名" prop="serviceName" width="90" />
         <el-table-column label="是否为跳板机" prop="isJumpServer" width="80">
@@ -257,6 +267,7 @@ import {
   deleteByIds,
   handleAgent,
   listPage,
+  batchHandleAgent,
 } from "@/api/monitor/agent";
 
 import { listAll } from "@/api/monitor/service";
@@ -367,6 +378,26 @@ function restartAgent(id) {
     handleAgent(id, "restart")
       .then(() => {
         ElMessage.success("重启成功");
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
+function batchUpgradeClients() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请先选择要升级的客户端");
+    return;
+  }
+  ElMessageBox.confirm(`确定要批量升级 ${ids.value.length} 个客户端?`, "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    batchHandleAgent(ids.value, "upgrade")
+      .then(() => {
+        ElMessage.success("批量升级成功");
+        handleQuery();
       })
       .finally(() => (loading.value = false));
   });

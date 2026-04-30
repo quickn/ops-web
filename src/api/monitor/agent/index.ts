@@ -66,3 +66,11 @@ export function handleAgent(id: number, cmd: string) {
     params: { "cmd": cmd }
   });
 }
+
+export function batchHandleAgent(ids: number[], cmd: string) {
+  return request({
+    url: "/agent/batchHandleAgent",
+    method: "post",
+    data: { ids, cmd }
+  });
+}

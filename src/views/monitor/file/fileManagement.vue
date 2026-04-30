@@ -24,7 +24,7 @@
                     />
                   </el-select>
                 </el-form-item>
-                <el-form-item label="选择代理">
+                <el-form-item label="选择Agent">
                   <el-select
                     v-model="formData.agentId"
                     placeholder="请选择"
@@ -35,7 +35,7 @@
                     <el-option
                       v-for="server in agentDataList"
                       :key="server.id"
-                      :label="server.serviceName"
+                      :label="server.hostname"
                       :value="server.id"
                     />
                   </el-select>
