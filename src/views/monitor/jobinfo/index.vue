@@ -1,0 +1,394 @@
+<template>
+  <div class="app-container">
+    <div class="search-container">
+      <el-form
+        ref="queryFormRef"
+        :model="queryParams"
+        :inline="true"
+        style="display: flex; align-items: center; flex-wrap: wrap"
+      >
+        <el-form-item prop="jobGroup" style="width: 130px">
+          <el-select
+            v-model="queryParams.jobGroup"
+            placeholder="选择任务分组"
+            clearable
+          >
+            <el-option
+              v-for="item in jobGroupList"
+              :key="item.id"
+              :label="item.title"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item prop="serviceId" style="width: 120px">
+          <el-select
+            v-model="queryParams.serviceId"
+            placeholder="选择服务"
+            clearable
+          >
+            <el-option
+              v-for="item in serviceList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item prop="jobName" label="" style="width: 150px">
+          <el-input
+            v-model="queryParams.jobName"
+            placeholder="任务名称"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+
+        <el-form-item label="状态" prop="status" style="width: 120px">
+          <el-select
+            v-model="queryParams.status"
+            placeholder="全部"
+            clearable
+          >
+            <el-option label="运行中" :value="1"/>
+            <el-option label="已停止" :value="0"/>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" @click="handleQuery">
+            <el-icon>
+              <Search/>
+            </el-icon>
+            搜索
+          </el-button>
+          <el-button @click="resetQuery">
+            <el-icon>
+              <Refresh/>
+            </el-icon>
+            重置
+          </el-button>
+        </el-form-item>
+
+        <el-form-item style="margin-left: auto">
+          <el-button type="success" @click="handleAdd">
+            <el-icon>
+              <Plus/>
+            </el-icon>
+            新增
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <el-card shadow="never">
+      <el-table
+        ref="dataTableRef"
+        v-loading="loading"
+        :data="dataList"
+        highlight-current-row
+        border
+      >
+        <el-table-column label="任务ID" prop="id" width="80" align="center"/>
+        <el-table-column label="任务描述" prop="jobDesc" width="180" show-overflow-tooltip/>
+        <el-table-column label="所属服务" prop="serviceName" width="120">
+          <template #default="scope">
+            <el-tag v-if="scope.row.serviceName" type="info">
+              {{ scope.row.serviceName }}
+            </el-tag>
+            <span v-else style="color: #999">未关联</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="负责人" prop="author" width="100" align="center"/>
+        <el-table-column label="调度类型" width="150" align="center">
+          <template #default="scope">
+            <el-tag
+              :type="scope.row.scheduleType === 'NONE' ? 'info' : 'success'"
+              size="small"
+            >
+              {{ getScheduleTypeText(scope.row.scheduleType) }}:{{ scope.row.scheduleConf }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="运行模式" width="200" align="center">
+          <template #default="scope">
+            <el-tag size="small" type="info">{{
+                getGlueTypeText(scope.row.glueType)
+              }}:{{ scope.row.executorHandler }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="scope">
+            <el-tag :type="scope.row.triggerStatus === 1 ? 'success' : 'danger'">
+              {{ scope.row.triggerStatus === 1 ? '运行中' : '已停止' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column fixed="right" label="操作" width="360" align="center">
+          <template #default="scope">
+            <el-button
+              type="primary"
+              size="small"
+              link
+              @click="handleEdit(scope.row)"
+            >
+              <el-icon>
+                <Edit/>
+              </el-icon>
+              编辑
+            </el-button>
+            <el-button
+              v-if="scope.row.status === 0"
+              type="success"
+              size="small"
+              link
+              @click="handleStart(scope.row)"
+            >
+              <el-icon>
+                <VideoPlay/>
+              </el-icon>
+              启动
+            </el-button>
+            <el-button
+              v-if="scope.row.status === 1"
+              type="warning"
+              size="small"
+              link
+              @click="handleStop(scope.row)"
+            >
+              <el-icon>
+                <VideoPause/>
+              </el-icon>
+              停止
+            </el-button>
+            <el-button
+              type="info"
+              size="small"
+              link
+              @click="handleTrigger(scope.row)"
+            >
+              <el-icon>
+                <CaretRight/>
+              </el-icon>
+              执行一次
+            </el-button>
+            <el-button
+              type="danger"
+              size="small"
+              link
+              @click="handleDelete(scope.row.id)"
+            >
+              <el-icon>
+                <Delete/>
+              </el-icon>
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <pagination
+        v-if="total > 0"
+        v-model:total="total"
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        @pagination="handleQuery"
+      />
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import {
+  Search,
+  Refresh,
+  Plus,
+  Edit,
+  Delete,
+  VideoPlay,
+  VideoPause,
+  CaretRight,
+} from "@element-plus/icons-vue";
+import {
+  listJobPage,
+  deleteJob,
+  startJob,
+  stopJob,
+  triggerJob,
+  jobGroupPageList,
+} from "@/api/monitor/jobinfo";
+import {JobInfo, JobInfoGroup} from "@/api/monitor/jobinfo/types";
+import {listAll} from "@/api/monitor/service";
+import {ServiceInfo} from "@/api/monitor/service/types";
+import {useRouter} from "vue-router";
+
+defineOptions({
+  name: "JobInfoIndex",
+  inheritAttrs: false,
+});
+
+const router = useRouter();
+const queryFormRef = ref(ElForm);
+const loading = ref(false);
+const total = ref(0);
+
+const queryParams = reactive({
+  pageSize: 15,
+  pageNum: 1,
+  jobGroup: undefined as number | undefined,
+  jobName: "",
+  serviceId: undefined as number | undefined,
+  status: undefined as number | undefined,
+});
+
+const dataList = ref<JobInfo[]>([]);
+const serviceList = ref<ServiceInfo[]>([]);
+const jobGroupList = ref<JobInfoGroup[]>([]);
+
+/** 查询 */
+function handleQuery() {
+  loading.value = true;
+  listJobPage(queryParams).then(({data}) => {
+    dataList.value = data.records;
+    total.value = data.total;
+    loading.value = false;
+  });
+}
+
+/** 获取服务列表 */
+function loadServiceList() {
+  listAll().then(({data}) => {
+    serviceList.value = data;
+  });
+}
+
+/** 获取任务分组列表 */
+function loadJobGroupList() {
+  jobGroupPageList().then(({data}) => {
+    jobGroupList.value = data;
+    if (jobGroupList.value.length > 0) {
+      queryParams.jobGroup = jobGroupList.value[0].id;
+    }
+  });
+}
+
+/** 重置查询 */
+function resetQuery() {
+  queryFormRef.value.resetFields();
+  queryParams.pageNum = 1;
+  queryParams.jobGroup = undefined;
+  queryParams.jobName = "";
+  queryParams.serviceId = undefined;
+  queryParams.status = undefined;
+  handleQuery();
+}
+
+/** 新增任务 */
+function handleAdd() {
+  router.push({name: "JobInfoEdit"});
+}
+
+/** 编辑任务 */
+function handleEdit(row: JobInfo) {
+  router.push({name: "JobInfoEdit", query: {id: row.id}});
+}
+
+/** 启动任务 */
+function handleStart(row: JobInfo) {
+  ElMessageBox.confirm(`确认启动任务【${row.jobName}】吗？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "info",
+  }).then(() => {
+    startJob(row.id!).then(() => {
+      ElMessage.success("启动成功");
+      handleQuery();
+    });
+  });
+}
+
+/** 停止任务 */
+function handleStop(row: JobInfo) {
+  ElMessageBox.confirm(`确认停止任务【${row.jobName}】吗？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    stopJob(row.id!).then(() => {
+      ElMessage.success("停止成功");
+      handleQuery();
+    });
+  });
+}
+
+/** 立即执行一次 */
+function handleTrigger(row: JobInfo) {
+  ElMessageBox.confirm(`确认立即执行一次任务【${row.jobName}】吗？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "info",
+  }).then(() => {
+    triggerJob(row.id!).then(() => {
+      ElMessage.success("执行成功");
+      handleQuery();
+    });
+  });
+}
+
+/** 删除任务 */
+function handleDelete(id: number) {
+  ElMessageBox.confirm("确定要删除该任务吗？", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    deleteJob(id)
+      .then(() => {
+        ElMessage.success("删除成功");
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
+/** 获取调度类型文本 */
+function getScheduleTypeText(type?: string): string {
+  const map: Record<string, string> = {
+    NONE: "无调度",
+    CRON: "Cron",
+    FIX_RATE: "固定间隔",
+  };
+  return map[type || ""] || type || "-";
+}
+
+/** 获取运行模式文本 */
+function getGlueTypeText(type?: string): string {
+  const map: Record<string, string> = {
+    BEAN: "BEAN",
+    GLUE_SHELL: "Shell",
+    GLUE_PYTHON: "Python",
+    GLUE_POWERSHELL: "PowerShell",
+  };
+  return map[type || ""] || type || "-";
+}
+
+onMounted(() => {
+  loadServiceList();
+  loadJobGroupList();
+  handleQuery();
+});
+</script>
+
+<style scoped>
+.app-container {
+  padding: 20px;
+}
+
+.search-container {
+  margin-bottom: 20px;
+}
+</style>
