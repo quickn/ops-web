@@ -79,7 +79,7 @@ function handleSelectChange(serviceId: number) {
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="服务" prop="status">
+        <el-form-item prop="status">
           <el-select
             v-model="queryParams.serviceId"
             clearable
@@ -106,7 +106,7 @@ function handleSelectChange(serviceId: number) {
           </el-select>
         </el-form-item>
 
-        <el-form-item prop="keywords" label="" style="width: 200px">
+        <el-form-item prop="keywords" label="" style="width: 150px">
           <el-input
             v-model="queryParams.keyword"
             placeholder="关键字"
@@ -115,7 +115,7 @@ function handleSelectChange(serviceId: number) {
           />
         </el-form-item>
 
-        <el-form-item prop="keyword1" label="" style="width: 200px">
+        <el-form-item prop="keyword1" label="" style="width: 150px">
           <el-input
             v-model="queryParams.keyword1"
             placeholder="关键字1"
@@ -143,7 +143,7 @@ function handleSelectChange(serviceId: number) {
           />
         </el-form-item>
 
-        <el-form-item label="日志级别" style="width: 170px">
+        <el-form-item label="日志级别" style="width: 150px">
           <el-select
             v-model="queryParams.logLevel"
             clearable

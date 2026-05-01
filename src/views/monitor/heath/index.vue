@@ -1,18 +1,7 @@
 <template>
   <div class="app-container">
     <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item>
-          <el-button
-            v-hasPerm="['sys:dept:add']"
-            type="success"
-            @click="openDialog()"
-          >
-            <i-ep-plus />
-            新增
-          </el-button>
-        </el-form-item>
-
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true" style="display: flex; align-items: center; flex-wrap: wrap">
         <el-form-item label="服务">
           <el-select
             v-model="queryParams.serviceId"
@@ -44,6 +33,16 @@
           <el-button @click="resetQuery">
             <i-ep-refresh />
             重置
+          </el-button>
+        </el-form-item>
+        <el-form-item style="margin-left: auto">
+          <el-button
+            v-hasPerm="['sys:dept:add']"
+            type="success"
+            @click="openDialog()"
+          >
+            <i-ep-plus />
+            新增
           </el-button>
         </el-form-item>
       </el-form>

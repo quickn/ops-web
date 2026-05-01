@@ -302,23 +302,6 @@ function handleSelectionChange(selection: any) {
   ids.value = selection.map((item: any) => item.id);
 }
 
-/** 删除角色 */
-function deleteById(id) {
-  ElMessageBox.confirm("确定要删除服务?", "警告", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
-    loading.value = true;
-    deleteByIds(id)
-      .then(() => {
-        ElMessage.success("删除成功");
-        handleQuery();
-      })
-      .finally(() => (loading.value = false));
-  });
-}
-
 function initPowerLineChart(arr1, arr2) {
   for (let i = 0; i < cpuListLength.value; i++) {
     const cpuChart: any = echarts.init(
@@ -418,22 +401,6 @@ function initPowerLineChart(arr1, arr2) {
   }
 }
 
-/** 删除角色 */
-function upgradeClient(id) {
-  ElMessageBox.confirm("确定要升级客户端?", "警告", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(() => {
-    loading.value = true;
-    upgradeClientByServiceId(id)
-      .then(() => {
-        ElMessage.success("升级成功");
-      })
-      .finally(() => (loading.value = false));
-  });
-}
-
 async function openDialog(data?: AgentConfig) {
   if (data) {
     dialogEdit.visible = true;
@@ -497,6 +464,6 @@ onMounted(() => {
       queryParams.serviceId = serviceInfoList.value[0].id;
     }
   });
-  handleQuery();
+  //handleQuery();
 });
 </script>

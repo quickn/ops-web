@@ -166,7 +166,7 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true" style="display: flex; align-items: center; flex-wrap: wrap">
         <el-form-item label="关键字" prop="keywords">
           <el-input
             v-model="queryParams.keywords"
@@ -192,25 +192,25 @@ onMounted(() => {
           </el-button>
           <el-button @click="resetQuery"> <i-ep-refresh />重置 </el-button>
         </el-form-item>
+        <el-form-item style="margin-left: auto">
+          <el-button
+            v-hasPerm="['sys:dept:add']"
+            type="success"
+            @click="openDialog(0, undefined)"
+            ><i-ep-plus />新增</el-button
+          >
+          <el-button
+            v-hasPerm="['sys:dept:delete']"
+            type="danger"
+            :disabled="ids.length === 0"
+            @click="handleDelete()"
+            ><i-ep-delete />删除
+          </el-button>
+        </el-form-item>
       </el-form>
     </div>
 
     <el-card>
-      <template #header>
-        <el-button
-          v-hasPerm="['sys:dept:add']"
-          type="success"
-          @click="openDialog(0, undefined)"
-          ><i-ep-plus />新增</el-button
-        >
-        <el-button
-          v-hasPerm="['sys:dept:delete']"
-          type="danger"
-          :disabled="ids.length === 0"
-          @click="handleDelete()"
-          ><i-ep-delete />删除
-        </el-button>
-      </template>
 
       <el-table
         v-loading="loading"

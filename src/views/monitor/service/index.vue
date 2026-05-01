@@ -101,18 +101,7 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item>
-          <el-button
-            v-hasPerm="['sys:dict_type:add']"
-            type="success"
-            @click="openDialog()"
-          >
-            <i-ep-plus />
-            新增
-          </el-button>
-        </el-form-item>
-
+      <el-form ref="queryFormRef" :model="queryParams" :inline="true" style="display: flex; align-items: center; flex-wrap: wrap">
         <el-form-item prop="keywords" label="" style="width: 150px">
           <el-input
             v-model="queryParams.name"
@@ -130,6 +119,16 @@ onMounted(() => {
           <el-button @click="resetQuery">
             <i-ep-refresh />
             重置
+          </el-button>
+        </el-form-item>
+        <el-form-item style="margin-left: auto">
+          <el-button
+            v-hasPerm="['sys:dict_type:add']"
+            type="success"
+            @click="openDialog()"
+          >
+            <i-ep-plus />
+            新增
           </el-button>
         </el-form-item>
       </el-form>
