@@ -198,6 +198,22 @@
         @pagination="handleQuery"
       />
     </el-card>
+
+    <!-- 编辑/新增对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="950px"
+      destroy-on-close
+      :close-on-click-modal="false"
+    >
+      <JobInfoEdit
+        :edit-data="currentEditRow"
+        :is-dialog="true"
+        @success="onEditSuccess"
+        @cancel="onEditCancel"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -224,6 +240,7 @@ import {JobInfo, JobInfoGroup} from "@/api/monitor/jobinfo/types";
 import {listAll} from "@/api/monitor/service";
 import {ServiceInfo} from "@/api/monitor/service/types";
 import {useRouter} from "vue-router";
+import JobInfoEdit from "./edit.vue";
 
 defineOptions({
   name: "JobInfoIndex",
@@ -234,6 +251,11 @@ const router = useRouter();
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
 const total = ref(0);
+
+// 对话框状态
+const dialogVisible = ref(false);
+const dialogTitle = ref("");
+const currentEditRow = ref<JobInfo | null>(null);
 
 const queryParams = reactive({
   pageSize: 15,
@@ -286,14 +308,32 @@ function resetQuery() {
   handleQuery();
 }
 
+/** 打开编辑对话框 */
+function openDialog(title: string, row?: JobInfo) {
+  dialogTitle.value = title;
+  currentEditRow.value = row || null;
+  dialogVisible.value = true;
+}
+
 /** 新增任务 */
 function handleAdd() {
-  router.push({name: "JobInfoEdit"});
+  openDialog("新增任务");
 }
 
 /** 编辑任务 */
 function handleEdit(row: JobInfo) {
-  router.push({name: "JobInfoEdit", query: {id: row.id}});
+  openDialog("编辑任务", row);
+}
+
+/** 对话框操作成功 */
+function onEditSuccess() {
+  dialogVisible.value = false;
+  handleQuery();
+}
+
+/** 对话框取消 */
+function onEditCancel() {
+  dialogVisible.value = false;
 }
 
 /** 启动任务 */

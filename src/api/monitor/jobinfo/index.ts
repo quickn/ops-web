@@ -27,7 +27,7 @@ export function jobGroupPageList(): AxiosPromise<JobInfoGroup[]> {
  */
 export function getJobById(id: number): AxiosPromise<JobInfo> {
   return request({
-    url: `/jobinfo/${id}`,
+    url: `/pyApi/jobinfo/${id}`,
     method: "get",
   });
 }
@@ -48,8 +48,8 @@ export function addJob(data: JobInfo) {
  */
 export function updateJob(data: JobInfo) {
   return request({
-    url: `/jobinfo/${data.id}`,
-    method: "put",
+    url: `/pyApi/jobinfo/jobinfoUpdate`,
+    method: "post",
     data,
   });
 }

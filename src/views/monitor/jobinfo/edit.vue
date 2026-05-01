@@ -1,9 +1,12 @@
 <template>
-  <div class="app-container">
+  <div :class="{ 'app-container': !isDialog }">
     <!-- 返回按钮 -->
-    <div class="header-bar">
+    <div v-if="!isDialog" class="header-bar">
       <el-button @click="handleBack">
-        <el-icon><ArrowLeft /></el-icon>返回
+        <el-icon>
+          <ArrowLeft/>
+        </el-icon>
+        返回
       </el-button>
       <span class="page-title">{{ isEdit ? '编辑任务' : '新增任务' }}</span>
     </div>
@@ -18,16 +21,11 @@
       >
         <!-- 基本信息 -->
         <el-divider content-position="left">
-          <el-icon><InfoFilled /></el-icon>基本信息
+          <el-icon>
+            <InfoFilled/>
+          </el-icon>
+          基本信息
         </el-divider>
-
-        <el-form-item label="任务名称" prop="jobName">
-          <el-input
-            v-model="formData.jobName"
-            placeholder="请输入任务名称"
-            clearable
-          />
-        </el-form-item>
 
         <el-form-item label="所属服务" prop="serviceId">
           <el-select
@@ -71,7 +69,10 @@
 
         <!-- 调度配置 -->
         <el-divider content-position="left">
-          <el-icon><Timer /></el-icon>调度配置
+          <el-icon>
+            <Timer/>
+          </el-icon>
+          调度配置
         </el-divider>
 
         <el-form-item label="调度类型" prop="scheduleType">
@@ -125,7 +126,10 @@
 
         <!-- 执行配置 -->
         <el-divider content-position="left">
-          <el-icon><Operation /></el-icon>执行配置
+          <el-icon>
+            <Operation/>
+          </el-icon>
+          执行配置
         </el-divider>
 
         <el-form-item label="运行模式" prop="glueType">
@@ -170,28 +174,43 @@
           />
         </el-form-item>
 
-        <el-form-item label="路由策略" prop="routeStrategy">
+        <el-form-item label="路由策略" prop="executorRouteStrategy">
           <el-select
-            v-model="formData.routeStrategy"
+            v-model="formData.executorRouteStrategy"
             placeholder="请选择路由策略"
             style="width: 100%"
           >
-            <el-option label="第一个" value="FIRST" />
-            <el-option label="最后一个" value="LAST" />
-            <el-option label="轮询" value="ROUND" />
-            <el-option label="随机" value="RANDOM" />
-            <el-option label="一致性Hash" value="CONSISTENT_HASH" />
-            <el-option label="最不经常使用" value="LEAST_FREQUENTLY_USED" />
-            <el-option label="最近最久未使用" value="LEAST_RECENTLY_USED" />
-            <el-option label="故障转移" value="FAILOVER" />
-            <el-option label="忙碌转移" value="BUSYOVER" />
-            <el-option label="分片广播" value="SHARDING_BROADCAST" />
+            <el-option label="第一个" value="FIRST"/>
+            <el-option label="最后一个" value="LAST"/>
+            <el-option label="轮询" value="ROUND"/>
+            <el-option label="随机" value="RANDOM"/>
+            <el-option label="一致性Hash" value="CONSISTENT_HASH"/>
+            <el-option label="最不经常使用" value="LEAST_FREQUENTLY_USED"/>
+            <el-option label="最近最久未使用" value="LEAST_RECENTLY_USED"/>
+            <el-option label="故障转移" value="FAILOVER"/>
+            <el-option label="忙碌转移" value="BUSYOVER"/>
+            <el-option label="分片广播" value="SHARDING_BROADCAST"/>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="阻塞处理策略" prop="executorBlockStrategy">
+          <el-select
+            v-model="formData.executorBlockStrategy"
+            placeholder="请选择阻塞处理策略"
+            style="width: 100%"
+          >
+            <el-option label="单机串行" value="SERIAL_EXECUTION"/>
+            <el-option label="丢弃后续调度" value="DISCARD_LATER"/>
+            <el-option label="覆盖之前调度" value="COVER_EARLY"/>
           </el-select>
         </el-form-item>
 
         <!-- 高级配置 -->
         <el-divider content-position="left">
-          <el-icon><Setting /></el-icon>高级配置
+          <el-icon>
+            <Setting/>
+          </el-icon>
+          高级配置
         </el-divider>
 
         <el-row :gutter="20">
@@ -232,23 +251,28 @@
 </template>
 
 <script setup lang="ts">
-import {
-  ArrowLeft,
-  InfoFilled,
-  Timer,
-  Operation,
-  Setting,
-} from "@element-plus/icons-vue";
-import { getJobById, addJob, updateJob } from "@/api/monitor/jobinfo";
-import { JobInfo } from "@/api/monitor/jobinfo/types";
-import { listAll } from "@/api/monitor/service";
-import { ServiceInfo } from "@/api/monitor/service/types";
-import { useRouter, useRoute } from "vue-router";
+import {ArrowLeft, InfoFilled, Operation, Setting, Timer,} from "@element-plus/icons-vue";
+import {addJob, getJobById, updateJob} from "@/api/monitor/jobinfo";
+import {JobInfo} from "@/api/monitor/jobinfo/types";
+import {listAll} from "@/api/monitor/service";
+import {ServiceInfo} from "@/api/monitor/service/types";
+import {useRoute, useRouter} from "vue-router";
 
 defineOptions({
   name: "JobInfoEdit",
   inheritAttrs: false,
 });
+
+const props = defineProps({
+  editId: {type: Number, default: undefined},
+  isDialog: {type: Boolean, default: false},
+  editData: {type: Object, default: undefined},
+});
+
+const emit = defineEmits<{
+  (e: "success"): void;
+  (e: "cancel"): void;
+}>();
 
 const router = useRouter();
 const route = useRoute();
@@ -261,7 +285,6 @@ const showCronHelp = ref(false);
 const serviceList = ref<ServiceInfo[]>([]);
 
 const formData = reactive<JobInfo>({
-  jobName: "",
   serviceId: undefined,
   jobDesc: "",
   author: "",
@@ -279,11 +302,10 @@ const formData = reactive<JobInfo>({
 });
 
 const rules = reactive({
-  jobName: [{ required: true, message: "请输入任务名称", trigger: "blur" }],
-  serviceId: [{ required: true, message: "请选择所属服务", trigger: "change" }],
-  scheduleType: [{ required: true, message: "请选择调度类型", trigger: "change" }],
-  glueType: [{ required: true, message: "请选择运行模式", trigger: "change" }],
-  routeStrategy: [{ required: true, message: "请选择路由策略", trigger: "change" }],
+  serviceId: [{required: true, message: "请选择所属服务", trigger: "change"}],
+  scheduleType: [{required: true, message: "请选择调度类型", trigger: "change"}],
+  glueType: [{required: true, message: "请选择运行模式", trigger: "change"}],
+  routeStrategy: [{required: true, message: "请选择路由策略", trigger: "change"}],
 });
 
 /** 获取GLUE源代码占位符 */
@@ -298,7 +320,7 @@ function getGlueSourcePlaceholder(): string {
 
 /** 获取服务列表 */
 function loadServiceList() {
-  listAll().then(({ data }) => {
+  listAll().then(({data}) => {
     serviceList.value = data;
   });
 }
@@ -307,7 +329,7 @@ function loadServiceList() {
 function loadJobDetail(id: number) {
   pageLoading.value = true;
   getJobById(id)
-    .then(({ data }) => {
+    .then(({data}) => {
       Object.assign(formData, data);
       isEdit.value = true;
     })
@@ -334,7 +356,11 @@ function handleSubmit() {
     apiCall
       .then(() => {
         ElMessage.success(isEdit.value ? "更新成功" : "新增成功");
-        router.push({ name: "JobInfoIndex" });
+        if (props.isDialog) {
+          emit("success");
+        } else {
+          router.push({name: "JobInfoIndex"});
+        }
       })
       .finally(() => {
         submitLoading.value = false;
@@ -344,14 +370,26 @@ function handleSubmit() {
 
 /** 返回列表 */
 function handleBack() {
-  router.push({ name: "JobInfoIndex" });
+  if (props.isDialog) {
+    emit("cancel");
+  } else {
+    router.push({name: "JobInfoIndex"});
+  }
 }
 
 onMounted(() => {
   loadServiceList();
-  const id = route.query.id;
-  if (id) {
-    loadJobDetail(Number(id));
+  // 优先级: editData(对话框传参) > editId(路由传参) > route.query(独立页面)
+  if (props.editData) {
+    Object.assign(formData, props.editData as JobInfo);
+    isEdit.value = true;
+  } else if (props.editId) {
+    loadJobDetail(props.editId);
+  } else if (!props.isDialog) {
+    const id = route.query.id;
+    if (id) {
+      loadJobDetail(Number(id));
+    }
   }
 });
 </script>

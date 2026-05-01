@@ -10,8 +10,6 @@ export interface JobInfo extends PageQuery {
   id?: number;
   /** 任务分组ID */
   jobGroup?: number;
-  /** 任务名称 */
-  jobName?: string;
   /** 所属服务ID */
   serviceId?: number;
   /** 所属服务名称 */
@@ -41,7 +39,9 @@ export interface JobInfo extends PageQuery {
   /** 调度过期策略：DO_NOTHING-忽略, FIRE_ONCE_NOW-立即执行一次 */
   misfirePolicy?: string;
   /** 路由策略：FIRST, LAST, ROUND, RANDOM, CONSISTENT_HASH, LEAST_FREQUENTLY_USED, LEAST_RECENTLY_USED, FAILOVER, BUSYOVER, SHARDING_BROADCAST */
-  routeStrategy?: string;
+  executorRouteStrategy?: string;
+  /** 执行器阻塞策略：SERIAL, PARALLEL */
+  executorBlockStrategy?: string;
   /** 任务状态：0-停止, 1-运行 */
   triggerStatus?: number;
   /** 创建时间 */
