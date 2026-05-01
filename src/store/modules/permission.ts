@@ -61,6 +61,14 @@ const filterAsyncRoutes = (routes: RouteRecordRaw[], roles: string[]) => {
         tmpRoute.children = filterAsyncRoutes(tmpRoute.children, roles);
       }
 
+      // 默认开启 keepAlive 缓存，避免页面重新进入时刷新数据
+      if (!tmpRoute.meta) {
+        tmpRoute.meta = {};
+      }
+      if (tmpRoute.meta.keepAlive === undefined) {
+        tmpRoute.meta.keepAlive = true;
+      }
+
       asyncRoutes.push(tmpRoute);
     }
   });
