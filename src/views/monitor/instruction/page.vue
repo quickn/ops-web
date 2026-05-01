@@ -2,10 +2,10 @@
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="环境Id">
+        <el-form-item>
           <el-select
             v-model="queryParams.serviceId"
-            placeholder="请输入"
+            placeholder="选择服务"
             clearable
             style="width: 160px"
           >
@@ -17,7 +17,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="服务Id" style="width: 220px">
+        <el-form-item label="IP" style="width: 220px">
           <el-input
             v-model="queryParams.agentId"
             placeholder="请输入"

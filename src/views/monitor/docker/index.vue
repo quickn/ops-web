@@ -95,10 +95,10 @@ onMounted(() => {
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="服务" prop="status">
+        <el-form-item prop="status">
           <el-select
             v-model="queryParams.serviceId"
-            placeholder="全部"
+            placeholder="选择服务"
             clearable
             style="width: 100px"
           >
@@ -143,7 +143,7 @@ onMounted(() => {
         <el-table-column label="容器名称" prop="names" width="100" />
         <el-table-column label="IP" prop="hostname" width="120" />
         <el-table-column label="状态" prop="status" width="150" />
-        <el-table-column label="是否开启监控" align="center" width="100">
+        <el-table-column label="是否开启监控" align="center" width="120">
           <template #default="scope">
             <el-tag v-if="scope.row.isMonitor === true" type="success"
               >已开启</el-tag

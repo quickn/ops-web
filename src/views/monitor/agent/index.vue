@@ -2,10 +2,10 @@
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="服务" prop="status">
+        <el-form-item prop="status">
           <el-select
             v-model="queryParams.serviceId"
-            placeholder="全部"
+            placeholder="选择服务"
             clearable
             style="width: 100px"
           >

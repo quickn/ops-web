@@ -9,7 +9,8 @@
         @keyup.enter="handleQuery"
         style="display: flex; align-items: center; flex-wrap: wrap"
       >
-        <el-form-item prop="keywords" label="" style="width: 150px">
+
+        <el-form-item prop="keywords" >
           <el-input
             v-model="queryParams.name"
             placeholder="应用名称"
@@ -18,11 +19,12 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery"
-            ><i-ep-search />搜索</el-button
+          ><i-ep-search />搜索</el-button
           >
           <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
         </el-form-item>
-        <el-form-item style="margin-left: auto">
+
+        <el-form-item label="" style="margin-left: auto">
           <el-button
             v-hasPerm="['sys:dept:add']"
             type="success"
@@ -327,7 +329,12 @@ import {
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { originServerList } from "@/api/monitor/agent";
-import { de } from "element-plus/es/locale";
+
+defineOptions({
+  name: "ProjectPage",
+  inheritAttrs: false,
+});
+
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
@@ -555,49 +562,16 @@ function setDockerfileDialog(row) {
   emit("setData", _param);
   emit("changePage", "set");
 }
-/** 获取默认Dockerfile */
-function getDefaultDockerfile(jar: JarPackage): string {
-  const jarFileName = (jar && jar.fileName) || "app.jar";
-  return `FROM adoptopenjdk:8-jdk-hotspot
 
-WORKDIR /home/park
-
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# 复制JAR文件到容器中
-COPY ${jarFileName}.jar /home/park/
-
-# 暴露端口
-EXPOSE 8080
-
-# 启动命令
-ENTRYPOINT ["java", "-jar", "${jarFileName}.jar"]`;
-}
-
-/** 获取默认DockerCompose */
-function getDefaultDockerCompose(jar: JarPackage): string {
-  const jarFileName = jar.fileName || "app.jar";
-  const baseName = jarFileName.replace(/\.jar$/i, "");
-  return `services:
-  ${baseName}:
-    build: .
-    image: ${baseName}
-    container_name: ${baseName}
-    restart: always
-    ports:
-      - "8080:8080"
-    environment:
-      - TZ=Asia/Shanghai
-      - JAVA_OPTS=-Xms256m -Xmx512m -Duser.timezone=Asia/Shanghai`;
-}
 function openDeployDialog(row) {
   deployList({ id: row.id }).then(({ data }) => {
     deployArr.value = data;
     deployEdit.visible = true;
   });
 }
-onActivated(() => {
+
+// 只在组件首次创建时加载数据，keep-alive 缓存后再次进入不会刷新
+onMounted(() => {
   fetchHostList();
   handleQuery();
 });

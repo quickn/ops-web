@@ -6,6 +6,13 @@
   </div>
 </template>
 <script lang="ts" setup>
+
+defineOptions({
+  name: "ProjectIndex",
+  inheritAttrs: false,
+});
+
+
 // 引入组件
 const page = defineAsyncComponent(() => import('./page.vue'));
 const deploy = defineAsyncComponent(() => import('./deploy.vue'));
