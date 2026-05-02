@@ -81,3 +81,40 @@ export interface MisfireStrategyOption {
   label: string;
   value: string;
 }
+
+
+/**
+ * 调度日志记录
+ */
+export interface JobLog {
+  /** 日志ID */
+  id?: number;
+  /** 任务分组ID */
+  jobGroup?: number;
+  /** 任务ID */
+  jobId?: number;
+  /** 任务描述 */
+  jobDesc?: string;
+  /** 执行器地址 */
+  executorAddress?: string;
+  /** 执行器Handler */
+  executorHandler?: string;
+  /** 执行参数 */
+  executorParam?: string;
+  /** 调度时间 */
+  triggerTime?: string;
+  /** 调度结果码：0-成功 */
+  triggerCode?: number;
+  /** 调度备注 */
+  triggerMsg?: string;
+  /** 执行时间 */
+  handleTime?: string;
+  /** 执行结果码：0-成功 */
+  handleCode?: number;
+  /** 执行日志 */
+  handleMsg?: string;
+  /** 执行耗时(ms) */
+  handleDuration?: number;
+  /** 报警状态：0-默认, 1-无需报警, 2-报警成功, 3-报警失败 */
+  alarmStatus?: number;
+}

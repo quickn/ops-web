@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import {AxiosPromise} from "axios";
-import {JobInfo, JobInfoGroup} from "./types";
+import {JobInfo, JobInfoGroup, JobLog} from "./types";
 
 /**
  * 分页查询任务列表
@@ -59,9 +59,8 @@ export function updateJob(data: JobInfo) {
  */
 export function deleteJob(id: number) {
   return request({
-    url: "/pyApi/jobinfo/jobinfoRemove",
-    data: {id: id},
-    method: "delete",
+    url: `/pyApi/jobinfo/jobinfoRemove/${id}`,
+    method: "get",
   });
 }
 
@@ -70,7 +69,7 @@ export function deleteJob(id: number) {
  */
 export function startJob(id: number) {
   return request({
-    url: `/jobinfo/start/${id}`,
+    url: `/pyApi/jobinfo/jobinfoStart/${id}`,
     method: "get",
   });
 }
@@ -80,7 +79,7 @@ export function startJob(id: number) {
  */
 export function stopJob(id: number) {
   return request({
-    url: `/jobinfo/stop/${id}`,
+    url: `/pyApi/jobinfo/jobinfoStop/${id}`,
     method: "get",
   });
 }
@@ -90,7 +89,7 @@ export function stopJob(id: number) {
  */
 export function triggerJob(id: number, executorParam?: string) {
   return request({
-    url: `/jobinfo/trigger/${id}`,
+    url: `/pyApi/jobinfo/trigger/${id}`,
     method: "post",
     data: {executorParam},
   });
@@ -104,5 +103,29 @@ export function getNextTriggerTime(scheduleConf: string) {
     url: "/pyApi/jobinfo/nextTriggerTime",
     method: "get",
     params: {scheduleConf},
+  });
+}
+
+
+/**
+ * 分页查询调度日志
+ */
+export function getJobLogPage(
+  queryParams?: JobLog
+): AxiosPromise<PageRecords<JobLog[]>> {
+  return request({
+    url: "/pyApi/jobinfo/logPage",
+    method: "get",
+    params: queryParams,
+  });
+}
+
+/**
+ * 根据日志ID获取执行日志详情
+ */
+export function getJobLogDetail(id: number): AxiosPromise<JobLog> {
+  return request({
+    url: `/pyApi/jobinfo/logDetail/${id}`,
+    method: "get",
   });
 }

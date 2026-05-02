@@ -136,7 +136,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="360" align="center">
+        <el-table-column fixed="right" label="操作" width="320" align="center">
           <template #default="scope">
             <el-button
               type="primary"
@@ -150,51 +150,58 @@
               编辑
             </el-button>
             <el-button
-              v-if="scope.row.status === 0"
-              type="success"
-              size="small"
-              link
-              @click="handleStart(scope.row)"
-            >
-              <el-icon>
-                <VideoPlay/>
-              </el-icon>
-              启动
-            </el-button>
-            <el-button
-              v-if="scope.row.status === 1"
-              type="warning"
-              size="small"
-              link
-              @click="handleStop(scope.row)"
-            >
-              <el-icon>
-                <VideoPause/>
-              </el-icon>
-              停止
-            </el-button>
-            <el-button
               type="info"
               size="small"
               link
-              @click="handleTrigger(scope.row)"
+              @click="handleQueryLog(scope.row)"
             >
               <el-icon>
-                <CaretRight/>
+                <Document/>
               </el-icon>
-              执行一次
+              查看日志
             </el-button>
-            <el-button
-              type="danger"
-              size="small"
-              link
-              @click="handleDelete(scope.row.id)"
-            >
-              <el-icon>
-                <Delete/>
-              </el-icon>
-              删除
-            </el-button>
+            <el-dropdown @command="(cmd: string) => handleCommand(cmd, scope.row)">
+              <el-button type="primary" size="small" link>
+                更多
+                <el-icon>
+                  <ArrowDown/>
+                </el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="trigger">
+                    <el-icon>
+                      <CaretRight/>
+                    </el-icon>
+                    执行一次
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="scope.row.triggerStatus === 0"
+                    command="start"
+                  >
+                    <el-icon>
+                      <VideoPlay/>
+                    </el-icon>
+                    启动
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="scope.row.triggerStatus === 1"
+                    command="stop"
+                  >
+                    <el-icon>
+                      <VideoPause/>
+                    </el-icon>
+                    停止
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>
+                    <el-icon>
+                      <Delete/>
+                    </el-icon>
+                    删除
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -223,17 +230,37 @@
         @cancel="onEditCancel"
       />
     </el-dialog>
+
+    <!-- 调度日志弹窗 -->
+    <JobLog
+      v-model="logVisible"
+      :job-id="currentLogJobId"
+      :job-group="currentLogJobGroup"
+      :job-desc="currentLogJobDesc"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import {CaretRight, Delete, Edit, Plus, Refresh, Search, VideoPause, VideoPlay,} from "@element-plus/icons-vue";
+import {
+  ArrowDown,
+  CaretRight,
+  Delete,
+  Document,
+  Edit,
+  Plus,
+  Refresh,
+  Search,
+  VideoPause,
+  VideoPlay,
+} from "@element-plus/icons-vue";
 import {deleteJob, jobGroupPageList, listJobPage, startJob, stopJob, triggerJob,} from "@/api/monitor/jobinfo";
 import {JobInfo, JobInfoGroup} from "@/api/monitor/jobinfo/types";
 import {listAll} from "@/api/monitor/service";
 import {ServiceInfo} from "@/api/monitor/service/types";
 import {useRouter} from "vue-router";
 import JobInfoEdit from "./edit.vue";
+import JobLog from "./joblog.vue";
 
 defineOptions({
   name: "JobInfoIndex",
@@ -249,6 +276,12 @@ const total = ref(0);
 const dialogVisible = ref(false);
 const dialogTitle = ref("");
 const currentEditRow = ref<JobInfo | null>(null);
+
+// 调度日志状态
+const logVisible = ref(false);
+const currentLogJobId = ref(0);
+const currentLogJobGroup = ref(0);
+const currentLogJobDesc = ref("");
 
 const queryParams = reactive({
   pageSize: 15,
@@ -312,7 +345,7 @@ function openDialog(title: string, row?: JobInfo) {
 
 /** 新增任务 */
 function handleAdd() {
-  openDialog("新增任务",queryParams);
+  openDialog("新增任务", queryParams);
 }
 
 /** 编辑任务 */
@@ -331,7 +364,35 @@ function onEditCancel() {
   dialogVisible.value = false;
 }
 
-/** 启动任务 */
+/** 操作命令分发 */
+function handleCommand(command: string, row: JobInfo) {
+  switch (command) {
+    case "trigger":
+      handleTrigger(row);
+      break;
+    case "start":
+      handleStart(row);
+      break;
+    case "stop":
+      handleStop(row);
+      break;
+    case "delete":
+      handleDelete(row.id!);
+      break;
+    case "responsible":
+      handleResponsible(row);
+      break;
+  }
+}
+
+/** 查看日志（调度日志） */
+function handleQueryLog(row: JobInfo) {
+  currentLogJobId.value = row.id!;
+  currentLogJobGroup.value = row.jobGroup;
+  currentLogJobDesc.value = row.jobDesc || "";
+  logVisible.value = true;
+}
+
 function handleStart(row: JobInfo) {
   ElMessageBox.confirm(`确认启动任务【${row.jobDesc}】吗？`, "提示", {
     confirmButtonText: "确定",
