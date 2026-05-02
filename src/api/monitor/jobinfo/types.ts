@@ -29,15 +29,15 @@ export interface JobInfo extends PageQuery {
   /** 执行参数 */
   executorParam?: string;
   /** 重试次数 */
-  retryCount?: number;
+  executorFailRetryCount?: number;
   /** 超时时间（秒） */
-  timeout?: number;
+  executorTimeout?: number;
   /** 运行模式：BEAN, GLUE_SHELL, GLUE_PYTHON, GLUE_POWERSHELL */
   glueType?: string;
   /** GLUE源代码 */
   glueSource?: string;
   /** 调度过期策略：DO_NOTHING-忽略, FIRE_ONCE_NOW-立即执行一次 */
-  misfirePolicy?: string;
+  misfireStrategy?: string;
   /** 路由策略：FIRST, LAST, ROUND, RANDOM, CONSISTENT_HASH, LEAST_FREQUENTLY_USED, LEAST_RECENTLY_USED, FAILOVER, BUSYOVER, SHARDING_BROADCAST */
   executorRouteStrategy?: string;
   /** 执行器阻塞策略：SERIAL, PARALLEL */
@@ -77,7 +77,7 @@ export interface RouteStrategyOption {
 /**
  * 调度过期策略选项
  */
-export interface MisfirePolicyOption {
+export interface MisfireStrategyOption {
   label: string;
   value: string;
 }

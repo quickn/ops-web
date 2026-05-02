@@ -117,8 +117,8 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="调度过期策略" prop="misfirePolicy">
-          <el-radio-group v-model="formData.misfirePolicy">
+        <el-form-item label="调度过期策略" prop="misfireStrategy">
+          <el-radio-group v-model="formData.misfireStrategy">
             <el-radio label="DO_NOTHING">忽略</el-radio>
             <el-radio label="FIRE_ONCE_NOW">立即执行一次</el-radio>
           </el-radio-group>
@@ -215,9 +215,9 @@
 
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="重试次数" prop="retryCount">
+            <el-form-item label="重试次数" prop="executorFailRetryCount">
               <el-input-number
-                v-model="formData.retryCount"
+                v-model="formData.executorFailRetryCount"
                 :min="0"
                 :max="10"
                 placeholder="0"
@@ -226,9 +226,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="超时时间(秒)" prop="timeout">
+            <el-form-item label="超时时间(秒)" prop="executorTimeout">
               <el-input-number
-                v-model="formData.timeout"
+                v-model="formData.executorTimeout"
                 :min="0"
                 :max="86400"
                 placeholder="0表示不限制"
@@ -290,16 +290,17 @@ const formData = reactive<JobInfo>({
   jobDesc: "",
   author: "",
   alarmEmail: "",
-  scheduleType: "NONE",
+  scheduleType: "CRON",
   scheduleConf: "",
-  misfirePolicy: "DO_NOTHING",
+  misfireStrategy: "DO_NOTHING",
   glueType: "BEAN",
   executorHandler: "",
   glueSource: "",
   executorParam: "",
-  executorRouteStrategy: "ROUND",
-  retryCount: 0,
-  timeout: 0,
+  executorRouteStrategy: "FIRST",
+  executorBlockStrategy: "SERIAL_EXECUTION",
+  executorFailRetryCount: 0,
+  executorTimeout: 0,
 });
 
 const rules = reactive({
@@ -356,8 +357,13 @@ function handleSubmit() {
       : addJob(formData);
 
     apiCall
-      .then((data) => {
-        ElMessage.success(isEdit.value ? "更新成功" : "新增成功");
+      .then((obj) => {
+        if (obj.data.code === 200) {
+          ElMessage.success(isEdit.value ? "更新成功" : "新增成功");
+        } else {
+          ElMessage.error(obj.data.msg || "操作失败");
+          return;
+        }
         if (props.isDialog) {
           emit("success");
         } else {
