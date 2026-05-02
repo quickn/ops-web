@@ -286,6 +286,7 @@ const serviceList = ref<ServiceInfo[]>([]);
 
 const formData = reactive<JobInfo>({
   serviceId: undefined,
+  jobGroup: undefined,
   jobDesc: "",
   author: "",
   alarmEmail: "",
@@ -296,16 +297,17 @@ const formData = reactive<JobInfo>({
   executorHandler: "",
   glueSource: "",
   executorParam: "",
-  routeStrategy: "ROUND",
+  executorRouteStrategy: "ROUND",
   retryCount: 0,
   timeout: 0,
 });
 
 const rules = reactive({
   serviceId: [{required: true, message: "请选择所属服务", trigger: "change"}],
+  jobGroup: [{required: true, message: "请选择任务分组", trigger: "change"}],
   scheduleType: [{required: true, message: "请选择调度类型", trigger: "change"}],
   glueType: [{required: true, message: "请选择运行模式", trigger: "change"}],
-  routeStrategy: [{required: true, message: "请选择路由策略", trigger: "change"}],
+  executorRouteStrategy: [{required: true, message: "请选择路由策略", trigger: "change"}],
 });
 
 /** 获取GLUE源代码占位符 */
@@ -354,7 +356,7 @@ function handleSubmit() {
       : addJob(formData);
 
     apiCall
-      .then(() => {
+      .then((data) => {
         ElMessage.success(isEdit.value ? "更新成功" : "新增成功");
         if (props.isDialog) {
           emit("success");
@@ -382,7 +384,11 @@ onMounted(() => {
   // 优先级: editData(对话框传参) > editId(路由传参) > route.query(独立页面)
   if (props.editData) {
     Object.assign(formData, props.editData as JobInfo);
-    isEdit.value = true;
+    if (props.editData.id !== undefined) {
+      isEdit.value = true;
+    } else {
+      isEdit.value = false;
+    }
   } else if (props.editId) {
     loadJobDetail(props.editId);
   } else if (!props.isDialog) {

@@ -37,10 +37,19 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item prop="jobName" label="" style="width: 150px">
+        <el-form-item prop="jobDesc" label="" style="width: 150px">
           <el-input
-            v-model="queryParams.jobName"
+            v-model="queryParams.jobDesc"
             placeholder="任务名称"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+
+        <el-form-item prop="executorHandler" label="" style="width: 150px">
+          <el-input
+            v-model="queryParams.executorHandler"
+            placeholder="执行器Handler"
             clearable
             @keyup.enter="handleQuery"
           />
@@ -48,7 +57,7 @@
 
         <el-form-item label="状态" prop="status" style="width: 120px">
           <el-select
-            v-model="queryParams.status"
+            v-model="queryParams.triggerStatus"
             placeholder="全部"
             clearable
           >
@@ -218,24 +227,8 @@
 </template>
 
 <script setup lang="ts">
-import {
-  Search,
-  Refresh,
-  Plus,
-  Edit,
-  Delete,
-  VideoPlay,
-  VideoPause,
-  CaretRight,
-} from "@element-plus/icons-vue";
-import {
-  listJobPage,
-  deleteJob,
-  startJob,
-  stopJob,
-  triggerJob,
-  jobGroupPageList,
-} from "@/api/monitor/jobinfo";
+import {CaretRight, Delete, Edit, Plus, Refresh, Search, VideoPause, VideoPlay,} from "@element-plus/icons-vue";
+import {deleteJob, jobGroupPageList, listJobPage, startJob, stopJob, triggerJob,} from "@/api/monitor/jobinfo";
 import {JobInfo, JobInfoGroup} from "@/api/monitor/jobinfo/types";
 import {listAll} from "@/api/monitor/service";
 import {ServiceInfo} from "@/api/monitor/service/types";
@@ -261,9 +254,10 @@ const queryParams = reactive({
   pageSize: 15,
   pageNum: 1,
   jobGroup: undefined as number | undefined,
-  jobName: "",
+  jobDesc: "",
+  executorHandler: "",
   serviceId: undefined as number | undefined,
-  status: undefined as number | undefined,
+  triggerStatus: undefined as number | undefined,
 });
 
 const dataList = ref<JobInfo[]>([]);
@@ -302,9 +296,10 @@ function resetQuery() {
   queryFormRef.value.resetFields();
   queryParams.pageNum = 1;
   queryParams.jobGroup = undefined;
-  queryParams.jobName = "";
+  queryParams.jobDesc = "";
+  queryParams.executorHandler = "";
   queryParams.serviceId = undefined;
-  queryParams.status = undefined;
+  queryParams.triggerStatus = undefined;
   handleQuery();
 }
 
@@ -317,7 +312,7 @@ function openDialog(title: string, row?: JobInfo) {
 
 /** 新增任务 */
 function handleAdd() {
-  openDialog("新增任务");
+  openDialog("新增任务",queryParams);
 }
 
 /** 编辑任务 */
@@ -338,7 +333,7 @@ function onEditCancel() {
 
 /** 启动任务 */
 function handleStart(row: JobInfo) {
-  ElMessageBox.confirm(`确认启动任务【${row.jobName}】吗？`, "提示", {
+  ElMessageBox.confirm(`确认启动任务【${row.jobDesc}】吗？`, "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "info",
@@ -352,7 +347,7 @@ function handleStart(row: JobInfo) {
 
 /** 停止任务 */
 function handleStop(row: JobInfo) {
-  ElMessageBox.confirm(`确认停止任务【${row.jobName}】吗？`, "提示", {
+  ElMessageBox.confirm(`确认停止任务【${row.jobDesc}】吗？`, "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning",
@@ -366,7 +361,7 @@ function handleStop(row: JobInfo) {
 
 /** 立即执行一次 */
 function handleTrigger(row: JobInfo) {
-  ElMessageBox.confirm(`确认立即执行一次任务【${row.jobName}】吗？`, "提示", {
+  ElMessageBox.confirm(`确认立即执行一次任务【${row.jobDesc}】吗？`, "提示", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "info",

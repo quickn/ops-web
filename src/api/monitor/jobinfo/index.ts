@@ -37,7 +37,7 @@ export function getJobById(id: number): AxiosPromise<JobInfo> {
  */
 export function addJob(data: JobInfo) {
   return request({
-    url: "/pyApi/jobinfo",
+    url: "/pyApi/jobinfo/jobinfoAdd",
     method: "post",
     data,
   });
@@ -59,7 +59,8 @@ export function updateJob(data: JobInfo) {
  */
 export function deleteJob(id: number) {
   return request({
-    url: `/jobinfo/${id}`,
+    url: "/pyApi/jobinfo/jobinfoRemove",
+    data: {id: id},
     method: "delete",
   });
 }
