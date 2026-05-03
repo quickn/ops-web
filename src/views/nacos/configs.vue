@@ -210,7 +210,7 @@ const detailContent = ref("");
 /** 跳转新增页面 */
 function goAddConfig() {
   router.push({
-    path: "/nacos/config/edit",
+    name: "NacosConfigEdit",
     query: {
       server_addr: queryParams.server_addr,
       tenant: queryParams.tenant || "",
@@ -221,7 +221,7 @@ function goAddConfig() {
 /** 跳转编辑页面 */
 function goEditConfig(row: NacosConfig) {
   router.push({
-    path: "/nacos/config/edit",
+    name: "NacosConfigEdit",
     query: {
       server_addr: queryParams.server_addr,
       dataId: row.dataId,
