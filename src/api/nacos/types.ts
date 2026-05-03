@@ -16,9 +16,6 @@ export interface NacosConfig {
   group?: string;
   tenant?: string;
   content?: string;
-  md5?: string;
-  appName?: string;
-  type?: string;
 }
 
 /**

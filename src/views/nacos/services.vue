@@ -63,7 +63,7 @@
         <el-table-column
           label="服务名称"
           prop="name"
-          min-width="220"
+          width="250"
           show-overflow-tooltip
         />
         <el-table-column
@@ -72,12 +72,7 @@
           width="180"
           show-overflow-tooltip
         />
-        <el-table-column
-          label="集群数"
-          prop="clusterCount"
-          width="80"
-          align="center"
-        />
+        <el-table-column label="集群数" prop="clusterCount" width="80" align="center" />
         <el-table-column
           label="健康实例"
           prop="healthyInstanceCount"
@@ -92,8 +87,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="IP" prop="ip" width="150" />
-        <el-table-column label="端口" prop="port" width="80" align="center" />
         <el-table-column fixed="right" label="操作" width="100" align="center">
           <template #default="scope">
             <el-button
@@ -132,9 +125,6 @@
           <el-descriptions-item label="分组">
             {{ detailService.groupName }}
           </el-descriptions-item>
-          <el-descriptions-item label="校验和">
-            {{ instanceData.checksum || "-" }}
-          </el-descriptions-item>
         </el-descriptions>
       </div>
       <el-table
@@ -143,7 +133,11 @@
         border
         style="margin-top: 16px"
       >
-        <el-table-column label="IP" prop="ip" width="150" />
+        <el-table-column
+          label="IP"
+          prop="ip"
+          width="150"
+        />
         <el-table-column label="端口" prop="port" width="80" align="center" />
         <el-table-column label="权重" prop="weight" width="80" align="center" />
         <el-table-column label="健康状态" width="100" align="center">
@@ -173,12 +167,6 @@
           width="120"
           show-overflow-tooltip
         />
-<!--        <el-table-column
-          label="实例ID"
-          prop="instanceId"
-          min-width="200"
-          show-overflow-tooltip
-        />-->
         <el-table-column label="操作" width="150" align="center" fixed="right">
           <template #default="scope">
             <el-button

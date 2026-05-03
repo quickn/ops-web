@@ -236,7 +236,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px 20px 10px 20px;
 }
 
 .edit-form {
@@ -247,17 +246,6 @@ onUnmounted(() => {
   max-width: 100%;
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
 .form-fields-wrapper {
   flex-shrink: 0;
 }
@@ -265,11 +253,9 @@ onUnmounted(() => {
 .editor-form-item {
   flex: 1;
   min-height: 0;
-  margin-bottom: 18px;
 }
 
 .editor-form-item :deep(.el-form-item__content) {
-  height: calc(100% - 22px);
   display: flex;
   flex-direction: column;
 }
@@ -285,16 +271,8 @@ onUnmounted(() => {
   border-radius: 4px;
   overflow: auto;
   width: 100%;
-  min-height: 200px;
-}
-
-.yaml-editor-container .cm-editor {
   height: 100%;
-  min-height: 400px;
-}
-
-.yaml-editor-container .cm-editor .cm-scroller {
-  overflow: auto;
+  background-color: #282c34;
 }
 
 /* 自定义滚动条样式 */
