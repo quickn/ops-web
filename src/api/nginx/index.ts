@@ -1,6 +1,7 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
 import { NginxFile } from "./types";
+import { originServerList } from "@/api/monitor/agent";
 
 /**
  * 部门树形表格
@@ -9,10 +10,17 @@ import { NginxFile } from "./types";
  */
 export function listFiles(queryParams?: NginxFile): AxiosPromise<NginxFile[]> {
   return request({
-    url: "/config/nginx/listFiles",
+    url: "/file-sync/list-files",
     method: "get",
     params: queryParams,
   });
+}
+
+/**
+ * 获取agent列表
+ */
+export function getAgentList() {
+  return originServerList({});
 }
 
 /**
