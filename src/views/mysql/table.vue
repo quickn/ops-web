@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import {
-  listTables,
+  alterTable,
   createTable,
   dropTable,
   getTableStructure,
-  alterTable,
+  listTables,
   queryTableData,
   truncateTable,
 } from "@/api/mysql";
-import type {
-  TableInfo,
-  TableStructure,
-  ColumnDef,
-  ColumnInfo,
-  TableDataResult,
-} from "@/api/mysql/types";
+import type {ColumnDef, ColumnInfo, TableDataResult, TableInfo, TableStructure,} from "@/api/mysql/types";
 import {useRoute, useRouter} from "vue-router";
 
 // ==================== 路由参数 ====================
@@ -36,7 +30,16 @@ const tableStructure = ref<TableStructure | null>(null);
 // ---- 创建表 ----
 const createVisible = ref(false);
 const createColumns = ref<ColumnDef[]>([
-  { name: "id", type: "INT", length: 11, nullable: false, default: undefined, comment: "主键ID", auto_increment: true, primary_key: true },
+  {
+    name: "id",
+    type: "INT",
+    length: 11,
+    nullable: false,
+    default: undefined,
+    comment: "主键ID",
+    auto_increment: true,
+    primary_key: true
+  },
 ]);
 const createForm = reactive({
   table_name: "",
@@ -50,7 +53,14 @@ const alterVisible = ref(false);
 const alterTableName = ref("");
 const alterAction = ref<"add_column" | "drop_column" | "modify_column">("add_column");
 const alterColumn = reactive<ColumnDef>({
-  name: "", type: "VARCHAR", length: 255, nullable: true, default: undefined, comment: "", auto_increment: false, primary_key: false,
+  name: "",
+  type: "VARCHAR",
+  length: 255,
+  nullable: true,
+  default: undefined,
+  comment: "",
+  auto_increment: false,
+  primary_key: false,
 });
 const alterDropColumnName = ref("");
 
@@ -73,11 +83,7 @@ async function fetchTables() {
   loading.value = true;
   try {
     const res: any = await listTables(connectionId, database);
-    if (res.code === 0) {
-      tables.value = res.data || [];
-    } else {
-      ElMessage.error(res.msg);
-    }
+    tables.value = res.data || [];
   } catch (e: any) {
     ElMessage.error(e?.message || "获取表列表失败");
   } finally {
@@ -93,11 +99,7 @@ async function viewStructure(tableName: string) {
   tableStructure.value = null;
   try {
     const res: any = await getTableStructure(connectionId, database, tableName);
-    if (res.code === 0) {
-      tableStructure.value = res.data;
-    } else {
-      ElMessage.error(res.msg);
-    }
+    tableStructure.value = res.data;
   } catch (e: any) {
     ElMessage.error(e?.message || "获取表结构失败");
   } finally {
@@ -112,7 +114,16 @@ function showCreateTable() {
   createForm.charset = "utf8mb4";
   createForm.comment = "";
   createColumns.value = [
-    { name: "id", type: "INT", length: 11, nullable: false, default: undefined, comment: "主键ID", auto_increment: true, primary_key: true },
+    {
+      name: "id",
+      type: "INT",
+      length: 11,
+      nullable: false,
+      default: undefined,
+      comment: "主键ID",
+      auto_increment: true,
+      primary_key: true
+    },
   ];
   createVisible.value = true;
 }
@@ -159,13 +170,9 @@ async function handleCreateTable() {
       createForm.charset,
       createForm.comment
     );
-    if (res.code === 0) {
-      ElMessage.success(res.msg);
-      createVisible.value = false;
-      await fetchTables();
-    } else {
-      ElMessage.error(res.msg);
-    }
+    ElMessage.success(res.msg);
+    createVisible.value = false;
+    await fetchTables();
   } catch (e: any) {
     ElMessage.error(e?.message || "创建失败");
   }
@@ -180,23 +187,28 @@ async function handleDropTable(tableName: string) {
   }).then(async () => {
     try {
       const res: any = await dropTable(connectionId, database, tableName);
-      if (res.code === 0) {
-        ElMessage.success(res.msg);
-        await fetchTables();
-      } else {
-        ElMessage.error(res.msg);
-      }
+      ElMessage.success(res.msg);
+      await fetchTables();
     } catch (e: any) {
       ElMessage.error(e?.message || "删除失败");
     }
-  }).catch(() => {});
+  }).catch(() => {
+  });
 }
 
 // ---- 修改表 ----
 function showAlterAddColumn(tableName: string) {
   alterTableName.value = tableName;
   alterAction.value = "add_column";
-  Object.assign(alterColumn, { name: "", type: "VARCHAR", length: 255, nullable: true, comment: "", auto_increment: false, primary_key: false });
+  Object.assign(alterColumn, {
+    name: "",
+    type: "VARCHAR",
+    length: 255,
+    nullable: true,
+    comment: "",
+    auto_increment: false,
+    primary_key: false
+  });
   alterDropColumnName.value = "";
   alterVisible.value = true;
 }
@@ -215,30 +227,26 @@ async function handleAlterTable() {
       ElMessage.warning("请输入列名");
       return;
     }
-    operations = [{ action: "add_column", column: { ...alterColumn } }];
+    operations = [{action: "add_column", column: {...alterColumn}}];
   } else if (alterAction.value === "drop_column") {
     if (!alterDropColumnName.value) {
       ElMessage.warning("请输入要删除的列名");
       return;
     }
-    operations = [{ action: "drop_column", column_name: alterDropColumnName.value }];
+    operations = [{action: "drop_column", column_name: alterDropColumnName.value}];
   } else if (alterAction.value === "modify_column") {
     if (!alterColumn.name) {
       ElMessage.warning("请输入列名");
       return;
     }
-    operations = [{ action: "modify_column", column: { ...alterColumn } }];
+    operations = [{action: "modify_column", column: {...alterColumn}}];
   }
 
   try {
     const res: any = await alterTable(connectionId, database, alterTableName.value, operations);
-    if (res.code === 0) {
-      ElMessage.success(res.msg);
-      alterVisible.value = false;
-      await fetchTables();
-    } else {
-      ElMessage.error(res.msg);
-    }
+    ElMessage.success(res.msg);
+    alterVisible.value = false;
+    await fetchTables();
   } catch (e: any) {
     ElMessage.error(e?.message || "修改失败");
   }
@@ -252,11 +260,7 @@ async function viewData(tableName: string, page = 1) {
   dataPage.value = page;
   try {
     const res: any = await queryTableData(connectionId, database, tableName, page, dataPageSize.value);
-    if (res.code === 0) {
-      dataResult.value = res.data;
-    } else {
-      ElMessage.error(res.msg);
-    }
+    dataResult.value = res.data;
   } catch (e: any) {
     ElMessage.error(e?.message || "查询失败");
   } finally {
@@ -273,24 +277,21 @@ async function handleTruncate(tableName: string) {
   }).then(async () => {
     try {
       const res: any = await truncateTable(connectionId, database, tableName);
-      if (res.code === 0) {
-        ElMessage.success(res.msg);
-      } else {
-        ElMessage.error(res.msg);
-      }
+      ElMessage.success(res.msg);
     } catch (e: any) {
       ElMessage.error(e?.message || "清空失败");
     }
-  }).catch(() => {});
+  }).catch(() => {
+  });
 }
 
 // ---- 导航 ----
 function enterConsole() {
-  router.push({ path: "/mysql/console", query: { connection_id: connectionId, database } });
+  router.push({path: "/mysql/console", query: {connection_id: connectionId, database}});
 }
 
 function backToDatabase() {
-  router.push({ path: "/mysql/database", query: { connection_id: connectionId } });
+  router.push({path: "/mysql/database", query: {connection_id: connectionId}});
 }
 
 function getKeyIcon(col: ColumnInfo): string {
@@ -311,7 +312,10 @@ onMounted(() => {
     <!-- 顶部信息栏 -->
     <div class="connection-bar">
       <el-button @click="backToDatabase" text>
-        <el-icon><ArrowLeft /></el-icon>返回数据库
+        <el-icon>
+          <ArrowLeft/>
+        </el-icon>
+        返回数据库
       </el-button>
       <el-tag type="success" effect="dark" style="margin-left: 12px">
         {{ database }}
@@ -321,23 +325,32 @@ onMounted(() => {
     <!-- 操作栏 -->
     <div class="search-container">
       <el-button type="primary" @click="showCreateTable">
-        <el-icon><Plus /></el-icon>新建表
+        <el-icon>
+          <Plus/>
+        </el-icon>
+        新建表
       </el-button>
       <el-button type="info" @click="enterConsole">
-        <el-icon><Terminal /></el-icon>命令行
+        <el-icon>
+          <Terminal/>
+        </el-icon>
+        命令行
       </el-button>
       <el-button @click="fetchTables">
-        <el-icon><Refresh /></el-icon>刷新
+        <el-icon>
+          <Refresh/>
+        </el-icon>
+        刷新
       </el-button>
     </div>
 
     <!-- 表列表 -->
     <el-card shadow="never" v-loading="loading">
       <template #header>
-        <span><el-icon><Grid /></el-icon> 表列表 ({{ tables.length }})</span>
+        <span><el-icon><Grid/></el-icon> 表列表 ({{ tables.length }})</span>
       </template>
 
-      <el-empty v-if="!loading && tables.length === 0" description="该数据库下暂无表" />
+      <el-empty v-if="!loading && tables.length === 0" description="该数据库下暂无表"/>
 
       <el-table v-else :data="tables" border highlight-current-row>
         <el-table-column label="#" width="50" align="center">
@@ -345,34 +358,54 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="表名" prop="name" min-width="180">
           <template #default="scope">
-            <el-icon style="margin-right: 6px; color: #409eff"><Grid /></el-icon>
+            <el-icon style="margin-right: 6px; color: #409eff">
+              <Grid/>
+            </el-icon>
             <span style="font-weight: 500">{{ scope.row.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="引擎" prop="engine" width="100" />
-        <el-table-column label="行数" prop="rows" width="100" align="right" />
-        <el-table-column label="数据大小" prop="data_length" width="110" />
-        <el-table-column label="创建时间" prop="create_time" width="170" />
-        <el-table-column label="注释" prop="comment" min-width="120" show-overflow-tooltip />
+        <el-table-column label="引擎" prop="engine" width="100"/>
+        <el-table-column label="行数" prop="rows" width="100" align="right"/>
+        <el-table-column label="数据大小" prop="data_length" width="110"/>
+        <el-table-column label="创建时间" prop="create_time" width="170"/>
+        <el-table-column label="注释" prop="comment" min-width="120" show-overflow-tooltip/>
         <el-table-column label="操作" width="500" fixed="right" align="center">
           <template #default="scope">
             <el-button type="primary" size="small" @click="viewStructure(scope.row.name)">
-              <el-icon><View /></el-icon>结构
+              <el-icon>
+                <View/>
+              </el-icon>
+              结构
             </el-button>
             <el-button type="success" size="small" @click="viewData(scope.row.name, 1)">
-              <el-icon><DataAnalysis /></el-icon>数据
+              <el-icon>
+                <DataAnalysis/>
+              </el-icon>
+              数据
             </el-button>
             <el-button size="small" @click="showAlterAddColumn(scope.row.name)">
-              <el-icon><Plus /></el-icon>加列
+              <el-icon>
+                <Plus/>
+              </el-icon>
+              加列
             </el-button>
             <el-button size="small" @click="showAlterDropColumn(scope.row.name)">
-              <el-icon><Minus /></el-icon>删列
+              <el-icon>
+                <Minus/>
+              </el-icon>
+              删列
             </el-button>
             <el-button type="warning" size="small" @click="handleTruncate(scope.row.name)">
-              <el-icon><DeleteFilled /></el-icon>清空
+              <el-icon>
+                <DeleteFilled/>
+              </el-icon>
+              清空
             </el-button>
             <el-button type="danger" size="small" @click="handleDropTable(scope.row.name)">
-              <el-icon><Delete /></el-icon>删除
+              <el-icon>
+                <Delete/>
+              </el-icon>
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -389,39 +422,44 @@ onMounted(() => {
             <el-table-column label="键" width="40" align="center">
               <template #default="scope">{{ getKeyIcon(scope.row) }}</template>
             </el-table-column>
-            <el-table-column label="列名" prop="Field" width="140" />
-            <el-table-column label="类型" prop="Type" width="130" />
-            <el-table-column label="允许空" prop="Null" width="70" align="center" />
+            <el-table-column label="列名" prop="Field" width="140"/>
+            <el-table-column label="类型" prop="Type" width="130"/>
+            <el-table-column label="允许空" prop="Null" width="70" align="center"/>
             <el-table-column label="默认值" prop="Default" width="100">
               <template #default="scope">
-                <span v-if="scope.row.Default === null || scope.row.Default === undefined" style="color: #999">NULL</span>
+                <span v-if="scope.row.Default === null || scope.row.Default === undefined"
+                      style="color: #999">NULL</span>
                 <span v-else>{{ scope.row.Default }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="额外" prop="Extra" width="100" />
-            <el-table-column label="注释" prop="Comment" min-width="120" show-overflow-tooltip />
+            <el-table-column label="额外" prop="Extra" width="100"/>
+            <el-table-column label="注释" prop="Comment" min-width="120" show-overflow-tooltip/>
           </el-table>
 
           <!-- 索引 -->
           <h4 v-if="tableStructure.indexes && tableStructure.indexes.length">索引信息</h4>
-          <el-table v-if="tableStructure.indexes && tableStructure.indexes.length" :data="tableStructure.indexes" border size="small" style="margin-top: 8px">
-            <el-table-column label="索引名" prop="name" width="180" />
+          <el-table v-if="tableStructure.indexes && tableStructure.indexes.length" :data="tableStructure.indexes" border
+                    size="small" style="margin-top: 8px">
+            <el-table-column label="索引名" prop="name" width="180"/>
             <el-table-column label="唯一" width="60" align="center">
               <template #default="scope">
-                <el-tag :type="scope.row.unique ? 'danger' : 'info'" size="small">{{ scope.row.unique ? '是' : '否' }}</el-tag>
+                <el-tag :type="scope.row.unique ? 'danger' : 'info'" size="small">{{
+                    scope.row.unique ? '是' : '否'
+                  }}
+                </el-tag>
               </template>
             </el-table-column>
             <el-table-column label="列" width="200">
               <template #default="scope">{{ scope.row.columns.join(', ') }}</template>
             </el-table-column>
-            <el-table-column label="类型" prop="type" width="100" />
+            <el-table-column label="类型" prop="type" width="100"/>
           </el-table>
 
           <!-- 建表语句 -->
           <h4>建表语句</h4>
           <pre class="sql-preview">{{ tableStructure.create_sql }}</pre>
         </template>
-        <el-empty v-else-if="!structureLoading" description="无数据" />
+        <el-empty v-else-if="!structureLoading" description="无数据"/>
       </div>
     </el-dialog>
 
@@ -431,79 +469,83 @@ onMounted(() => {
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="表名" required>
-              <el-input v-model="createForm.table_name" placeholder="例如: users" />
+              <el-input v-model="createForm.table_name" placeholder="例如: users"/>
             </el-form-item>
           </el-col>
           <el-col :span="6">
             <el-form-item label="引擎">
               <el-select v-model="createForm.engine">
-                <el-option label="InnoDB" value="InnoDB" />
-                <el-option label="MyISAM" value="MyISAM" />
+                <el-option label="InnoDB" value="InnoDB"/>
+                <el-option label="MyISAM" value="MyISAM"/>
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="6">
             <el-form-item label="字符集">
               <el-select v-model="createForm.charset">
-                <el-option label="utf8mb4" value="utf8mb4" />
-                <el-option label="utf8" value="utf8" />
+                <el-option label="utf8mb4" value="utf8mb4"/>
+                <el-option label="utf8" value="utf8"/>
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="注释">
-          <el-input v-model="createForm.comment" placeholder="表注释（可选）" />
+          <el-input v-model="createForm.comment" placeholder="表注释（可选）"/>
         </el-form-item>
       </el-form>
 
       <div style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between">
         <strong>列定义</strong>
         <el-button type="primary" size="small" @click="addColumn">
-          <el-icon><Plus /></el-icon>添加列
+          <el-icon>
+            <Plus/>
+          </el-icon>
+          添加列
         </el-button>
       </div>
 
       <el-table :data="createColumns" border size="small">
         <el-table-column label="列名" width="130">
           <template #default="scope">
-            <el-input v-model="scope.row.name" placeholder="列名" size="small" />
+            <el-input v-model="scope.row.name" placeholder="列名" size="small"/>
           </template>
         </el-table-column>
         <el-table-column label="类型" width="120">
           <template #default="scope">
             <el-select v-model="scope.row.type" size="small">
-              <el-option v-for="t in ['INT','BIGINT','VARCHAR','TEXT','DATE','DATETIME','DECIMAL','FLOAT','TINYINT']" :key="t" :label="t" :value="t" />
+              <el-option v-for="t in ['INT','BIGINT','VARCHAR','TEXT','DATE','DATETIME','DECIMAL','FLOAT','TINYINT']"
+                         :key="t" :label="t" :value="t"/>
             </el-select>
           </template>
         </el-table-column>
         <el-table-column label="长度" width="80">
           <template #default="scope">
-            <el-input-number v-model="scope.row.length" :min="0" size="small" controls-position="right" />
+            <el-input-number v-model="scope.row.length" :min="0" size="small" controls-position="right"/>
           </template>
         </el-table-column>
         <el-table-column label="非空" width="60" align="center">
           <template #default="scope">
-            <el-checkbox v-model="scope.row.nullable" :true-label="false" :false-label="true" />
+            <el-checkbox v-model="scope.row.nullable" :true-label="false" :false-label="true"/>
           </template>
         </el-table-column>
         <el-table-column label="自增" width="60" align="center">
           <template #default="scope">
-            <el-checkbox v-model="scope.row.auto_increment" />
+            <el-checkbox v-model="scope.row.auto_increment"/>
           </template>
         </el-table-column>
         <el-table-column label="主键" width="60" align="center">
           <template #default="scope">
-            <el-checkbox v-model="scope.row.primary_key" />
+            <el-checkbox v-model="scope.row.primary_key"/>
           </template>
         </el-table-column>
         <el-table-column label="注释" min-width="120">
           <template #default="scope">
-            <el-input v-model="scope.row.comment" placeholder="列注释" size="small" />
+            <el-input v-model="scope.row.comment" placeholder="列注释" size="small"/>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="60" align="center">
           <template #default="scope">
-            <el-button type="danger" size="small" @click="removeColumn(scope.$index)" :icon="Delete" circle />
+            <el-button type="danger" size="small" @click="removeColumn(scope.$index)" :icon="Delete" circle/>
           </template>
         </el-table-column>
       </el-table>
@@ -525,28 +567,29 @@ onMounted(() => {
       <template v-if="alterAction === 'drop_column'">
         <el-form label-width="100px">
           <el-form-item label="要删除的列名">
-            <el-input v-model="alterDropColumnName" placeholder="输入列名" />
+            <el-input v-model="alterDropColumnName" placeholder="输入列名"/>
           </el-form-item>
         </el-form>
       </template>
       <template v-else>
         <el-form label-width="80px">
           <el-form-item label="列名" required>
-            <el-input v-model="alterColumn.name" placeholder="列名" />
+            <el-input v-model="alterColumn.name" placeholder="列名"/>
           </el-form-item>
           <el-form-item label="类型">
             <el-select v-model="alterColumn.type" style="width: 160px">
-              <el-option v-for="t in ['INT','BIGINT','VARCHAR','TEXT','DATE','DATETIME','DECIMAL','FLOAT','TINYINT']" :key="t" :label="t" :value="t" />
+              <el-option v-for="t in ['INT','BIGINT','VARCHAR','TEXT','DATE','DATETIME','DECIMAL','FLOAT','TINYINT']"
+                         :key="t" :label="t" :value="t"/>
             </el-select>
           </el-form-item>
           <el-form-item label="长度">
-            <el-input-number v-model="alterColumn.length" :min="0" controls-position="right" />
+            <el-input-number v-model="alterColumn.length" :min="0" controls-position="right"/>
           </el-form-item>
           <el-form-item label="允许空">
-            <el-switch v-model="alterColumn.nullable" />
+            <el-switch v-model="alterColumn.nullable"/>
           </el-form-item>
           <el-form-item label="注释">
-            <el-input v-model="alterColumn.comment" placeholder="列注释" />
+            <el-input v-model="alterColumn.comment" placeholder="列注释"/>
           </el-form-item>
         </el-form>
       </template>
@@ -558,11 +601,14 @@ onMounted(() => {
     </el-dialog>
 
     <!-- ============ 数据浏览对话框 ============ -->
-    <el-dialog v-model="dataVisible" :title="`数据浏览 - ${dataTableName}`" width="95%" top="3vh" :close-on-click-modal="false">
+    <el-dialog v-model="dataVisible" :title="`数据浏览 - ${dataTableName}`" width="95%" top="3vh"
+               :close-on-click-modal="false">
       <div v-loading="dataLoading">
         <template v-if="dataResult">
           <div style="margin-bottom: 8px; color: #909399; font-size: 13px">
-            共 {{ dataResult.total }} 条记录，第 {{ dataResult.page }}/{{ Math.ceil(dataResult.total / dataResult.page_size) || 1 }} 页
+            共 {{ dataResult.total }} 条记录，第 {{
+              dataResult.page
+            }}/{{ Math.ceil(dataResult.total / dataResult.page_size) || 1 }} 页
           </div>
           <div class="table-data-wrapper">
             <el-table :data="dataResult.records" border size="small" max-height="450" stripe>
@@ -594,7 +640,7 @@ onMounted(() => {
             />
           </div>
         </template>
-        <el-empty v-else description="无数据" />
+        <el-empty v-else description="无数据"/>
       </div>
     </el-dialog>
   </div>
@@ -607,6 +653,7 @@ onMounted(() => {
   padding: 8px 0;
   margin-bottom: 12px;
 }
+
 .sql-preview {
   background: #f5f7fa;
   padding: 12px 16px;
@@ -619,6 +666,7 @@ onMounted(() => {
   max-height: 300px;
   overflow-y: auto;
 }
+
 .table-data-wrapper {
   overflow-x: auto;
 }

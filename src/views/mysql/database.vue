@@ -42,11 +42,7 @@ async function fetchDatabases() {
   loading.value = true;
   try {
     const res: any = await listDatabases(connectionId);
-    if (res.code === 0) {
-      databases.value = res.data || [];
-    } else {
-      ElMessage.error(res.msg);
-    }
+    databases.value = res.data || [];
   } catch (e: any) {
     ElMessage.error(e?.message || "获取数据库列表失败");
   } finally {
@@ -65,14 +61,10 @@ async function handleCreate() {
       createForm.charset,
       createForm.collation
     );
-    if (res.code === 0) {
-      ElMessage.success(res.msg);
-      createVisible.value = false;
-      createForm.db_name = "";
-      await fetchDatabases();
-    } else {
-      ElMessage.error(res.msg);
-    }
+    ElMessage.success(res.msg);
+    createVisible.value = false;
+    createForm.db_name = "";
+    await fetchDatabases();
   } catch (e: any) {
     ElMessage.error(e?.message || "创建失败");
   }
@@ -86,12 +78,8 @@ async function handleDrop(dbName: string) {
   ).then(async () => {
     try {
       const res: any = await dropDatabase(connectionId, dbName);
-      if (res.code === 0) {
-        ElMessage.success(res.msg);
-        await fetchDatabases();
-      } else {
-        ElMessage.error(res.msg);
-      }
+      ElMessage.success(res.msg);
+      await fetchDatabases();
     } catch (e: any) {
       ElMessage.error(e?.message || "删除失败");
     }

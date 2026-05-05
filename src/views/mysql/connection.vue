@@ -14,6 +14,47 @@
         </div>
       </div>
 
+      <!-- 连接树 -->
+      <div class="tree-wrapper" @contextmenu.prevent>
+        <el-tree
+          ref="treeRef"
+          :data="treeData"
+          :props="treeProps"
+          node-key="id"
+          :highlight-current="true"
+          :expand-on-click-node="false"
+          @node-click="onTreeNodeClick"
+          @node-expand="onTreeNodeExpand"
+          @node-contextmenu="onTreeContextMenu"
+        >
+          <template #default="{ node, data }">
+            <div class="tree-node-content" @contextmenu.prevent="onTreeContextMenu($event, data, node)">
+              <!-- 连接节点 -->
+              <template v-if="data.nodeType === 'connection'">
+                <i-ep-connection class="node-icon" :color="data.isActive ? '#67c23a' : '#409eff'"/>
+                <span class="node-label" :class="{ 'active-conn': data.isActive }">
+                  {{ data.label }}
+                </span>
+                <el-tag v-if="data.isActive" size="small" type="success" effect="plain" class="active-tag">
+                  已连接
+                </el-tag>
+              </template>
+
+              <!-- 数据库节点 -->
+              <template v-else-if="data.nodeType === 'database'">
+                <i-ep-folder/>
+                <span class="node-label">{{ data.label }}</span>
+              </template>
+
+              <!-- 加载中 -->
+              <template v-else-if="data.nodeType === 'loading'">
+                <i-ep-loading/>
+                <span class="node-label loading-text">加载中...</span>
+              </template>
+            </div>
+          </template>
+        </el-tree>
+      </div>
 
       <!-- 右键菜单 -->
       <div
@@ -406,7 +447,6 @@ async function refreshActiveConnections() {
 /** 构建树数据 */
 function buildTreeData() {
   const nodes: TreeNode[] = [];
-
   // 已保存的连接配置
   savedConfigs.value.forEach((cfg, idx) => {
     // 检查是否已有活跃连接匹配此配置
@@ -426,22 +466,22 @@ function buildTreeData() {
   });
 
   // 活跃但未保存的连接
-  // activeConnections.value.forEach((conn) => {
-  //   const hasSaved = savedConfigs.value.some(
-  //     (cfg) => cfg.host === conn.host && cfg.port === conn.port && cfg.user === conn.user
-  //   );
-  //   if (!hasSaved) {
-  //     nodes.push({
-  //       id: `active_${conn.connection_id}`,
-  //       label: `${conn.user}@${conn.host}:${conn.port}`,
-  //       nodeType: "connection",
-  //       isActive: true,
-  //       connId: conn.connection_id,
-  //       configIndex: -1,
-  //       children: [],
-  //     });
-  //   }
-  // });
+  activeConnections.value.forEach((conn) => {
+    const hasSaved = savedConfigs.value.some(
+      (cfg) => cfg.host === conn.host && cfg.port === conn.port && cfg.user === conn.user
+    );
+    if (!hasSaved) {
+      nodes.push({
+        id: `active_${conn.connection_id}`,
+        label: `${conn.user}@${conn.host}:${conn.port}`,
+        nodeType: "connection",
+        isActive: true,
+        connId: conn.connection_id,
+        configIndex: -1,
+        children: [],
+      });
+    }
+  });
 
   treeData.value = nodes;
 }
@@ -483,7 +523,6 @@ function onTreeContextMenu(event: MouseEvent, data: TreeNode, _node: any) {
 function onContextMenuAction(action: string) {
   closeContextMenu();
   const {nodeId, configIndex, config, connId, dbName} = contextMenu;
-
   switch (action) {
     case "connect":
       if (config) handleConnect(config);

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { executeSql, listDatabases, listConnections } from "@/api/mysql";
-import type { ConnectionInfo } from "@/api/mysql/types";
+import {executeSql, listConnections, listDatabases} from "@/api/mysql";
+import type {ConnectionInfo} from "@/api/mysql/types";
+import {useRoute, useRouter} from "vue-router";
+import {ref} from "vue";
 
 // ==================== 路由参数 ====================
 const route = useRoute();
@@ -52,9 +54,7 @@ async function loadDatabases() {
   if (!currentConnId.value) return;
   try {
     const res: any = await listDatabases(currentConnId.value);
-    if (res.code === 0) {
-      databases.value = res.data || [];
-    }
+    databases.value = res.data || [];
   } catch {
     databases.value = [];
   }
@@ -88,25 +88,20 @@ async function execute() {
 
   try {
     const res: any = await executeSql(currentConnId.value, currentDatabase.value || "", sql);
-    if (res.code === 0) {
-      const data = res.data;
-      if (data.type === "query") {
-        resultType.value = "query";
-        resultColumns.value = data.columns || [];
-        resultRecords.value = data.records || [];
-        resultRowCount.value = data.row_count || 0;
-        addLog("result", `查询成功，返回 ${data.row_count} 行`);
-      } else {
-        resultType.value = "execute";
-        resultAffectedRows.value = data.affected_rows || 0;
-        resultMessage.value = data.message || "";
-        resultColumns.value = [];
-        resultRecords.value = [];
-        addLog("result", data.message || "执行成功");
-      }
+    const data = res.data;
+    if (data.type === "query") {
+      resultType.value = "query";
+      resultColumns.value = data.columns || [];
+      resultRecords.value = data.records || [];
+      resultRowCount.value = data.row_count || 0;
+      addLog("result", `查询成功，返回 ${data.row_count} 行`);
     } else {
-      addLog("error", res.msg);
-      resultType.value = "";
+      resultType.value = "execute";
+      resultAffectedRows.value = data.affected_rows || 0;
+      resultMessage.value = data.message || "";
+      resultColumns.value = [];
+      resultRecords.value = [];
+      addLog("result", data.message || "执行成功");
     }
   } catch (e: any) {
     addLog("error", e?.message || "执行失败");
@@ -131,7 +126,7 @@ function clearLogs() {
 function addLog(type: "info" | "error" | "sql" | "result", text: string) {
   const now = new Date();
   const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
-  outputLogs.value.push({ type, text, time });
+  outputLogs.value.push({type, text, time});
 }
 
 // 键盘事件：Ctrl+Enter 执行
@@ -188,31 +183,38 @@ onMounted(() => {
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <el-button @click="backToConnection" text>
-        <el-icon><ArrowLeft /></el-icon>返回
+        返回
       </el-button>
 
-      <el-select v-model="currentConnId" placeholder="选择连接" style="width: 200px; margin-left: 8px" @change="onConnChange" size="small">
-        <el-option v-for="c in activeConnections" :key="c.connection_id" :label="`${c.user}@${c.host}:${c.port}`" :value="c.connection_id" />
+      <el-select v-model="currentConnId" placeholder="选择连接" style="width: 200px; margin-left: 8px"
+                 @change="onConnChange" size="small">
+        <el-option v-for="c in activeConnections" :key="c.connection_id" :label="`${c.user}@${c.host}:${c.port}`"
+                   :value="c.connection_id"/>
       </el-select>
 
       <span style="margin: 0 8px; color: #909399">|</span>
 
       <span style="font-size: 13px; color: #606266">数据库:</span>
-      <el-select v-model="currentDatabase" placeholder="选择数据库" style="width: 160px; margin-left: 4px" clearable size="small" @change="(v: string) => setDatabase(v)">
-        <el-option v-for="db in databases" :key="db" :label="db" :value="db" />
+      <el-select v-model="currentDatabase" placeholder="选择数据库" style="width: 160px; margin-left: 4px" clearable
+                 size="small" @change="(v: string) => setDatabase(v)">
+        <el-option v-for="db in databases" :key="db" :label="db" :value="db"/>
       </el-select>
 
       <el-button type="primary" @click="execute" :loading="executing" style="margin-left: 12px">
-        <el-icon><VideoPlay /></el-icon>执行 (Ctrl+Enter)
+        <i-ep-video-play/>
+        执行 (Ctrl+Enter)
       </el-button>
       <el-button @click="clearSql">
-        <el-icon><Delete /></el-icon>清空
+        <i-ep-delete/>
+        清空
       </el-button>
     </div>
 
     <!-- 快捷模板 -->
     <div class="quick-templates">
-      <el-tag v-for="tpl in ['SELECT * FROM ', 'SHOW TABLES', 'SHOW CREATE TABLE ', 'DESC ', 'SHOW INDEX FROM ']" :key="tpl" style="cursor: pointer; margin-right: 6px; margin-bottom: 4px" @click="insertSql(tpl)" size="small">
+      <el-tag v-for="tpl in ['SELECT * FROM ', 'SHOW TABLES', 'SHOW CREATE TABLE ', 'DESC ', 'SHOW INDEX FROM ']"
+              :key="tpl" style="cursor: pointer; margin-right: 6px; margin-bottom: 4px" @click="insertSql(tpl)"
+              size="small">
         {{ tpl }}
       </el-tag>
     </div>
@@ -222,7 +224,7 @@ onMounted(() => {
       <el-col :span="14" style="height: 100%">
         <el-card shadow="never" style="height: 100%; display: flex; flex-direction: column">
           <template #header>
-            <span><el-icon><Edit /></el-icon> SQL 编辑器</span>
+            <span><i-ep-edit/> SQL 编辑器</span>
           </template>
           <div style="flex: 1; display: flex; flex-direction: column">
             <el-input
@@ -243,7 +245,7 @@ onMounted(() => {
       <el-col :span="10" style="height: 100%">
         <el-card shadow="never" style="height: 100%; display: flex; flex-direction: column">
           <template #header>
-            <span><el-icon><DataAnalysis /></el-icon> 结果</span>
+            <span><i-ep-data-analysis/> 结果</span>
           </template>
           <div style="flex: 1; overflow: auto">
             <!-- 查询结果 -->
@@ -273,13 +275,13 @@ onMounted(() => {
 
             <!-- 执行结果 -->
             <template v-else-if="resultType === 'execute'">
-              <el-result icon="success" title="执行成功" :sub-title="resultMessage" />
+              <el-result icon="success" title="执行成功" :sub-title="resultMessage"/>
               <div style="text-align: center; color: #909399; font-size: 14px">
                 影响行数: {{ resultAffectedRows }}
               </div>
             </template>
 
-            <el-empty v-else description="等待执行 SQL..." />
+            <el-empty v-else description="等待执行 SQL..."/>
           </div>
         </el-card>
       </el-col>
@@ -289,7 +291,7 @@ onMounted(() => {
     <el-card shadow="never" style="margin-top: 12px">
       <template #header>
         <div style="display: flex; align-items: center; justify-content: space-between">
-          <span><el-icon><Notebook /></el-icon> 输出日志</span>
+          <span><i-ep-notebook/> 输出日志</span>
           <el-button size="small" text @click="clearLogs">清空日志</el-button>
         </div>
       </template>
@@ -312,14 +314,17 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .quick-templates {
   margin-bottom: 8px;
 }
+
 .sql-editor :deep(textarea) {
   font-family: "Cascadia Code", "Fira Code", "Consolas", "Monaco", monospace !important;
   font-size: 14px !important;
   line-height: 1.6 !important;
 }
+
 .log-area {
   max-height: 160px;
   overflow-y: auto;
@@ -329,23 +334,29 @@ onMounted(() => {
   border-radius: 4px;
   padding: 10px 12px;
 }
+
 .log-line {
   padding: 2px 0;
   line-height: 1.5;
 }
+
 .log-time {
   color: #888;
   margin-right: 8px;
 }
+
 .log-info .log-text {
   color: #4fc3f7;
 }
+
 .log-error .log-text {
   color: #ef5350;
 }
+
 .log-sql .log-text {
   color: #a5d6a7;
 }
+
 .log-result .log-text {
   color: #fff176;
 }
