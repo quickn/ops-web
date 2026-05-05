@@ -28,7 +28,7 @@
           @node-contextmenu="onTreeContextMenu"
         >
           <template #default="{ node, data }">
-            <div class="tree-node-content" @contextmenu.prevent="onTreeContextMenu($event, data, node)">
+            <div class="tree-node-content" @contextmenu.prevent="onTreeContextMenu($event, data, node)" @dblclick.stop="onTreeNodeDblClick($event, data)">
               <!-- 连接节点 -->
               <template v-if="data.nodeType === 'connection'">
                 <i-ep-connection class="node-icon" :color="data.isActive ? '#67c23a' : '#409eff'"/>
@@ -118,144 +118,6 @@
             删除数据库
           </div>
         </template>
-      </div>
-    </div>
-
-    <!-- ==================== 分割线（可拖拽调整宽度） ==================== -->
-    <div class="splitter" @mousedown="onSplitterMouseDown"/>
-
-    <!-- ==================== 右侧面板：控制台 ==================== -->
-    <div class="right-panel">
-      <div class="panel-header">
-        <!--        <span><i-ep-terminal/> 控制台</span>-->
-      </div>
-
-      <!-- 工具栏 -->
-      <div class="console-toolbar">
-        <el-select
-          v-model="consoleConnId"
-          placeholder="选择连接"
-          size="small"
-          style="width: 200px"
-          @change="onConsoleConnChange"
-        >
-          <el-option
-            v-for="c in activeConnections"
-            :key="c.connection_id"
-            :label="`${c.user}@${c.host}:${c.port}`"
-            :value="c.connection_id"
-          />
-        </el-select>
-
-        <span class="console-sep">|</span>
-
-        <span class="console-label">数据库:</span>
-        <el-select
-          v-model="consoleDatabase"
-          placeholder="选择数据库"
-          size="small"
-          style="width: 150px"
-          clearable
-          @change="(v: string) => addConsoleLog('info', `已切换数据库: ${v || '(未选择)'}`)"
-        >
-          <el-option v-for="db in consoleDatabases" :key="db" :label="db" :value="db"/>
-        </el-select>
-
-        <el-button type="primary" size="small" @click="executeSql" :loading="executing" style="margin-left: 8px">
-          <i-ep-video-play/>
-          执行
-        </el-button>
-        <el-button size="small" @click="clearConsole">
-          <i-ep-delete/>
-          清空
-        </el-button>
-      </div>
-
-      <!-- 快捷模板 -->
-      <div class="quick-templates">
-        <el-tag
-          v-for="tpl in ['SELECT * FROM ', 'SHOW TABLES', 'SHOW CREATE TABLE ', 'DESC ', 'SHOW INDEX FROM ']"
-          :key="tpl"
-          size="small"
-          class="tpl-tag"
-          @click="sqlInput = tpl"
-        >
-          {{ tpl }}
-        </el-tag>
-      </div>
-
-      <!-- SQL 编辑区 -->
-      <div class="console-editor">
-        <el-input
-          v-model="sqlInput"
-          type="textarea"
-          :rows="6"
-          placeholder="在此输入 SQL...  Ctrl+Enter 执行"
-          class="sql-textarea"
-          resize="none"
-          @keydown="onConsoleKeydown"
-        />
-      </div>
-
-      <!-- 结果区 -->
-      <div class="console-result">
-        <div class="result-header">
-          <span><i-ep-data-analysis/> 结果</span>
-          <span v-if="resultType === 'query'" class="result-count">返回 {{ resultRowCount }} 行</span>
-          <span v-else-if="resultType === 'execute'" class="result-count">影响 {{ resultAffectedRows }} 行</span>
-        </div>
-        <div class="result-body">
-          <template v-if="resultType === 'query'">
-            <el-table
-              :data="resultRecords.slice(0, 200)"
-              border
-              size="small"
-              max-height="200"
-              stripe
-            >
-              <el-table-column
-                v-for="col in resultColumns"
-                :key="col"
-                :label="col"
-                :prop="col"
-                min-width="100"
-                show-overflow-tooltip
-              >
-                <template #default="scope">
-                  <span v-if="scope.row[col] === null" class="null-value">NULL</span>
-                  <span v-else>{{ scope.row[col] }}</span>
-                </template>
-              </el-table-column>
-            </el-table>
-            <div v-if="resultRecords.length > 200" class="truncate-hint">
-              仅显示前 200 条，共 {{ resultRowCount }} 条
-            </div>
-          </template>
-          <template v-else-if="resultType === 'execute'">
-            <el-result icon="success" title="执行成功" :sub-title="resultMessage"/>
-          </template>
-          <el-empty v-else description="等待执行 SQL..." :image-size="60"/>
-        </div>
-      </div>
-
-      <!-- 输出日志 -->
-      <div class="console-log">
-        <div class="log-header">
-          <span><i-ep-notebook/> 输出日志</span>
-          <el-button size="small" text @click="consoleLogs = []">清空</el-button>
-        </div>
-        <div class="log-body" ref="logBodyRef">
-          <div v-if="consoleLogs.length === 0" class="log-empty">暂无日志</div>
-          <div
-            v-for="(log, idx) in consoleLogs"
-            :key="idx"
-            class="log-line"
-            :class="`log-${log.type}`"
-          >
-            <span class="log-time">[{{ log.time }}]</span>
-            <span>{{ log.text }}</span>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -591,6 +453,52 @@ function onTreeNodeClick(data: TreeNode) {
         query: {connection_id: data.connId, database: data.dbName},
       });
     }
+  }
+}
+
+/** 双击树节点 */
+function onTreeNodeDblClick(_event: MouseEvent, data: TreeNode) {
+  if (data.nodeType === "connection") {
+    if (data.isActive && data.connId) {
+      // 已连接，直接跳转 table 页
+      router.push({
+        path: "/mysql/table",
+        query: { connection_id: data.connId },
+      });
+    } else if (data.config) {
+      // 未连接，先连接再跳转
+      handleConnectAndGoToTable(data.config);
+    }
+  } else if (data.nodeType === "database") {
+    if (data.connId && data.dbName) {
+      router.push({
+        path: "/mysql/table",
+        query: { connection_id: data.connId, database: data.dbName },
+      });
+    }
+  }
+}
+
+/** 连接并跳转到 table 页 */
+async function handleConnectAndGoToTable(config: ConnectionConfig) {
+  connecting.value = true;
+  try {
+    const res: any = await connect(config);
+    if (res.code === 0) {
+      ElMessage.success("连接成功");
+      await refreshActiveConnections();
+      buildTreeData();
+      router.push({
+        path: "/mysql/table",
+        query: { connection_id: res.data.connection_id },
+      });
+    } else {
+      ElMessage.error(res.msg);
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || "连接失败");
+  } finally {
+    connecting.value = false;
   }
 }
 

@@ -4,6 +4,7 @@ import {
   createTable,
   dropTable,
   getTableStructure,
+  listDatabases,
   listTables,
   queryTableData,
   truncateTable,
@@ -15,7 +16,8 @@ import {useRoute, useRouter} from "vue-router";
 const route = useRoute();
 const router = useRouter();
 const connectionId = (route.query.connection_id as string) || "";
-const database = (route.query.database as string) || "";
+const databases = ref<string[]>([]);
+const currentDatabase = ref((route.query.database as string) || "");
 
 // ==================== 状态 ====================
 const loading = ref(false);
@@ -75,14 +77,14 @@ const dataPageSize = ref(20);
 // ==================== 方法 ====================
 
 async function fetchTables() {
-  if (!connectionId || !database) {
+  if (!connectionId || !currentDatabase.value) {
     ElMessage.warning("缺少连接信息");
     router.push("/mysql/connection");
     return;
   }
   loading.value = true;
   try {
-    const res: any = await listTables(connectionId, database);
+    const res: any = await listTables(connectionId, currentDatabase.value);
     tables.value = res.data || [];
   } catch (e: any) {
     ElMessage.error(e?.message || "获取表列表失败");
@@ -98,7 +100,7 @@ async function viewStructure(tableName: string) {
   structureLoading.value = true;
   tableStructure.value = null;
   try {
-    const res: any = await getTableStructure(connectionId, database, tableName);
+    const res: any = await getTableStructure(connectionId, currentDatabase.value, tableName);
     tableStructure.value = res.data;
   } catch (e: any) {
     ElMessage.error(e?.message || "获取表结构失败");
@@ -163,7 +165,7 @@ async function handleCreateTable() {
   try {
     const res: any = await createTable(
       connectionId,
-      database,
+      currentDatabase.value,
       createForm.table_name,
       createColumns.value,
       createForm.engine,
@@ -186,7 +188,7 @@ async function handleDropTable(tableName: string) {
     type: "error",
   }).then(async () => {
     try {
-      const res: any = await dropTable(connectionId, database, tableName);
+      const res: any = await dropTable(connectionId, currentDatabase.value, tableName);
       ElMessage.success(res.msg);
       await fetchTables();
     } catch (e: any) {
@@ -243,7 +245,7 @@ async function handleAlterTable() {
   }
 
   try {
-    const res: any = await alterTable(connectionId, database, alterTableName.value, operations);
+    const res: any = await alterTable(connectionId, currentDatabase.value, alterTableName.value, operations);
     ElMessage.success(res.msg);
     alterVisible.value = false;
     await fetchTables();
@@ -259,7 +261,7 @@ async function viewData(tableName: string, page = 1) {
   dataLoading.value = true;
   dataPage.value = page;
   try {
-    const res: any = await queryTableData(connectionId, database, tableName, page, dataPageSize.value);
+    const res: any = await queryTableData(connectionId, currentDatabase.value, tableName, page, dataPageSize.value);
     dataResult.value = res.data;
   } catch (e: any) {
     ElMessage.error(e?.message || "查询失败");
@@ -276,7 +278,7 @@ async function handleTruncate(tableName: string) {
     type: "error",
   }).then(async () => {
     try {
-      const res: any = await truncateTable(connectionId, database, tableName);
+      const res: any = await truncateTable(connectionId, currentDatabase.value, tableName);
       ElMessage.success(res.msg);
     } catch (e: any) {
       ElMessage.error(e?.message || "清空失败");
@@ -287,11 +289,31 @@ async function handleTruncate(tableName: string) {
 
 // ---- 导航 ----
 function enterConsole() {
-  router.push({path: "/mysql/console", query: {connection_id: connectionId, database}});
+  router.push({path: "/mysql/console", query: {connection_id: connectionId, database: currentDatabase.value}});
 }
 
 function backToDatabase() {
   router.push({path: "/mysql/database", query: {connection_id: connectionId}});
+}
+
+/** 加载数据库列表 */
+async function loadDatabases() {
+  try {
+    const res: any = await listDatabases(connectionId);
+    databases.value = res.data || [];
+    // 如果 URL 未传 database 参数，默认选中第一个库
+    if (!currentDatabase.value && databases.value.length > 0) {
+      currentDatabase.value = databases.value[0];
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || "获取数据库列表失败");
+  }
+}
+
+/** 切换数据库 */
+function onDatabaseChange() {
+  dataPage.value = 1;
+  fetchTables();
 }
 
 function getKeyIcon(col: ColumnInfo): string {
@@ -302,56 +324,45 @@ function getKeyIcon(col: ColumnInfo): string {
 }
 
 // ==================== 初始化 ====================
-onMounted(() => {
+onMounted(async () => {
+  await loadDatabases();
   fetchTables();
 });
 </script>
 
 <template>
   <div class="app-container">
-    <!-- 顶部信息栏 -->
-    <div class="connection-bar">
-      <el-button @click="backToDatabase" text>
-        <el-icon>
-          <ArrowLeft/>
-        </el-icon>
-        返回数据库
-      </el-button>
-      <el-tag type="success" effect="dark" style="margin-left: 12px">
-        {{ database }}
-      </el-tag>
-    </div>
-
-    <!-- 操作栏 -->
-    <div class="search-container">
+    <div class="search-container" style="padding-bottom: 15px;">
+      <el-select
+        v-model="currentDatabase"
+        @change="onDatabaseChange"
+        style="margin-left: 12px; margin-right: 12px; width: 220px"
+        placeholder="选择数据库"
+        filterable
+      >
+        <el-option
+          v-for="db in databases"
+          :key="db"
+          :label="db"
+          :value="db"
+        />
+      </el-select>
       <el-button type="primary" @click="showCreateTable">
-        <el-icon>
-          <Plus/>
-        </el-icon>
+        <i-ep-plus/>
         新建表
       </el-button>
       <el-button type="info" @click="enterConsole">
-        <el-icon>
-          <Terminal/>
-        </el-icon>
         命令行
       </el-button>
       <el-button @click="fetchTables">
-        <el-icon>
-          <Refresh/>
-        </el-icon>
+        <i-ep-refresh/>
         刷新
       </el-button>
     </div>
 
     <!-- 表列表 -->
     <el-card shadow="never" v-loading="loading">
-      <template #header>
-        <span><el-icon><Grid/></el-icon> 表列表 ({{ tables.length }})</span>
-      </template>
-
       <el-empty v-if="!loading && tables.length === 0" description="该数据库下暂无表"/>
-
       <el-table v-else :data="tables" border highlight-current-row>
         <el-table-column label="#" width="50" align="center">
           <template #default="scope">{{ scope.$index + 1 }}</template>
