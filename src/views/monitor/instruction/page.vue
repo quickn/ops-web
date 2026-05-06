@@ -25,6 +25,17 @@
             @keyup.enter="handleQuery"
           />
         </el-form-item>
+        <el-form-item label="创建时间" prop="createTime">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="-"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+          />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery"
             ><i-ep-search />搜索</el-button
@@ -82,10 +93,17 @@ const total = ref(0);
 const queryParams = reactive<LogInfo>({ pageSize: 15, pageNum: 1 });
 const dataList = ref<LogInfo[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
+const dateRange = ref<[string, string] | null>(null);
 /** 查询 */
 function handleQuery() {
   loading.value = true;
-  listData(queryParams).then(({ data }) => {
+  // 添加日期范围参数
+  const params = { ...queryParams };
+  if (dateRange.value && dateRange.value.length === 2) {
+    params.startTime = dateRange.value[0];
+    params.endTime = dateRange.value[1];
+  }
+  listData(params).then(({ data }) => {
     dataList.value = data.records;
     total.value = data.total;
     loading.value = false;
@@ -97,6 +115,7 @@ function handleQuery() {
 /** 重置查询 */
 function resetQuery() {
   queryFormRef.value.resetFields();
+  dateRange.value = null;
   queryParams.pageNum = 1;
   handleQuery();
 }

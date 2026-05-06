@@ -7,10 +7,9 @@
         :inline="true"
         @submit.prevent
         @keyup.enter="handleQuery"
-        style="display: flex; align-items: center; flex-wrap: wrap"
+        style="display: flex; flex-wrap: wrap; align-items: center"
       >
-
-        <el-form-item prop="keywords" >
+        <el-form-item prop="keywords">
           <el-input
             v-model="queryParams.name"
             placeholder="应用名称"
@@ -19,7 +18,7 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery"
-          ><i-ep-search />搜索</el-button
+            ><i-ep-search />搜索</el-button
           >
           <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
         </el-form-item>
@@ -141,43 +140,6 @@
       />
     </el-card>
     <el-dialog
-      v-model="dialogEdit.visible"
-      :title="dialogEdit.title"
-      width="900px"
-      @closed="closeDialog"
-    >
-      <el-form
-        ref="deptFormRef"
-        :model="formData"
-        :rules="rules"
-        label-width="80px"
-      >
-        <el-form-item label="应用名称" prop="name">
-          <el-input
-            v-model="formData.name"
-            :disabled="!addStatus"
-            placeholder="接口名"
-          />
-        </el-form-item>
-
-        <el-form-item label="描述" prop="remark">
-          <el-input
-            v-model="formData.remark"
-            type="textarea"
-            :rows="4"
-            placeholder="链接"
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="handleSubmit"> 确 定</el-button>
-          <el-button @click="closeDialog"> 取 消</el-button>
-        </div>
-      </template>
-    </el-dialog>
-    <el-dialog
       v-model="backupEdit.visible"
       title="备份"
       width="500px"
@@ -211,9 +173,9 @@
             style="width: 300px"
           >
             <el-option
-              v-for="(item, index) in hostList"
+              v-for="(item, index) in serviceInfoList"
               :value="item.id"
-              :label="item.label"
+              :label="item.name"
               :key="index"
             />
           </el-select>
@@ -241,7 +203,7 @@
         ref="deptFormRef"
         :model="formData"
         :rules="rules"
-        label-width="80px"
+        label-width="100px"
       >
         <el-form-item label="应用名称" prop="name">
           <el-input
@@ -250,7 +212,18 @@
             placeholder="接口名"
           />
         </el-form-item>
-
+        <el-form-item label="源文件目录" prop="sourceDir">
+          <el-input v-model="formData.sourceDir" placeholder="源文件目录" />
+        </el-form-item>
+        <el-form-item label="指向目录" prop="targetDir">
+          <el-input v-model="formData.targetDir" placeholder="指向目录" />
+        </el-form-item>
+        <el-form-item label="应用类型" prop="type">
+          <el-select v-model="formData.type" filterable size="default">
+            <el-option :value="1" label="Java" />
+            <el-option :value="2" label="docker" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="描述" prop="remark">
           <el-input
             v-model="formData.remark"
@@ -328,13 +301,11 @@ import {
 } from "@/api/monitor/project";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { originServerList } from "@/api/monitor/agent";
-
 defineOptions({
   name: "ProjectPage",
   inheritAttrs: false,
 });
-
+import { listAll } from "@/api/monitor/agent";
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
@@ -362,7 +333,10 @@ const backupEdit = reactive<DialogOption>({
 });
 const formData = reactive<HeathMonitor>({
   name: undefined,
+  type: undefined,
   remark: undefined,
+  sourceDir: undefined,
+  targetDir: undefined,
 });
 const formBackupData = reactive<HeathMonitor>({
   sourceDir: "/home/park/docker",
@@ -397,18 +371,8 @@ function resetQuery() {
 }
 function fetchHostList() {
   // 假设有一个API可以获取主机列表
-  originServerList({
-    pageNum: 1,
-    pageSize: 10000,
-    isOriginServer: true,
-  }).then((response) => {
-    hostList.value = response.data;
-    hostList.value.forEach((item) => {
-      item.label = item.hostname + " (" + item.serviceName + ")";
-      if (item.isOriginServer) {
-        formData.sourceAgentId = item.id;
-      }
-    });
+  listAll().then(({ data }) => {
+    serviceInfoList.value = data;
   });
 }
 /** 行checkbox 选中事件 */

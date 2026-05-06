@@ -10,6 +10,16 @@ export function listAll(): AxiosPromise<ServiceInfo[]> {
   });
 }
 
+export function agentList(
+  queryParams?: AgentConfig
+): AxiosPromise<PageRecords<AgentConfig[]>> {
+  return request({
+    url: "/agent/list",
+    method: "get",
+    params: queryParams
+  });
+}
+
 export function listPage(
   queryParams?: ServiceInfo
 ): AxiosPromise<PageRecords<ServiceInfo[]>> {
@@ -49,5 +59,29 @@ export function upgradeClientByServiceId(id: number) {
   return request({
     url: "/serviceInfo/upgradeClientByServiceId/" + id,
     method: "get",
+  });
+}
+
+// 日志列表
+export function listFiles(agentId: number, path: string) {
+  return request({
+    url: "/fileLog/listFiles",
+    method: "get",
+    params: {
+      agentId,
+      path,
+    },
+  });
+}
+
+// 分析日志
+export function analyzerLog(agentId: number, logFilePath: string) {
+  return request({
+    url: "/fileLog/analyzerLog",
+    method: "get",
+    params: {
+      agentId,
+      logFilePath,
+    },
   });
 }

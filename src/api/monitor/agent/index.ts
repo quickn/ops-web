@@ -21,6 +21,12 @@ export function originServerList(
     params: queryParams
   });
 }
+export function listAll(): AxiosPromise<ServiceInfo[]> {
+  return request({
+    url: "/serviceInfo/listAll",
+    method: "get",
+  });
+}
 /**
  * 获取部门详情
  *
@@ -58,5 +64,13 @@ export function handleAgent(id: number, cmd: string) {
     url: "/agent/handleAgent/" + id,
     method: "get",
     params: { "cmd": cmd }
+  });
+}
+
+export function batchHandleAgent(ids: number[], cmd: string) {
+  return request({
+    url: "/agent/batchHandleAgent",
+    method: "post",
+    data: { ids, cmd }
   });
 }
