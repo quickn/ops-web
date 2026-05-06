@@ -62,6 +62,7 @@ export interface NacosServiceQuery extends NacosServerParams {
   pageSize?: number;
   namespaceId?: string;
   groupName?: string;
+  serviceName?: string;
 }
 
 /**

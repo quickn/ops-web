@@ -17,6 +17,7 @@
             clearable
             filterable
             style="width: 280px"
+            @change="handleServerChange"
           >
             <el-option
               v-for="server in serverList"
@@ -46,6 +47,14 @@
           <el-input
             v-model="queryParams.groupName"
             placeholder="分组名称"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        <el-form-item label="服务名" prop="serviceName">
+          <el-input
+            v-model="queryParams.serviceName"
+            placeholder="请输入服务名称"
             clearable
             style="width: 200px"
           />
@@ -247,6 +256,16 @@ const queryParams = reactive<NacosServiceQuery>({
   groupName: "DEFAULT_GROUP",
 });
 
+/** 切换 Nacos 服务器 */
+function handleServerChange() {
+  if (queryParams.configId) {
+    handleQuery();
+  } else {
+    dataList.value = [];
+    total.value = 0;
+  }
+}
+
 const detailDialog = reactive<DialogOption>({
   visible: false,
   title: "服务实例列表",
@@ -312,6 +331,7 @@ function resetQuery() {
   queryParams.pageSize = 10;
   queryParams.namespaceId = "";
   queryParams.groupName = "DEFAULT_GROUP";
+  queryParams.serviceName = "";
   // 重置后如果有服务器列表，选择第一个
   if (serverList.value.length > 0) {
     queryParams.configId = serverList.value[0].id;

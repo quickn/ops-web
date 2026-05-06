@@ -185,18 +185,6 @@ function loadNamespaces() {
   });
 }
 
-// 监听configId变化，重新加载命名空间
-watch(
-  () => editForm.configId,
-  (newVal) => {
-    if (newVal) {
-      loadNamespaces();
-    } else {
-      namespaceList.value = [];
-    }
-  }
-);
-
 /** 初始化 CodeMirror YAML 编辑器 */
 function initEditor() {
   setTimeout(() => {
@@ -224,16 +212,13 @@ function getEditorContent(): string {
 
 /** 提交保存 */
 function handleSubmit() {
+  editForm.content = getEditorContent();
   editFormRef.value?.validate((valid: boolean) => {
     if (!valid) return;
-
-    editForm.content = getEditorContent();
-
     if (!editForm.content.trim()) {
       ElMessage.warning("请输入配置内容");
       return;
     }
-
     submitLoading.value = true;
     publishConfig({
       configId: editForm.configId,
