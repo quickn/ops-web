@@ -2,9 +2,9 @@
 
 /** 连接配置 */
 export interface ConnectionConfig {
-  host: string;
+  url: string;
   port: number;
-  user: string;
+  username: string;
   password: string;
   charset?: string;
 }
@@ -12,9 +12,9 @@ export interface ConnectionConfig {
 /** 活跃连接信息 */
 export interface ConnectionInfo {
   connection_id: string;
-  host: string;
+  url: string;
   port: number;
-  user: string;
+  username: string;
 }
 
 /** 表信息 */
