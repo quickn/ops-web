@@ -8,15 +8,23 @@
         :inline="true"
         @submit.prevent
         @keyup.enter="handleQuery"
-        style="display: flex; align-items: center; flex-wrap: wrap"
+        style="display: flex; flex-wrap: wrap; align-items: center"
       >
-        <el-form-item label="服务器地址" prop="server_addr">
-          <el-input
-            v-model="queryParams.server_addr"
-            placeholder="Nacos 服务地址"
+        <el-form-item label="服务器地址" prop="configId">
+          <el-select
+            v-model="queryParams.configId"
+            placeholder="请选择 Nacos 服务器"
             clearable
+            filterable
             style="width: 280px"
-          />
+          >
+            <el-option
+              v-for="server in serverList"
+              :key="server.id"
+              :label="server.service_name || server.url"
+              :value="server.id!"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="命名空间" prop="namespaceId">
           <el-select
@@ -72,7 +80,12 @@
           width="180"
           show-overflow-tooltip
         />
-        <el-table-column label="集群数" prop="clusterCount" width="80" align="center" />
+        <el-table-column
+          label="集群数"
+          prop="clusterCount"
+          width="80"
+          align="center"
+        />
         <el-table-column
           label="健康实例"
           prop="healthyInstanceCount"
@@ -133,11 +146,7 @@
         border
         style="margin-top: 16px"
       >
-        <el-table-column
-          label="IP"
-          prop="ip"
-          width="150"
-        />
+        <el-table-column label="IP" prop="ip" width="150" />
         <el-table-column label="端口" prop="port" width="80" align="center" />
         <el-table-column label="权重" prop="weight" width="80" align="center" />
         <el-table-column label="健康状态" width="100" align="center">
@@ -202,11 +211,19 @@
 </template>
 
 <script setup lang="ts">
-import { getServices, getServiceDetail, getNamespaces, onlineServiceInstance, offlineServiceInstance } from "@/api/nacos";
+import {
+  getServices,
+  getServiceDetail,
+  getNamespaces,
+  onlineServiceInstance,
+  offlineServiceInstance,
+  getNacosServerList,
+} from "@/api/nacos";
 import {
   NacosServiceQuery,
   NacosService,
   NacosNamespace,
+  AccountConfig,
 } from "@/api/nacos/types";
 
 defineOptions({
@@ -220,9 +237,10 @@ const instanceLoading = ref(false);
 const total = ref(0);
 const dataList = ref<NacosService[]>([]);
 const namespaceList = ref<NacosNamespace[]>([]);
+const serverList = ref<AccountConfig[]>([]);
 
 const queryParams = reactive<NacosServiceQuery>({
-  server_addr: "https://cms.xgzyzc.com",
+  configId: undefined,
   pageNo: 1,
   pageSize: 10,
   namespaceId: "",
@@ -238,10 +256,23 @@ const detailService = reactive<NacosService>({});
 const instanceList = ref<any[]>([]);
 const instanceData = ref<any>({});
 
+/** 加载 Nacos 服务器列表 */
+function loadServerList() {
+  getNacosServerList().then(({ data }) => {
+    if (data && Array.isArray(data)) {
+      serverList.value = data;
+      // 如果有服务器列表，默认选择第一个
+      if (data.length > 0 && !queryParams.configId) {
+        queryParams.configId = data[0].id;
+      }
+    }
+  });
+}
+
 /** 加载命名空间列表 */
 function loadNamespaces() {
-  if (!queryParams.server_addr) return;
-  getNamespaces({ server_addr: queryParams.server_addr }).then(({ data }) => {
+  if (!queryParams.configId) return;
+  getNamespaces({ configId: queryParams.configId }).then(({ data }) => {
     if (data && Array.isArray(data)) {
       namespaceList.value = data;
     }
@@ -250,8 +281,8 @@ function loadNamespaces() {
 
 /** 查询服务列表 */
 function handleQuery() {
-  if (!queryParams.server_addr) {
-    ElMessage.warning("请输入 Nacos 服务器地址");
+  if (!queryParams.configId) {
+    ElMessage.warning("请选择 Nacos 服务器");
     return;
   }
   loading.value = true;
@@ -281,6 +312,12 @@ function resetQuery() {
   queryParams.pageSize = 10;
   queryParams.namespaceId = "";
   queryParams.groupName = "DEFAULT_GROUP";
+  // 重置后如果有服务器列表，选择第一个
+  if (serverList.value.length > 0) {
+    queryParams.configId = serverList.value[0].id;
+  } else {
+    queryParams.configId = undefined;
+  }
   handleQuery();
 }
 
@@ -292,7 +329,7 @@ function openDetailDialog(row: NacosService) {
   instanceLoading.value = true;
 
   getServiceDetail({
-    server_addr: queryParams.server_addr,
+    configId: queryParams.configId,
     serviceName: row.name!,
     namespaceId: queryParams.namespaceId,
     groupName: row.groupName,
@@ -324,18 +361,14 @@ function closeDetailDialog() {
 
 /** 上线服务实例 */
 function handleOnlineInstance(row: any) {
-  ElMessageBox.confirm(
-    `确认上线实例 ${row.ip}:${row.port} 吗？`,
-    "提示",
-    {
-      confirmButtonText: "确定",
-      cancelButtonText: "取消",
-      type: "warning",
-    }
-  ).then(() => {
+  ElMessageBox.confirm(`确认上线实例 ${row.ip}:${row.port} 吗？`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
     row.onlineLoading = true;
     onlineServiceInstance({
-      server_addr: queryParams.server_addr,
+      configId: queryParams.configId,
       serviceName: detailService.name!,
       ip: row.ip,
       port: row.port,
@@ -366,7 +399,7 @@ function handleOfflineInstance(row: any) {
   ).then(() => {
     row.offlineLoading = true;
     offlineServiceInstance({
-      server_addr: queryParams.server_addr,
+      configId: queryParams.configId,
       serviceName: detailService.name!,
       ip: row.ip,
       port: row.port,
@@ -384,17 +417,20 @@ function handleOfflineInstance(row: any) {
   });
 }
 
-// 服务器地址变更时重新加载命名空间
+// 服务器配置变更时重新加载命名空间
 watch(
-  () => queryParams.server_addr,
+  () => queryParams.configId,
   (newVal) => {
     if (newVal) {
       loadNamespaces();
+    } else {
+      namespaceList.value = [];
     }
   }
 );
 
 onMounted(() => {
+  loadServerList();
   loadNamespaces();
   handleQuery();
 });

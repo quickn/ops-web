@@ -133,3 +133,15 @@ export function offlineServiceInstance(
     data: data,
   });
 }
+
+/**
+ * 获取 Nacos 服务器配置列表
+ * GET /pyApi/accountConfig/list?type=nacos
+ */
+export function getNacosServerList(): AxiosPromise<any> {
+  return request({
+    url: "/pyApi/accountConfig/list",
+    method: "get",
+    params: { type: "nacos" },
+  });
+}

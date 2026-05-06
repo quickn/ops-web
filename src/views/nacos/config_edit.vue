@@ -9,6 +9,23 @@
         class="edit-form"
       >
         <div class="form-fields-wrapper">
+          <el-form-item label="服务器地址" prop="configId">
+            <el-select
+              v-model="editForm.configId"
+              placeholder="请选择 Nacos 服务器"
+              clearable
+              filterable
+              style="width: 100%"
+              disabled
+            >
+              <el-option
+                v-for="server in serverList"
+                :key="server.id"
+                :label="server.service_name || server.url"
+                :value="server.id!"
+              />
+            </el-select>
+          </el-form-item>
           <el-form-item label="Data ID" prop="dataId">
             <el-input
               v-model="editForm.dataId"
@@ -30,7 +47,7 @@
               filterable
               style="width: 100%"
             >
-              <el-option label="public（默认）" value=""/>
+              <el-option label="public（默认）" value="" />
               <el-option
                 v-for="ns in namespaceList"
                 :key="ns.namespace"
@@ -45,12 +62,12 @@
               placeholder="请选择配置类型"
               style="width: 100%"
             >
-              <el-option label="yaml" value="yaml"/>
-              <el-option label="json" value="json"/>
-              <el-option label="properties" value="properties"/>
-              <el-option label="xml" value="xml"/>
-              <el-option label="text" value="text"/>
-              <el-option label="html" value="html"/>
+              <el-option label="yaml" value="yaml" />
+              <el-option label="json" value="json" />
+              <el-option label="properties" value="properties" />
+              <el-option label="xml" value="xml" />
+              <el-option label="text" value="text" />
+              <el-option label="html" value="html" />
             </el-select>
           </el-form-item>
         </div>
@@ -63,11 +80,11 @@
             :loading="submitLoading"
             @click="handleSubmit"
           >
-            <i-ep-check/>
+            <i-ep-check />
             保 存
           </el-button>
           <el-button @click="goBack">
-            <i-ep-close/>
+            <i-ep-close />
             取 消
           </el-button>
         </el-form-item>
@@ -77,13 +94,22 @@
 </template>
 
 <script setup lang="ts">
-import {useRoute, useRouter} from "vue-router";
-import {useTagsViewStore} from "@/store/modules/tagsView";
-import {basicSetup, EditorView} from "codemirror";
-import {oneDark} from "@codemirror/theme-one-dark";
-import {yaml} from "@codemirror/lang-yaml";
-import {getConfigDetail, getNamespaces, publishConfig} from "@/api/nacos";
-import {NacosConfigPublish, NacosNamespace} from "@/api/nacos/types";
+import { useRoute, useRouter } from "vue-router";
+import { useTagsViewStore } from "@/store/modules/tagsView";
+import { basicSetup, EditorView } from "codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { yaml } from "@codemirror/lang-yaml";
+import {
+  getConfigDetail,
+  getNacosServerList,
+  getNamespaces,
+  publishConfig,
+} from "@/api/nacos";
+import {
+  AccountConfig,
+  NacosConfigPublish,
+  NacosNamespace,
+} from "@/api/nacos/types";
 
 defineOptions({
   name: "NacosConfigEdit",
@@ -96,12 +122,13 @@ const tagsViewStore = useTagsViewStore();
 const editFormRef = ref(ElForm);
 const submitLoading = ref(false);
 const namespaceList = ref<NacosNamespace[]>([]);
+const serverList = ref<AccountConfig[]>([]);
 let yamlEditor: EditorView | null = null;
 
 const isEdit = ref(false);
 
 const editForm = reactive<NacosConfigPublish>({
-  server_addr: (route.query.server_addr as string) || "https://cms.xgzyzc.com",
+  configId: route.query.configId ? Number(route.query.configId) : undefined,
   dataId: (route.query.dataId as string) || "",
   group: (route.query.group as string) || "DEFAULT_GROUP",
   tenant: (route.query.tenant as string) || "",
@@ -110,8 +137,8 @@ const editForm = reactive<NacosConfigPublish>({
 });
 
 const editRules = reactive({
-  dataId: [{required: true, message: "请输入 Data ID", trigger: "blur"}],
-  content: [{required: true, message: "请输入配置内容", trigger: "blur"}],
+  dataId: [{ required: true, message: "请输入 Data ID", trigger: "blur" }],
+  content: [{ required: true, message: "请输入配置内容", trigger: "blur" }],
 });
 
 // 判断编辑模式
@@ -126,15 +153,49 @@ function goBack() {
   router.back();
 }
 
+/** 加载 Nacos 服务器列表 */
+function loadServerList() {
+  getNacosServerList().then(({ data }) => {
+    if (data && Array.isArray(data)) {
+      serverList.value = data;
+      // 如果从路由参数指定了configId，则设置对应的服务器
+      if (editForm.configId && data.length > 0) {
+        const server = data.find(
+          (s: AccountConfig) => s.id === editForm.configId
+        );
+        if (server) {
+          editForm.configId = server.id;
+        }
+      }
+      // 如果没有指定服务器且有服务器列表，默认选择第一个
+      else if (!editForm.configId && data.length > 0) {
+        editForm.configId = data[0].id;
+      }
+    }
+  });
+}
+
 /** 加载命名空间列表 */
 function loadNamespaces() {
-  if (!editForm.server_addr) return;
-  getNamespaces({server_addr: editForm.server_addr}).then(({data}) => {
+  if (!editForm.configId) return;
+  getNamespaces({ configId: editForm.configId }).then(({ data }) => {
     if (data && Array.isArray(data)) {
       namespaceList.value = data;
     }
   });
 }
+
+// 监听configId变化，重新加载命名空间
+watch(
+  () => editForm.configId,
+  (newVal) => {
+    if (newVal) {
+      loadNamespaces();
+    } else {
+      namespaceList.value = [];
+    }
+  }
+);
 
 /** 初始化 CodeMirror YAML 编辑器 */
 function initEditor() {
@@ -175,7 +236,7 @@ function handleSubmit() {
 
     submitLoading.value = true;
     publishConfig({
-      server_addr: editForm.server_addr,
+      configId: editForm.configId,
       dataId: editForm.dataId,
       group: editForm.group,
       tenant: editForm.tenant,
@@ -193,14 +254,15 @@ function handleSubmit() {
 }
 
 onMounted(() => {
+  loadServerList();
   loadNamespaces();
   if (isEdit.value) {
     getConfigDetail({
-      server_addr: editForm.server_addr,
+      configId: editForm.configId,
       dataId: editForm.dataId,
       group: editForm.group,
       tenant: editForm.tenant,
-    }).then(({data}) => {
+    }).then(({ data }) => {
       editForm.content = data.content || "";
       initEditor();
     });
@@ -219,31 +281,31 @@ onUnmounted(() => {
 
 <style scoped>
 .config-edit-page {
-  height: calc(100vh - 84px);
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 84px);
 }
 
 .edit-card {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   overflow: hidden;
 }
 
 .edit-card :deep(.el-card__body) {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   overflow: hidden;
 }
 
 .edit-form {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  overflow: hidden;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .form-fields-wrapper {
@@ -267,12 +329,12 @@ onUnmounted(() => {
 
 .yaml-editor-container {
   flex: 1;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  overflow: auto;
   width: 100%;
   height: 100%;
+  overflow: auto;
   background-color: #282c34;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
 }
 
 /* 自定义滚动条样式 */

@@ -8,15 +8,24 @@
         :inline="true"
         @submit.prevent
         @keyup.enter="handleQuery"
-        style="display: flex; align-items: center; flex-wrap: wrap"
+        style="display: flex; flex-wrap: wrap; align-items: center"
       >
-        <el-form-item label="服务器地址" prop="server_addr">
-          <el-input
-            v-model="queryParams.server_addr"
-            placeholder="Nacos 服务地址"
+        <el-form-item label="选择Nacos服务器" prop="configId">
+          <el-select
+            v-model="queryParams.configId"
+            placeholder="请选择 Nacos 服务器"
             clearable
+            filterable
             style="width: 280px"
-          />
+            @change="handleServerChange"
+          >
+            <el-option
+              v-for="server in serverList"
+              :key="server.id"
+              :label="server.service_name || server.url"
+              :value="server.id!"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="Data ID" prop="dataId">
           <el-input
@@ -36,17 +45,17 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery">
-            <i-ep-search/>
+            <i-ep-search />
             搜索
           </el-button>
           <el-button @click="resetQuery">
-            <i-ep-refresh/>
+            <i-ep-refresh />
             重置
           </el-button>
         </el-form-item>
         <el-form-item style="margin-left: auto">
           <el-button type="success" @click="goAddConfig">
-            <i-ep-plus/>
+            <i-ep-plus />
             新增
           </el-button>
         </el-form-item>
@@ -88,7 +97,7 @@
               size="small"
               @click.stop="goEditConfig(scope.row)"
             >
-              <i-ep-edit/>
+              <i-ep-edit />
               编辑
             </el-button>
             <el-button
@@ -97,7 +106,7 @@
               size="small"
               @click.stop="handleDelete(scope.row)"
             >
-              <i-ep-delete/>
+              <i-ep-delete />
               删除
             </el-button>
           </template>
@@ -116,9 +125,19 @@
 </template>
 
 <script setup lang="ts">
-import {useRouter} from "vue-router";
-import {deleteConfigApi, getConfigs, getNamespaces,} from "@/api/nacos";
-import {NacosConfig, NacosConfigQuery, NacosNamespace,} from "@/api/nacos/types";
+import { useRouter } from "vue-router";
+import {
+  deleteConfigApi,
+  getConfigs,
+  getNacosServerList,
+  getNamespaces,
+} from "@/api/nacos";
+import {
+  AccountConfig,
+  NacosConfig,
+  NacosConfigQuery,
+  NacosNamespace,
+} from "@/api/nacos/types";
 
 defineOptions({
   name: "NacosConfigs",
@@ -131,9 +150,10 @@ const loading = ref(false);
 const total = ref(0);
 const dataList = ref<NacosConfig[]>([]);
 const namespaceList = ref<NacosNamespace[]>([]);
+const serverList = ref<AccountConfig[]>([]);
 
 const queryParams = reactive<NacosConfigQuery>({
-  server_addr: "https://cms.xgzyzc.com",
+  configId: undefined,
   pageNo: 1,
   pageSize: 10,
   tenant: "",
@@ -141,12 +161,22 @@ const queryParams = reactive<NacosConfigQuery>({
   group: "",
 });
 
+/** 切换 Nacos 服务器 */
+function handleServerChange() {
+  if (queryParams.configId) {
+    handleQuery();
+  } else {
+    dataList.value = [];
+    total.value = 0;
+  }
+}
+
 /** 跳转新增页面 */
 function goAddConfig() {
   router.push({
     name: "NacosConfigEdit",
     query: {
-      server_addr: queryParams.server_addr,
+      configId: queryParams.configId?.toString() || "",
       tenant: queryParams.tenant || "",
     },
   });
@@ -157,7 +187,7 @@ function goEditConfig(row: NacosConfig) {
   router.push({
     name: "NacosConfigEdit",
     query: {
-      server_addr: queryParams.server_addr,
+      configId: queryParams.configId?.toString() || "",
       dataId: row.dataId,
       group: row.group,
       tenant: row.tenant || "",
@@ -167,10 +197,26 @@ function goEditConfig(row: NacosConfig) {
   });
 }
 
+/** 加载 Nacos 服务器列表 */
+async function loadServerList() {
+  try {
+    const { data } = await getNacosServerList();
+    if (data && Array.isArray(data)) {
+      serverList.value = data;
+      // 如果有服务器列表，默认选择第一个
+      if (data.length > 0 && !queryParams.configId) {
+        queryParams.configId = data[0].id;
+      }
+    }
+  } catch {
+    // 加载服务器列表失败
+  }
+}
+
 /** 加载命名空间列表 */
 function loadNamespaces() {
-  if (!queryParams.server_addr) return;
-  getNamespaces({server_addr: queryParams.server_addr}).then(({data}) => {
+  if (!queryParams.configId) return;
+  getNamespaces({ configId: queryParams.configId }).then(({ data }) => {
     if (data && Array.isArray(data)) {
       namespaceList.value = data;
     }
@@ -179,13 +225,13 @@ function loadNamespaces() {
 
 /** 查询配置列表 */
 function handleQuery() {
-  if (!queryParams.server_addr) {
-    ElMessage.warning("请输入 Nacos 服务器地址");
+  if (!queryParams.configId) {
+    ElMessage.warning("请选择 Nacos 服务器");
     return;
   }
   loading.value = true;
   getConfigs(queryParams)
-    .then(({data}) => {
+    .then(({ data }) => {
       if (data) {
         dataList.value = data.pageItems || [];
         total.value = data.totalCount || 0;
@@ -211,6 +257,12 @@ function resetQuery() {
   queryParams.tenant = "";
   queryParams.dataId = "";
   queryParams.group = "";
+  // 重置后如果有服务器列表，选择第一个
+  if (serverList.value.length > 0) {
+    queryParams.configId = serverList.value[0].id;
+  } else {
+    queryParams.configId = undefined;
+  }
   handleQuery();
 }
 
@@ -227,7 +279,7 @@ function handleDelete(row: NacosConfig) {
   ).then(() => {
     loading.value = true;
     deleteConfigApi({
-      server_addr: queryParams.server_addr,
+      configId: queryParams.configId,
       dataId: row.dataId!,
       group: row.group,
       tenant: row.tenant,
@@ -243,18 +295,19 @@ function handleDelete(row: NacosConfig) {
 }
 
 watch(
-  () => queryParams.server_addr,
+  () => queryParams.configId,
   (newVal) => {
-    if (newVal) {
+    if (newVal !== undefined && newVal !== null) {
       loadNamespaces();
+    } else {
+      namespaceList.value = [];
     }
   }
 );
 
-onMounted(() => {
+onMounted(async () => {
+  await loadServerList();
   loadNamespaces();
   handleQuery();
 });
 </script>
-
-

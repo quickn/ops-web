@@ -2,7 +2,7 @@
  * Nacos 服务器连接参数
  */
 export interface NacosServerParams {
-  server_addr?: string;
+  configId?: number;
   username?: string;
   password?: string;
 }
@@ -102,4 +102,19 @@ export interface NacosServiceInstanceAction extends NacosServerParams {
   port: number;
   namespaceId?: string;
   groupName?: string;
+}
+
+/**
+ * Account Config 服务器配置
+ */
+export interface AccountConfig {
+  id?: number;
+  service_id?: number;
+  service_name?: string;
+  username?: string;
+  password?: string;
+  access_token?: string;
+  url?: string;
+  port?: number;
+  type?: string;
 }
