@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import {executeSql, listConnections, listDatabases} from "@/api/mysql";
-import type {ConnectionInfo} from "@/api/mysql/types";
-import {useRoute, useRouter} from "vue-router";
-import {ref} from "vue";
+import { executeSql, listConnections, listDatabases } from "@/api/mysql";
+import type { ConnectionInfo } from "@/api/mysql/types";
+import { useRoute, useRouter } from "vue-router";
+import { ref } from "vue";
 
 // ==================== 路由参数 ====================
 const route = useRoute();
@@ -33,7 +33,9 @@ const resultAffectedRows = ref(0);
 const resultRowCount = ref(0);
 
 // 输出日志
-const outputLogs = ref<{ type: "info" | "error" | "sql" | "result"; text: string; time: string }[]>([]);
+const outputLogs = ref<
+  { type: "info" | "error" | "sql" | "result"; text: string; time: string }[]
+>([]);
 
 // ==================== 方法 ====================
 
@@ -42,7 +44,7 @@ async function loadConnections() {
     const res: any = await listConnections();
     activeConnections.value = res.data || [];
     if (!currentConnId.value && activeConnections.value.length > 0) {
-      currentConnId.value = activeConnections.value[0].connection_id;
+      currentConnId.value = activeConnections.value[0].id;
       await loadDatabases();
     }
   } catch {
@@ -87,7 +89,11 @@ async function execute() {
   executing.value = true;
 
   try {
-    const res: any = await executeSql(currentConnId.value, currentDatabase.value || "", sql);
+    const res: any = await executeSql(
+      currentConnId.value,
+      currentDatabase.value || "",
+      sql
+    );
     const data = res.data;
     if (data.type === "query") {
       resultType.value = "query";
@@ -125,8 +131,11 @@ function clearLogs() {
 
 function addLog(type: "info" | "error" | "sql" | "result", text: string) {
   const now = new Date();
-  const time = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
-  outputLogs.value.push({type, text, time});
+  const time = `${now.getHours().toString().padStart(2, "0")}:${now
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}:${now.getSeconds().toString().padStart(2, "0")}`;
+  outputLogs.value.push({ type, text, time });
 }
 
 // 键盘事件：Ctrl+Enter 执行
@@ -182,39 +191,67 @@ onMounted(() => {
   <div class="app-container">
     <!-- 顶部工具栏 -->
     <div class="toolbar">
-      <el-button @click="backToConnection" text>
-        返回
-      </el-button>
+      <el-button @click="backToConnection" text> 返回 </el-button>
 
-      <el-select v-model="currentConnId" placeholder="选择连接" style="width: 200px; margin-left: 8px"
-                 @change="onConnChange" size="small">
-        <el-option v-for="c in activeConnections" :key="c.connection_id" :label="`${c.user}@${c.host}:${c.port}`"
-                   :value="c.connection_id"/>
+      <el-select
+        v-model="currentConnId"
+        placeholder="选择连接"
+        style="width: 200px; margin-left: 8px"
+        @change="onConnChange"
+        size="small"
+      >
+        <el-option
+          v-for="c in activeConnections"
+          :key="c.connection_id"
+          :label="`${c.serviceName} ${c.username}@${c.url}:${c.port}`"
+          :value="c.connection_id"
+        />
       </el-select>
 
       <span style="margin: 0 8px; color: #909399">|</span>
 
       <span style="font-size: 13px; color: #606266">数据库:</span>
-      <el-select v-model="currentDatabase" placeholder="选择数据库" style="width: 160px; margin-left: 4px" clearable
-                 size="small" @change="(v: string) => setDatabase(v)">
-        <el-option v-for="db in databases" :key="db" :label="db" :value="db"/>
+      <el-select
+        v-model="currentDatabase"
+        placeholder="选择数据库"
+        style="width: 160px; margin-left: 4px"
+        clearable
+        size="small"
+        @change="(v: string) => setDatabase(v)"
+      >
+        <el-option v-for="db in databases" :key="db" :label="db" :value="db" />
       </el-select>
 
-      <el-button type="primary" @click="execute" :loading="executing" style="margin-left: 12px">
-        <i-ep-video-play/>
+      <el-button
+        type="primary"
+        @click="execute"
+        :loading="executing"
+        style="margin-left: 12px"
+      >
+        <i-ep-video-play />
         执行 (Ctrl+Enter)
       </el-button>
       <el-button @click="clearSql">
-        <i-ep-delete/>
+        <i-ep-delete />
         清空
       </el-button>
     </div>
 
     <!-- 快捷模板 -->
     <div class="quick-templates">
-      <el-tag v-for="tpl in ['SELECT * FROM ', 'SHOW TABLES', 'SHOW CREATE TABLE ', 'DESC ', 'SHOW INDEX FROM ']"
-              :key="tpl" style="cursor: pointer; margin-right: 6px; margin-bottom: 4px" @click="insertSql(tpl)"
-              size="small">
+      <el-tag
+        v-for="tpl in [
+          'SELECT * FROM ',
+          'SHOW TABLES',
+          'SHOW CREATE TABLE ',
+          'DESC ',
+          'SHOW INDEX FROM ',
+        ]"
+        :key="tpl"
+        style=" margin-right: 6px; margin-bottom: 4px;cursor: pointer"
+        @click="insertSql(tpl)"
+        size="small"
+      >
         {{ tpl }}
       </el-tag>
     </div>
@@ -222,16 +259,19 @@ onMounted(() => {
     <el-row :gutter="12" style="height: calc(100vh - 240px); min-height: 400px">
       <!-- SQL 编辑区 -->
       <el-col :span="14" style="height: 100%">
-        <el-card shadow="never" style="height: 100%; display: flex; flex-direction: column">
+        <el-card
+          shadow="never"
+          style=" display: flex; flex-direction: column;height: 100%"
+        >
           <template #header>
-            <span><i-ep-edit/> SQL 编辑器</span>
+            <span><i-ep-edit /> SQL 编辑器</span>
           </template>
-          <div style="flex: 1; display: flex; flex-direction: column">
+          <div style=" display: flex;flex: 1; flex-direction: column">
             <el-input
               v-model="sqlInput"
               type="textarea"
               :rows="10"
-              placeholder="在此输入 SQL 语句...&#10;&#10;快捷键: Ctrl+Enter 执行 | Ctrl+↑↓ 历史记录"
+              :placeholder="`在此输入 SQL 语句...\n\n快捷键: Ctrl+Enter 执行 | Ctrl+↑↓ 历史记录`"
               style="flex: 1"
               resize="none"
               class="sql-editor"
@@ -243,9 +283,12 @@ onMounted(() => {
 
       <!-- 结果区 -->
       <el-col :span="10" style="height: 100%">
-        <el-card shadow="never" style="height: 100%; display: flex; flex-direction: column">
+        <el-card
+          shadow="never"
+          style=" display: flex; flex-direction: column;height: 100%"
+        >
           <template #header>
-            <span><i-ep-data-analysis/> 结果</span>
+            <span><i-ep-data-analysis /> 结果</span>
           </template>
           <div style="flex: 1; overflow: auto">
             <!-- 查询结果 -->
@@ -253,7 +296,13 @@ onMounted(() => {
               <div style="margin-bottom: 6px; font-size: 13px; color: #67c23a">
                 返回 {{ resultRowCount }} 行
               </div>
-              <el-table :data="resultRecords.slice(0, 200)" border size="small" max-height="350" stripe>
+              <el-table
+                :data="resultRecords.slice(0, 200)"
+                border
+                size="small"
+                max-height="350"
+                stripe
+              >
                 <el-table-column
                   v-for="col in resultColumns"
                   :key="col"
@@ -263,25 +312,36 @@ onMounted(() => {
                   show-overflow-tooltip
                 >
                   <template #default="scope">
-                    <span v-if="scope.row[col] === null" style="color: #ccc; font-style: italic">NULL</span>
+                    <span
+                      v-if="scope.row[col] === null"
+                      style=" font-style: italic;color: #ccc"
+                      >NULL</span
+                    >
                     <span v-else>{{ scope.row[col] }}</span>
                   </template>
                 </el-table-column>
               </el-table>
-              <div v-if="resultRecords.length > 200" style="margin-top: 6px; font-size: 12px; color: #e6a23c">
+              <div
+                v-if="resultRecords.length > 200"
+                style="margin-top: 6px; font-size: 12px; color: #e6a23c"
+              >
                 仅显示前 200 条，共 {{ resultRowCount }} 条
               </div>
             </template>
 
             <!-- 执行结果 -->
             <template v-else-if="resultType === 'execute'">
-              <el-result icon="success" title="执行成功" :sub-title="resultMessage"/>
-              <div style="text-align: center; color: #909399; font-size: 14px">
+              <el-result
+                icon="success"
+                title="执行成功"
+                :sub-title="resultMessage"
+              />
+              <div style=" font-size: 14px; color: #909399;text-align: center">
                 影响行数: {{ resultAffectedRows }}
               </div>
             </template>
 
-            <el-empty v-else description="等待执行 SQL..."/>
+            <el-empty v-else description="等待执行 SQL..." />
           </div>
         </el-card>
       </el-col>
@@ -290,14 +350,30 @@ onMounted(() => {
     <!-- 输出日志 -->
     <el-card shadow="never" style="margin-top: 12px">
       <template #header>
-        <div style="display: flex; align-items: center; justify-content: space-between">
-          <span><i-ep-notebook/> 输出日志</span>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          "
+        >
+          <span><i-ep-notebook /> 输出日志</span>
           <el-button size="small" text @click="clearLogs">清空日志</el-button>
         </div>
       </template>
       <div class="log-area" ref="logContainer">
-        <div v-if="outputLogs.length === 0" style="color: #909399; font-size: 13px; padding: 8px 0">暂无日志</div>
-        <div v-for="(log, idx) in outputLogs" :key="idx" class="log-line" :class="`log-${log.type}`">
+        <div
+          v-if="outputLogs.length === 0"
+          style=" padding: 8px 0; font-size: 13px;color: #909399"
+        >
+          暂无日志
+        </div>
+        <div
+          v-for="(log, idx) in outputLogs"
+          :key="idx"
+          class="log-line"
+          :class="`log-${log.type}`"
+        >
           <span class="log-time">[{{ log.time }}]</span>
           <span class="log-text">{{ log.text }}</span>
         </div>
@@ -309,10 +385,10 @@ onMounted(() => {
 <style scoped>
 .toolbar {
   display: flex;
-  align-items: center;
-  margin-bottom: 8px;
   flex-wrap: wrap;
   gap: 4px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .quick-templates {
@@ -320,19 +396,19 @@ onMounted(() => {
 }
 
 .sql-editor :deep(textarea) {
-  font-family: "Cascadia Code", "Fira Code", "Consolas", "Monaco", monospace !important;
+  font-family: "Cascadia Code", "Fira Code", Consolas, Monaco, monospace !important;
   font-size: 14px !important;
   line-height: 1.6 !important;
 }
 
 .log-area {
   max-height: 160px;
+  padding: 10px 12px;
   overflow-y: auto;
-  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
   font-size: 13px;
   background: #1e1e1e;
   border-radius: 4px;
-  padding: 10px 12px;
 }
 
 .log-line {
@@ -341,8 +417,8 @@ onMounted(() => {
 }
 
 .log-time {
-  color: #888;
   margin-right: 8px;
+  color: #888;
 }
 
 .log-info .log-text {

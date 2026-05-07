@@ -105,17 +105,3 @@ export interface NacosServiceInstanceAction extends NacosServerParams {
   groupName?: string;
 }
 
-/**
- * Account Config 服务器配置
- */
-export interface AccountConfig {
-  id?: number;
-  service_id?: number;
-  service_name?: string;
-  username?: string;
-  password?: string;
-  access_token?: string;
-  url?: string;
-  port?: number;
-  type?: string;
-}

@@ -1,11 +1,11 @@
 /** MySQL 连接配置 */
 export interface AccountConfig {
   id?: number;
-  service_id?: number;
-  service_name?: string;
+  serviceId?: number;
+  configName?: string;
   username?: string;
   password?: string;
-  access_token?: string;
+  accessToken?: string;
   url?: string;
   port?: number;
   charset?: string;

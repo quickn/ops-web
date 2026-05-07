@@ -22,7 +22,7 @@
             <el-option
               v-for="server in serverList"
               :key="server.id"
-              :label="server.service_name || server.url"
+              :label="`${server.configName || ''} (${server.url || ''})`"
               :value="server.id!"
             />
           </el-select>
@@ -61,9 +61,13 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery">
-            <i-ep-search />搜索
+            <i-ep-search />
+            搜索
           </el-button>
-          <el-button @click="resetQuery"> <i-ep-refresh />重置 </el-button>
+          <el-button @click="resetQuery">
+            <i-ep-refresh />
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -117,7 +121,8 @@
               size="small"
               @click.stop="openDetailDialog(scope.row)"
             >
-              <i-ep-view />实例
+              <i-ep-view />
+              实例
             </el-button>
           </template>
         </el-table-column>
@@ -195,7 +200,8 @@
               :loading="scope.row.onlineLoading"
               @click="handleOnlineInstance(scope.row)"
             >
-              <i-ep-top />上线
+              <i-ep-top />
+              上线
             </el-button>
             <el-button
               v-if="scope.row.enabled"
@@ -205,7 +211,8 @@
               :loading="scope.row.offlineLoading"
               @click="handleOfflineInstance(scope.row)"
             >
-              <i-ep-bottom />下线
+              <i-ep-bottom />
+              下线
             </el-button>
           </template>
         </el-table-column>
@@ -221,19 +228,19 @@
 
 <script setup lang="ts">
 import {
-  getServices,
-  getServiceDetail,
-  getNamespaces,
-  onlineServiceInstance,
-  offlineServiceInstance,
   getNacosServerList,
+  getNamespaces,
+  getServiceDetail,
+  getServices,
+  offlineServiceInstance,
+  onlineServiceInstance,
 } from "@/api/nacos";
 import {
-  NacosServiceQuery,
-  NacosService,
   NacosNamespace,
-  AccountConfig,
+  NacosService,
+  NacosServiceQuery,
 } from "@/api/nacos/types";
+import { AccountConfig } from "@/api/accountConfig/types";
 
 defineOptions({
   name: "NacosServices",

@@ -10,6 +10,7 @@ mock
 
 src/assets
 src/api
+src/views
 
 .eslintrc.cjs
 .prettierrc.cjs

@@ -22,7 +22,7 @@
             <el-option
               v-for="server in serverList"
               :key="server.id"
-              :label="server.service_name || server.url"
+              :label="`${server.configName || ''} (${server.url || ''})`"
               :value="server.id!"
             />
           </el-select>
@@ -133,11 +133,12 @@ import {
   getNamespaces,
 } from "@/api/nacos";
 import {
-  AccountConfig,
   NacosConfig,
   NacosConfigQuery,
   NacosNamespace,
 } from "@/api/nacos/types";
+
+import { AccountConfig } from "@/api/accountConfig/types";
 
 defineOptions({
   name: "NacosConfigs",

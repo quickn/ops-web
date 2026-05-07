@@ -1,16 +1,6 @@
 // api/mysql/index.ts
 import request from "@/utils/request";
-import type {
-  ApiResponse,
-  ConnectionConfig,
-  ConnectionInfo,
-  TableInfo,
-  TableStructure,
-  TableDataResult,
-  ColumnDef,
-  AlterOperation,
-  SqlResult,
-} from "./types";
+import type { AlterOperation, ApiResponse, ColumnDef, ConnectionConfig, ConnectionInfo, SqlResult, TableDataResult, TableInfo, TableStructure } from "./types";
 
 const BASE = "/pyApi/mysql";
 
@@ -21,25 +11,25 @@ export function testConnect(config: ConnectionConfig) {
   return request<ApiResponse<{ version_info: string }>>({
     url: `${BASE}/test-connect`,
     method: "post",
-    data: config,
+    data: config
   });
 }
 
 /** 建立连接 */
 export function connect(config: ConnectionConfig) {
   return request<ApiResponse<{ connection_id: string }>>({
-    url: `${BASE}/connect`,
-    method: "post",
-    data: config,
+    url: `${BASE}/connect/${config.id}`,
+    method: "get",
+    data: config
   });
 }
 
 /** 断开连接 */
 export function disconnect(connection_id: string) {
   return request<ApiResponse>({
-    url: `${BASE}/disconnect`,
-    method: "post",
-    data: { connection_id },
+    url: `${BASE}/disconnect/${connection_id}`,
+    method: "get",
+    data: { connection_id }
   });
 }
 
@@ -47,7 +37,7 @@ export function disconnect(connection_id: string) {
 export function listConnections() {
   return request<ApiResponse<ConnectionInfo[]>>({
     url: `${BASE}/connections`,
-    method: "get",
+    method: "get"
   });
 }
 
@@ -58,7 +48,7 @@ export function listDatabases(connection_id: string) {
   return request<ApiResponse<string[]>>({
     url: `${BASE}/databases`,
     method: "get",
-    params: { connection_id },
+    params: { connection_id }
   });
 }
 
@@ -72,7 +62,7 @@ export function createDatabase(
   return request<ApiResponse>({
     url: `${BASE}/databases`,
     method: "post",
-    data: { connection_id, db_name, charset, collation },
+    data: { connection_id, db_name, charset, collation }
   });
 }
 
@@ -81,7 +71,7 @@ export function dropDatabase(connection_id: string, db_name: string) {
   return request<ApiResponse>({
     url: `${BASE}/databases/${db_name}`,
     method: "delete",
-    params: { connection_id },
+    params: { connection_id }
   });
 }
 
@@ -92,7 +82,7 @@ export function listTables(connection_id: string, database: string) {
   return request<ApiResponse<TableInfo[]>>({
     url: `${BASE}/tables`,
     method: "get",
-    params: { connection_id, database },
+    params: { connection_id, database }
   });
 }
 
@@ -109,7 +99,7 @@ export function createTable(
   return request<ApiResponse>({
     url: `${BASE}/tables`,
     method: "post",
-    data: { connection_id, database, table_name, columns, engine, charset, comment },
+    data: { connection_id, database, table_name, columns, engine, charset, comment }
   });
 }
 
@@ -118,7 +108,7 @@ export function dropTable(connection_id: string, database: string, table_name: s
   return request<ApiResponse>({
     url: `${BASE}/tables/${table_name}`,
     method: "delete",
-    params: { connection_id, database },
+    params: { connection_id, database }
   });
 }
 
@@ -127,7 +117,7 @@ export function getTableStructure(connection_id: string, database: string, table
   return request<ApiResponse<TableStructure>>({
     url: `${BASE}/tables/${table_name}/structure`,
     method: "get",
-    params: { connection_id, database },
+    params: { connection_id, database }
   });
 }
 
@@ -141,7 +131,7 @@ export function alterTable(
   return request<ApiResponse>({
     url: `${BASE}/tables/${table_name}/alter`,
     method: "put",
-    data: { connection_id, database, operations },
+    data: { connection_id, database, operations }
   });
 }
 
@@ -156,7 +146,7 @@ export function queryTableData(
   return request<ApiResponse<TableDataResult>>({
     url: `${BASE}/tables/${table_name}/data`,
     method: "get",
-    params: { connection_id, database, page, page_size },
+    params: { connection_id, database, page, page_size }
   });
 }
 
@@ -165,7 +155,7 @@ export function truncateTable(connection_id: string, database: string, table_nam
   return request<ApiResponse>({
     url: `${BASE}/tables/${table_name}/truncate`,
     method: "post",
-    params: { connection_id, database },
+    params: { connection_id, database }
   });
 }
 
@@ -176,6 +166,6 @@ export function executeSql(connection_id: string, database: string, sql: string)
   return request<ApiResponse<SqlResult>>({
     url: `${BASE}/execute`,
     method: "post",
-    data: { connection_id, database, sql },
+    data: { connection_id, database, sql }
   });
 }

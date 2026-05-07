@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {createDatabase, dropDatabase, listDatabases} from "@/api/mysql";
-import {useRoute, useRouter} from "vue-router";
-
+import { createDatabase, dropDatabase, listDatabases } from "@/api/mysql";
+import { useRoute, useRouter } from "vue-router";
 
 // ==================== 路由参数 ====================
 const route = useRoute();
 const router = useRouter();
 const connectionId = (route.query.connection_id as string) || "";
+const configName = (route.query.configName as string) || "";
 
 // ==================== 状态 ====================
 const loading = ref(false);
@@ -22,7 +22,7 @@ const createForm = reactive({
 });
 const createRules = {
   db_name: [
-    {required: true, message: "请输入数据库名称", trigger: "blur"},
+    { required: true, message: "请输入数据库名称", trigger: "blur" },
     {
       pattern: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
       message: "只能包含字母、数字和下划线，不能以数字开头",
@@ -74,30 +74,35 @@ async function handleDrop(dbName: string) {
   ElMessageBox.confirm(
     `确定要删除数据库 "${dbName}" 吗？此操作不可恢复！`,
     "危险操作",
-    {confirmButtonText: "确定删除", cancelButtonText: "取消", type: "error"}
-  ).then(async () => {
-    try {
-      const res: any = await dropDatabase(connectionId, dbName);
-      ElMessage.success(res.msg);
-      await fetchDatabases();
-    } catch (e: any) {
-      ElMessage.error(e?.message || "删除失败");
-    }
-  }).catch(() => {
-  });
+    { confirmButtonText: "确定删除", cancelButtonText: "取消", type: "error" }
+  )
+    .then(async () => {
+      try {
+        const res: any = await dropDatabase(connectionId, dbName);
+        ElMessage.success(res.msg);
+        await fetchDatabases();
+      } catch (e: any) {
+        ElMessage.error(e?.message || "删除失败");
+      }
+    })
+    .catch(() => {});
 }
 
 function enterTable(dbName: string) {
   router.push({
     path: "/mysql/table",
-    query: {connection_id: connectionId, database: dbName},
+    query: {
+      connection_id: connectionId,
+      database: dbName,
+      configName: configName,
+    },
   });
 }
 
 function enterConsole(dbName: string) {
   router.push({
     path: "/mysql/console",
-    query: {connection_id: connectionId, database: dbName},
+    query: { connection_id: connectionId, database: dbName },
   });
 }
 
@@ -117,7 +122,7 @@ onMounted(() => {
     <div class="connection-bar">
       <el-button @click="backToConnection" text>
         <el-icon>
-          <ArrowLeft/>
+          <ArrowLeft />
         </el-icon>
         返回连接
       </el-button>
@@ -130,13 +135,13 @@ onMounted(() => {
     <div class="search-container">
       <el-button type="primary" @click="createVisible = true">
         <el-icon>
-          <Plus/>
+          <Plus />
         </el-icon>
         新增数据库
       </el-button>
       <el-button @click="fetchDatabases">
         <el-icon>
-          <Refresh/>
+          <Refresh />
         </el-icon>
         刷新
       </el-button>
@@ -145,40 +150,65 @@ onMounted(() => {
     <!-- 数据库列表 -->
     <el-card shadow="never" v-loading="loading">
       <template #header>
-        <span><el-icon><Folder/></el-icon> 数据库列表 ({{ databases.length }})</span>
+        <span
+          ><el-icon><Folder /></el-icon> 数据库列表 ({{
+            databases.length
+          }})</span
+        >
       </template>
 
-      <el-empty v-if="!loading && databases.length === 0" description="暂无数据库"/>
+      <el-empty
+        v-if="!loading && databases.length === 0"
+        description="暂无数据库"
+      />
 
-      <el-table :data="databases.map((d) => ({ name: d }))" border highlight-current-row>
+      <el-table
+        :data="databases.map((d) => ({ name: d }))"
+        border
+        highlight-current-row
+      >
         <el-table-column label="序号" width="60" align="center">
           <template #default="scope">{{ scope.$index + 1 }}</template>
         </el-table-column>
         <el-table-column label="数据库名" prop="name" min-width="200">
           <template #default="scope">
             <el-icon style="margin-right: 6px; color: #e6a23c">
-              <Folder/>
+              <Folder />
             </el-icon>
-            <span style="font-weight: 500; font-size: 14px">{{ scope.row.name }}</span>
+            <span style=" font-size: 14px;font-weight: 500">{{
+              scope.row.name
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="380" align="center" fixed="right">
           <template #default="scope">
-            <el-button type="primary" size="small" @click="enterTable(scope.row.name)">
+            <el-button
+              type="primary"
+              size="small"
+              @click="enterTable(scope.row.name)"
+            >
               <el-icon>
-                <Grid/>
+                <Grid />
               </el-icon>
               查看表
             </el-button>
-            <el-button type="info" size="small" @click="enterConsole(scope.row.name)">
+            <el-button
+              type="info"
+              size="small"
+              @click="enterConsole(scope.row.name)"
+            >
               <el-icon>
-                <Terminal/>
+                <Terminal />
               </el-icon>
               命令行
             </el-button>
-            <el-button type="danger" size="small" @click="handleDrop(scope.row.name)">
+            <el-button
+              type="danger"
+              size="small"
+              @click="handleDrop(scope.row.name)"
+            >
               <el-icon>
-                <Delete/>
+                <Delete />
               </el-icon>
               删除
             </el-button>
@@ -188,25 +218,38 @@ onMounted(() => {
     </el-card>
 
     <!-- 创建数据库对话框 -->
-    <el-dialog v-model="createVisible" title="新增数据库" width="480px" :close-on-click-modal="false">
-      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="80px">
+    <el-dialog
+      v-model="createVisible"
+      title="新增数据库"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="createFormRef"
+        :model="createForm"
+        :rules="createRules"
+        label-width="80px"
+      >
         <el-form-item label="数据库名" prop="db_name">
-          <el-input v-model="createForm.db_name" placeholder="例如: my_database"/>
+          <el-input
+            v-model="createForm.db_name"
+            placeholder="例如: my_database"
+          />
         </el-form-item>
         <el-form-item label="字符集">
           <el-select v-model="createForm.charset" style="width: 100%">
-            <el-option label="utf8mb4 (推荐)" value="utf8mb4"/>
-            <el-option label="utf8" value="utf8"/>
-            <el-option label="gbk" value="gbk"/>
-            <el-option label="latin1" value="latin1"/>
+            <el-option label="utf8mb4 (推荐)" value="utf8mb4" />
+            <el-option label="utf8" value="utf8" />
+            <el-option label="gbk" value="gbk" />
+            <el-option label="latin1" value="latin1" />
           </el-select>
         </el-form-item>
         <el-form-item label="排序规则">
           <el-select v-model="createForm.collation" style="width: 100%">
-            <el-option label="utf8mb4_unicode_ci" value="utf8mb4_unicode_ci"/>
-            <el-option label="utf8mb4_general_ci" value="utf8mb4_general_ci"/>
-            <el-option label="utf8_unicode_ci" value="utf8_unicode_ci"/>
-            <el-option label="utf8_general_ci" value="utf8_general_ci"/>
+            <el-option label="utf8mb4_unicode_ci" value="utf8mb4_unicode_ci" />
+            <el-option label="utf8mb4_general_ci" value="utf8mb4_general_ci" />
+            <el-option label="utf8_unicode_ci" value="utf8_unicode_ci" />
+            <el-option label="utf8_general_ci" value="utf8_general_ci" />
           </el-select>
         </el-form-item>
       </el-form>

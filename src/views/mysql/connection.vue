@@ -269,7 +269,6 @@ const activeConnections = ref<ConnectionInfo[]>([]);
 // 面板宽度（可拖拽调整）
 const leftPanelWidth = ref(280);
 const MIN_PANEL_WIDTH = 220;
-const MAX_PANEL_WIDTH = 500;
 
 // 右键菜单
 const contextMenu = reactive({
@@ -307,20 +306,9 @@ const rules = {
 
 // ==================== 右侧面板：控制台 ====================
 
-const executing = ref(false);
 const consoleConnId = ref("");
 const consoleDatabase = ref("");
 const consoleDatabases = ref<string[]>([]);
-const sqlInput = ref("");
-const sqlHistory = ref<string[]>([]);
-const historyIdx = ref(-1);
-
-const resultType = ref<"query" | "execute" | "">("");
-const resultColumns = ref<string[]>([]);
-const resultRecords = ref<Record<string, any>[]>([]);
-const resultMessage = ref("");
-const resultAffectedRows = ref(0);
-const resultRowCount = ref(0);
 
 const consoleLogs = ref<
   { type: "info" | "error" | "sql" | "result"; text: string; time: string }[]
@@ -387,7 +375,7 @@ function buildTreeData() {
       label: `${cfg.username}@${cfg.url}:${cfg.port}`,
       nodeType: "connection",
       isActive: !!active,
-      connId: active?.connection_id || "",
+      connId: active?.id || "",
       configIndex: idx,
       config: { ...cfg },
       children: [],
@@ -398,17 +386,17 @@ function buildTreeData() {
   activeConnections.value.forEach((conn) => {
     const hasSaved = savedConfigs.value.some(
       (cfg) =>
-        cfg.host === conn.host &&
+        cfg.url === conn.url &&
         cfg.port === conn.port &&
-        cfg.user === conn.user
+        cfg.username === conn.username
     );
     if (!hasSaved) {
       nodes.push({
-        id: `active_${conn.connection_id}`,
-        label: `${conn.user}@${conn.host}:${conn.port}`,
+        id: `active_${conn.id}`,
+        label: `${conn.username}@${conn.url}:${conn.port}`,
         nodeType: "connection",
         isActive: true,
-        connId: conn.connection_id,
+        connId: conn.id,
         configIndex: -1,
         children: [],
       });
@@ -431,6 +419,7 @@ function closeContextMenu() {
 }
 
 function onTreeContextMenu(event: MouseEvent, data: TreeNode, _node: any) {
+  void _node;
   // 阻止冒泡，防止 document click 立即关闭
   event.stopPropagation();
 
@@ -489,12 +478,7 @@ function onContextMenuAction(action: string) {
       else if (connId) refreshDatabases(nodeId);
       break;
     case "open-table":
-      if (connId && dbName) {
-        router.push({
-          path: "/mysql/table",
-          query: { connection_id: connId, database: dbName },
-        });
-      }
+      open_table(connId, dbName);
       break;
     case "console-db":
       if (connId && dbName) {
@@ -520,54 +504,54 @@ function onTreeNodeClick(data: TreeNode) {
       onConsoleConnChange();
     }
   } else if (data.nodeType === "database") {
-    if (data.connId && data.dbName) {
-      router.push({
-        path: "/mysql/table",
-        query: { connection_id: data.connId, database: data.dbName },
-      });
-    }
+    open_table(data.connId, data.dbName);
   }
 }
 
 /** 双击树节点 */
 function onTreeNodeDblClick(_event: MouseEvent, data: TreeNode) {
+  const connId = data.config?.id;
   if (data.nodeType === "connection") {
-    if (data.isActive && data.connId) {
+    if (data.isActive && connId) {
       // 已连接，直接跳转 table 页
-      router.push({
-        path: "/mysql/table",
-        query: { connection_id: data.connId },
-      });
+      open_table(connId, "");
     } else if (data.config) {
       // 未连接，先连接再跳转
       handleConnectAndGoToTable(data.config);
     }
   } else if (data.nodeType === "database") {
-    if (data.connId && data.dbName) {
-      router.push({
-        path: "/mysql/table",
-        query: { connection_id: data.connId, database: data.dbName },
-      });
-    }
+    open_table(connId, data.dbName);
   }
+}
+
+function open_table(connId, dbName) {
+  if (dbName === undefined) {
+    dbName = "";
+  }
+  const conn = activeConnections.value.find((c) => c.id === connId);
+  debugger;
+  if (conn === undefined) {
+    return;
+  }
+  router.push({
+    path: "/mysql/table",
+    query: {
+      connection_id: connId,
+      database: dbName,
+      configName: conn?.configName || "",
+    },
+  });
 }
 
 /** 连接并跳转到 table 页 */
 async function handleConnectAndGoToTable(config: ConnectionConfig) {
   connecting.value = true;
   try {
-    const res: any = await connect(config);
-    if (res.code === 0) {
-      ElMessage.success("连接成功");
-      await refreshActiveConnections();
-      buildTreeData();
-      router.push({
-        path: "/mysql/table",
-        query: { connection_id: res.data.connection_id },
-      });
-    } else {
-      ElMessage.error(res.msg);
-    }
+    await connect(config);
+    ElMessage.success("连接成功");
+    await refreshActiveConnections();
+    buildTreeData();
+    open_table(config.id, "");
   } catch (e: any) {
     ElMessage.error(e?.message || "连接失败");
   } finally {
@@ -633,43 +617,14 @@ async function refreshDatabases(nodeKey: string) {
   }
 }
 
-// ==================== 面板拖拽 ====================
-
-function onSplitterMouseDown(e: MouseEvent) {
-  e.preventDefault();
-  const startX = e.clientX;
-  const startWidth = leftPanelWidth.value;
-
-  function onMouseMove(moveEvent: MouseEvent) {
-    const delta = moveEvent.clientX - startX;
-    const newWidth = startWidth + delta;
-    leftPanelWidth.value = Math.min(
-      MAX_PANEL_WIDTH,
-      Math.max(MIN_PANEL_WIDTH, newWidth)
-    );
-  }
-
-  function onMouseUp() {
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
-    document.body.style.cursor = "";
-    document.body.style.userSelect = "";
-  }
-
-  document.body.style.cursor = "col-resize";
-  document.body.style.userSelect = "none";
-  document.addEventListener("mousemove", onMouseMove);
-  document.addEventListener("mouseup", onMouseUp);
-}
-
 // ==================== 连接管理 ====================
 
 function showAddForm() {
   isEdit.value = false;
   editIndex.value = -1;
-  formData.host = "127.0.0.1";
+  formData.url = "127.0.0.1";
   formData.port = 3306;
-  formData.user = "root";
+  formData.username = "root";
   formData.password = "";
   formData.charset = "utf8mb4";
   formVisible.value = true;
@@ -762,17 +717,13 @@ async function handleConnectAndGo(config: ConnectionConfig) {
   connecting.value = true;
   try {
     const res: any = await connect(config);
-    if (res.code === 0) {
-      ElMessage.success("连接成功");
-      await refreshActiveConnections();
-      buildTreeData();
-      router.push({
-        path: "/mysql/database",
-        query: { connection_id: res.data.connection_id },
-      });
-    } else {
-      ElMessage.error(res.msg);
-    }
+    ElMessage.success("连接成功");
+    await refreshActiveConnections();
+    buildTreeData();
+    router.push({
+      path: "/mysql/database",
+      query: { connection_id: res.data.connection_id },
+    });
   } catch (e: any) {
     ElMessage.error(e?.message || "连接失败");
   } finally {
@@ -797,9 +748,13 @@ async function handleDisconnect(connId: string) {
 }
 
 function enterDatabase(connId: string) {
+  const conn = activeConnections.value.find((c) => c.id === connId);
   router.push({
     path: "/mysql/database",
-    query: { connection_id: connId },
+    query: {
+      connection_id: connId,
+      service_name: conn?.configName || "",
+    },
   });
 }
 
@@ -833,9 +788,10 @@ function refreshDatabasesByConnId(connId: string) {
   // 找到所有匹配已保存连接的节点
   savedConfigs.value.forEach((cfg, idx) => {
     const active = activeConnections.value.find(
-      (a) => a.host === cfg.host && a.port === cfg.port && a.user === cfg.user
+      (a) =>
+        a.url === cfg.url && a.port === cfg.port && a.username === cfg.username
     );
-    if (active?.connection_id === connId) {
+    if (active?.id === connId) {
       refreshDatabases(`saved_${idx}`);
     }
   });
@@ -859,67 +815,6 @@ async function onConsoleConnChange() {
   }
 }
 
-async function executeSql() {
-  const sql = sqlInput.value.trim();
-  if (!sql) {
-    ElMessage.warning("请输入 SQL 语句");
-    return;
-  }
-  if (!consoleConnId.value) {
-    ElMessage.warning("请先选择连接");
-    return;
-  }
-
-  // 记录历史
-  sqlHistory.value.unshift(sql);
-  if (sqlHistory.value.length > 100) sqlHistory.value.pop();
-  historyIdx.value = -1;
-
-  addConsoleLog("sql", sql);
-  executing.value = true;
-
-  try {
-    const res: any = await apiExecuteSql(
-      consoleConnId.value,
-      consoleDatabase.value || "",
-      sql
-    );
-    if (res.code === 0) {
-      const data = res.data;
-      if (data.type === "query") {
-        resultType.value = "query";
-        resultColumns.value = data.columns || [];
-        resultRecords.value = data.records || [];
-        resultRowCount.value = data.row_count || 0;
-        addConsoleLog("result", `查询成功，返回 ${data.row_count} 行`);
-      } else {
-        resultType.value = "execute";
-        resultAffectedRows.value = data.affected_rows || 0;
-        resultMessage.value = data.message || "";
-        resultColumns.value = [];
-        resultRecords.value = [];
-        addConsoleLog("result", data.message || "执行成功");
-      }
-    } else {
-      addConsoleLog("error", res.msg);
-      resultType.value = "";
-    }
-  } catch (e: any) {
-    addConsoleLog("error", e?.message || "执行失败");
-    resultType.value = "";
-  } finally {
-    executing.value = false;
-  }
-}
-
-function clearConsole() {
-  sqlInput.value = "";
-  resultType.value = "";
-  resultColumns.value = [];
-  resultRecords.value = [];
-  resultMessage.value = "";
-}
-
 function addConsoleLog(
   type: "info" | "error" | "sql" | "result",
   text: string
@@ -935,32 +830,6 @@ function addConsoleLog(
       logBodyRef.value.scrollTop = logBodyRef.value.scrollHeight;
     }
   });
-}
-
-function onConsoleKeydown(e: KeyboardEvent) {
-  // Ctrl+Enter 执行
-  if (e.ctrlKey && e.key === "Enter") {
-    e.preventDefault();
-    executeSql();
-  }
-  // Ctrl+↑↓ 切换历史
-  if (e.ctrlKey && e.key === "ArrowUp") {
-    e.preventDefault();
-    if (historyIdx.value < sqlHistory.value.length - 1) {
-      historyIdx.value++;
-      sqlInput.value = sqlHistory.value[historyIdx.value];
-    }
-  }
-  if (e.ctrlKey && e.key === "ArrowDown") {
-    e.preventDefault();
-    if (historyIdx.value > 0) {
-      historyIdx.value--;
-      sqlInput.value = sqlHistory.value[historyIdx.value];
-    } else if (historyIdx.value === 0) {
-      historyIdx.value = -1;
-      sqlInput.value = "";
-    }
-  }
 }
 </script>
 

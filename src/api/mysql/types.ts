@@ -2,8 +2,10 @@
 
 /** 连接配置 */
 export interface ConnectionConfig {
+  id: string;
   url: string;
   port: number;
+  configName: string;
   username: string;
   password: string;
   charset?: string;
@@ -11,10 +13,11 @@ export interface ConnectionConfig {
 
 /** 活跃连接信息 */
 export interface ConnectionInfo {
-  connection_id: string;
+  id: string;
   url: string;
   port: number;
   username: string;
+  configName: string;
 }
 
 /** 表信息 */
