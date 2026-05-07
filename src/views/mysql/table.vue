@@ -29,6 +29,14 @@ const currentDatabase = ref((route.query.database as string) || "");
 // ==================== 状态 ====================
 const loading = ref(false);
 const tables = ref<TableInfo[]>([]);
+const searchKeyword = ref("");
+
+/** 根据搜索关键字过滤表 */
+const filteredTables = computed(() => {
+  if (!searchKeyword.value) return tables.value;
+  const kw = searchKeyword.value.toLowerCase();
+  return tables.value.filter((t) => t.name.toLowerCase().includes(kw));
+});
 
 // ---- 表结构查看 ----
 const structureVisible = ref(false);
@@ -416,6 +424,17 @@ onMounted(async () => {
         <i-ep-refresh />
         刷新
       </el-button>
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索表名"
+        clearable
+        style="width: 200px; margin-left: 12px"
+        size="default"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
     </div>
 
     <!-- 表列表 -->
@@ -424,7 +443,7 @@ onMounted(async () => {
         v-if="!loading && tables.length === 0"
         description="该数据库下暂无表"
       />
-      <el-table v-else :data="tables" border highlight-current-row>
+      <el-table v-else :data="filteredTables" border highlight-current-row>
         <el-table-column label="#" width="50" align="center">
           <template #default="scope">{{ scope.$index + 1 }}</template>
         </el-table-column>
