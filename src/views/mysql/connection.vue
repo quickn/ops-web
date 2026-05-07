@@ -175,6 +175,12 @@
         :rules="rules"
         label-width="80px"
       >
+        <el-form-item label="配置名称">
+          <el-input
+            v-model="formData.configName"
+            placeholder="例如：生产数据库"
+          />
+        </el-form-item>
         <el-form-item label="主机" prop="host">
           <el-input v-model="formData.url" placeholder="127.0.0.1" />
         </el-form-item>
@@ -223,7 +229,6 @@ defineOptions({
 import {
   connect,
   disconnect,
-  executeSql as apiExecuteSql,
   listConnections,
   listDatabases,
   testConnect,
@@ -291,6 +296,7 @@ const editIndex = ref(-1);
 const formRef = ref();
 const formData = reactive<AccountConfig>({
   type: "mysql",
+  configName: "",
   url: "127.0.0.1",
   port: 3306,
   username: "root",
@@ -299,9 +305,9 @@ const formData = reactive<AccountConfig>({
 });
 
 const rules = {
-  host: [{ required: true, message: "请输入主机地址", trigger: "blur" }],
+  url: [{ required: true, message: "请输入主机地址", trigger: "blur" }],
   port: [{ required: true, message: "请输入端口", trigger: "blur" }],
-  user: [{ required: true, message: "请输入用户名", trigger: "blur" }],
+  username: [{ required: true, message: "请输入用户名", trigger: "blur" }],
 };
 
 // ==================== 右侧面板：控制台 ====================
@@ -372,7 +378,7 @@ function buildTreeData() {
     );
     nodes.push({
       id: `saved_${idx}`,
-      label: `${cfg.username}@${cfg.url}:${cfg.port}`,
+      label: `${cfg.configName}`,
       nodeType: "connection",
       isActive: !!active,
       connId: active?.id || "",
@@ -529,7 +535,6 @@ function open_table(connId, dbName) {
     dbName = "";
   }
   const conn = activeConnections.value.find((c) => c.id === connId);
-  debugger;
   if (conn === undefined) {
     return;
   }
@@ -622,6 +627,7 @@ async function refreshDatabases(nodeKey: string) {
 function showAddForm() {
   isEdit.value = false;
   editIndex.value = -1;
+  formData.configName = "";
   formData.url = "127.0.0.1";
   formData.port = 3306;
   formData.username = "root";

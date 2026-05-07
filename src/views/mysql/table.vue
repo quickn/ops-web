@@ -257,6 +257,20 @@ async function handleAlterTable() {
       ElMessage.warning("请输入要删除的列名");
       return;
     }
+    // 二次确认
+    try {
+      await ElMessageBox.confirm(
+        `确定要删除表 "${alterTableName.value}" 中的列 "${alterDropColumnName.value}" 吗？此操作不可恢复！`,
+        "危险操作",
+        {
+          confirmButtonText: "确定删除",
+          cancelButtonText: "取消",
+          type: "error",
+        }
+      );
+    } catch {
+      return;
+    }
     operations = [
       { action: "drop_column", column_name: alterDropColumnName.value },
     ];
@@ -387,7 +401,7 @@ onMounted(async () => {
       <el-select
         v-model="currentDatabase"
         @change="onDatabaseChange"
-        style=" width: 220px; margin-right: 12px;margin-left: 12px"
+        style="width: 220px; margin-right: 12px; margin-left: 12px"
         placeholder="选择数据库"
         filterable
       >
@@ -479,7 +493,7 @@ onMounted(async () => {
               </el-icon>
               清空
             </el-button>
-            <el-button
+            <!--            <el-button
               type="danger"
               size="small"
               @click="handleDropTable(scope.row.name)"
@@ -488,7 +502,7 @@ onMounted(async () => {
                 <Delete />
               </el-icon>
               删除
-            </el-button>
+            </el-button>-->
           </template>
         </el-table-column>
       </el-table>
@@ -824,7 +838,7 @@ onMounted(async () => {
                 <template #default="scope">
                   <span
                     v-if="scope.row[col] === null"
-                    style=" font-style: italic;color: #ccc"
+                    style="font-style: italic; color: #ccc"
                     >NULL</span
                   >
                   <span v-else>{{ scope.row[col] }}</span>

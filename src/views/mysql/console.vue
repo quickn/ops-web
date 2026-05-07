@@ -7,7 +7,7 @@ import { ref } from "vue";
 // ==================== 路由参数 ====================
 const route = useRoute();
 const router = useRouter();
-const queryConnId = (route.query.connection_id as string) || "";
+const queryConnId = Number(route.query.connection_id as string) || "";
 const queryDb = (route.query.database as string) || "";
 
 // ==================== 状态 ====================
@@ -191,7 +191,7 @@ onMounted(() => {
   <div class="app-container">
     <!-- 顶部工具栏 -->
     <div class="toolbar">
-      <el-button @click="backToConnection" text> 返回 </el-button>
+      <el-button @click="backToConnection" text> 返回</el-button>
 
       <el-select
         v-model="currentConnId"
@@ -202,9 +202,9 @@ onMounted(() => {
       >
         <el-option
           v-for="c in activeConnections"
-          :key="c.connection_id"
-          :label="`${c.serviceName} ${c.username}@${c.url}:${c.port}`"
-          :value="c.connection_id"
+          :key="c.id"
+          :label="`${c.configName || ''} ${c.url || ''}`.trim() || c.id"
+          :value="c.id"
         />
       </el-select>
 
@@ -248,7 +248,7 @@ onMounted(() => {
           'SHOW INDEX FROM ',
         ]"
         :key="tpl"
-        style=" margin-right: 6px; margin-bottom: 4px;cursor: pointer"
+        style="margin-right: 6px; margin-bottom: 4px; cursor: pointer"
         @click="insertSql(tpl)"
         size="small"
       >
@@ -261,12 +261,12 @@ onMounted(() => {
       <el-col :span="14" style="height: 100%">
         <el-card
           shadow="never"
-          style=" display: flex; flex-direction: column;height: 100%"
+          style="display: flex; flex-direction: column; height: 100%"
         >
           <template #header>
             <span><i-ep-edit /> SQL 编辑器</span>
           </template>
-          <div style=" display: flex;flex: 1; flex-direction: column">
+          <div style="display: flex; flex: 1; flex-direction: column">
             <el-input
               v-model="sqlInput"
               type="textarea"
@@ -285,7 +285,7 @@ onMounted(() => {
       <el-col :span="10" style="height: 100%">
         <el-card
           shadow="never"
-          style=" display: flex; flex-direction: column;height: 100%"
+          style="display: flex; flex-direction: column; height: 100%"
         >
           <template #header>
             <span><i-ep-data-analysis /> 结果</span>
@@ -314,7 +314,7 @@ onMounted(() => {
                   <template #default="scope">
                     <span
                       v-if="scope.row[col] === null"
-                      style=" font-style: italic;color: #ccc"
+                      style="font-style: italic; color: #ccc"
                       >NULL</span
                     >
                     <span v-else>{{ scope.row[col] }}</span>
@@ -336,7 +336,7 @@ onMounted(() => {
                 title="执行成功"
                 :sub-title="resultMessage"
               />
-              <div style=" font-size: 14px; color: #909399;text-align: center">
+              <div style="font-size: 14px; color: #909399; text-align: center">
                 影响行数: {{ resultAffectedRows }}
               </div>
             </template>
@@ -364,7 +364,7 @@ onMounted(() => {
       <div class="log-area" ref="logContainer">
         <div
           v-if="outputLogs.length === 0"
-          style=" padding: 8px 0; font-size: 13px;color: #909399"
+          style="padding: 8px 0; font-size: 13px; color: #909399"
         >
           暂无日志
         </div>

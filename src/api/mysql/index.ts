@@ -1,5 +1,6 @@
 // api/mysql/index.ts
 import request from "@/utils/request";
+import { AxiosPromise } from "axios";
 import type { AlterOperation, ApiResponse, ColumnDef, ConnectionConfig, ConnectionInfo, SqlResult, TableDataResult, TableInfo, TableStructure } from "./types";
 
 const BASE = "/pyApi/mysql";
@@ -35,7 +36,7 @@ export function disconnect(connection_id: string) {
 
 /** 获取活跃连接列表 */
 export function listConnections() {
-  return request<ApiResponse<ConnectionInfo[]>>({
+  return request<AxiosPromise<ConnectionInfo[]>>({
     url: `${BASE}/connections`,
     method: "get"
   });
