@@ -449,18 +449,19 @@ function onTreeContextMenu(event: MouseEvent, data: TreeNode, _node: any) {
 
 function onContextMenuAction(action: string) {
   closeContextMenu();
-  const { nodeId, configIndex, config, connId, dbName } = contextMenu;
+  const { nodeId, configIndex, config, dbName } = contextMenu;
+  const configId = config?.id;
   switch (action) {
     case "connect":
       if (config) handleConnect(config);
       break;
     case "open-database":
-      if (connId) enterDatabase(connId);
+      if (configId) enterDatabase(configId);
       else if (config) handleConnectAndGo(config);
       break;
     case "console":
-      if (connId) {
-        consoleConnId.value = connId;
+      if (configId) {
+        consoleConnId.value = configId;
         onConsoleConnChange();
       } else if (config) {
         // 直接去独立控制台页
@@ -471,30 +472,30 @@ function onContextMenuAction(action: string) {
       if (config) handleTest(config);
       break;
     case "disconnect":
-      if (connId) handleDisconnect(connId);
+      if (configId) handleDisconnect(configId);
       break;
     case "edit":
       if (configIndex >= 0) showEditForm(configIndex);
       break;
     case "delete":
-      if (configIndex >= 0) deleteConfig(configIndex);
+      if (configIndex >= 0) deleteConfig(configId);
       break;
     case "refresh-databases":
       if (configIndex >= 0) refreshDatabases(`saved_${configIndex}`);
-      else if (connId) refreshDatabases(nodeId);
+      else if (configId) refreshDatabases(nodeId);
       break;
     case "open-table":
-      open_table(connId, dbName);
+      open_table(configId, dbName);
       break;
     case "console-db":
-      if (connId && dbName) {
-        consoleConnId.value = connId;
+      if (configId && dbName) {
+        consoleConnId.value = configId;
         consoleDatabase.value = dbName;
         onConsoleConnChange();
       }
       break;
     case "drop-db":
-      if (connId && dbName) dropDatabase(connId, dbName);
+      if (configId && dbName) dropDatabase(configId, dbName);
       break;
   }
 }
@@ -507,7 +508,8 @@ function onTreeNodeClick(data: TreeNode) {
     // 选中连接后更新控制台连接选择
     if (data.isActive && data.connId) {
       consoleConnId.value = data.connId;
-      onConsoleConnChange();
+      //onConsoleConnChange();
+      open_table(data.connId, data.dbName);
     }
   } else if (data.nodeType === "database") {
     open_table(data.connId, data.dbName);
@@ -648,9 +650,8 @@ async function saveConfig() {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
   try {
-    debugger;
     if (isEdit.value) {
-      await updateSavedConfig(editIndex.value, { ...formData });
+      await updateSavedConfig({ ...formData });
     } else {
       await addSavedConfig({ ...formData });
     }
@@ -663,12 +664,12 @@ async function saveConfig() {
   }
 }
 
-async function deleteConfig(index: number) {
+async function deleteConfig(configId: number) {
   try {
     await ElMessageBox.confirm("确定删除该连接配置？", "提示", {
       type: "warning",
     });
-    await deleteSavedConfig(index);
+    await deleteSavedConfig(configId);
     await loadSavedConfigs();
     buildTreeData();
     ElMessage.success("已删除");
@@ -702,16 +703,12 @@ async function handleConnect(config: ConnectionConfig) {
   connecting.value = true;
   try {
     const res: any = await connect(config);
-    if (res.code === 0) {
-      ElMessage.success("连接成功");
-      await refreshActiveConnections();
-      buildTreeData();
-      // 自动选中新连接
-      consoleConnId.value = res.data.connection_id;
-      await onConsoleConnChange();
-    } else {
-      ElMessage.error(res.msg);
-    }
+    ElMessage.success("连接成功");
+    await refreshActiveConnections();
+    buildTreeData();
+    // 自动选中新连接
+    consoleConnId.value = res.data.connection_id;
+    await onConsoleConnChange();
   } catch (e: any) {
     ElMessage.error(e?.message || "连接失败");
   } finally {

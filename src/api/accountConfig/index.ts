@@ -22,18 +22,18 @@ export function addSavedConfig(config: AccountConfig) {
 }
 
 /** 更新保存的连接配置 */
-export function updateSavedConfig(index: number, config: AccountConfig) {
+export function updateSavedConfig(config: AccountConfig) {
   return request<ApiResponse>({
-    url: SAVED_BASE + "/update/" + index,
+    url: SAVED_BASE + "/update/" + config.id,
     method: "put",
     data: config
   });
 }
 
 /** 删除保存的连接配置 */
-export function deleteSavedConfig(index: number) {
+export function deleteSavedConfig(id: number) {
   return request<ApiResponse>({
-    url: SAVED_BASE + "/delete" + index,
+    url: SAVED_BASE + "/delete/" + id,
     method: "delete"
   });
 }
