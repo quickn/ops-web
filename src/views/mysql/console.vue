@@ -57,6 +57,9 @@ async function loadDatabases() {
   try {
     const res: any = await listDatabases(currentConnId.value);
     databases.value = res.data || [];
+    if (databases.value.length > 0) {
+      currentDatabase.value = databases.value[0];
+    }
   } catch {
     databases.value = [];
   }
@@ -290,7 +293,7 @@ onMounted(() => {
           <template #header>
             <span><i-ep-data-analysis /> 结果</span>
           </template>
-          <div style="flex: 1; overflow: auto">
+          <div style="overflow: auto">
             <!-- 查询结果 -->
             <template v-if="resultType === 'query'">
               <div style="margin-bottom: 6px; font-size: 13px; color: #67c23a">
@@ -300,7 +303,7 @@ onMounted(() => {
                 :data="resultRecords.slice(0, 200)"
                 border
                 size="small"
-                max-height="350"
+                max-height="600px"
                 stripe
               >
                 <el-table-column

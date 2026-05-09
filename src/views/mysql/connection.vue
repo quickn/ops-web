@@ -24,7 +24,6 @@
           :highlight-current="true"
           :expand-on-click-node="false"
           @node-click="onTreeNodeClick"
-          @node-expand="onTreeNodeExpand"
           @node-contextmenu="onTreeContextMenu"
         >
           <template #default="{ node, data }">
@@ -54,12 +53,6 @@
                 >
                   已连接
                 </el-tag>
-              </template>
-
-              <!-- 数据库节点 -->
-              <template v-else-if="data.nodeType === 'database'">
-                <i-ep-folder />
-                <span class="node-label">{{ data.label }}</span>
               </template>
 
               <!-- 加载中 -->
@@ -98,7 +91,6 @@
             class="context-menu-item"
             @click="onContextMenuAction('console')"
           >
-            <!--            <i-ep-terminal/>-->
             控制台
           </div>
           <div class="context-menu-item" @click="onContextMenuAction('test')">
@@ -124,39 +116,6 @@
           >
             <i-ep-delete />
             删除
-          </div>
-          <div class="context-menu-divider"></div>
-          <div
-            class="context-menu-item"
-            @click="onContextMenuAction('refresh-databases')"
-          >
-            <i-ep-refresh />
-            刷新数据库列表
-          </div>
-        </template>
-
-        <template v-else-if="contextMenu.nodeType === 'database'">
-          <div
-            class="context-menu-item"
-            @click="onContextMenuAction('open-table')"
-          >
-            <i-ep-grid />
-            打开表
-          </div>
-          <div
-            class="context-menu-item"
-            @click="onContextMenuAction('console-db')"
-          >
-            <!--            <i-ep-terminal/>-->
-            控制台
-          </div>
-          <div class="context-menu-divider"></div>
-          <div
-            class="context-menu-item danger"
-            @click="onContextMenuAction('drop-db')"
-          >
-            <i-ep-delete />
-            删除数据库
           </div>
         </template>
       </div>
@@ -213,6 +172,7 @@
         </el-form-item>
       </el-form>
       <template #footer>
+        <el-button @click="handleTest(undefined)">测试连接</el-button>
         <el-button @click="formVisible = false">取消</el-button>
         <el-button type="primary" @click="saveConfig">保存配置</el-button>
       </template>
@@ -253,12 +213,11 @@ const router = useRouter();
 interface TreeNode {
   id: string;
   label: string;
-  nodeType: "connection" | "database" | "loading";
+  nodeType: "connection" | "loading";
   isActive?: boolean;
   connId?: string;
   configIndex?: number;
   config?: ConnectionConfig;
-  dbName?: string;
   children?: TreeNode[];
 }
 
@@ -285,7 +244,6 @@ const contextMenu = reactive({
   configIndex: -1,
   isActive: false,
   connId: "",
-  dbName: "",
   config: null as ConnectionConfig | null,
 });
 
@@ -442,14 +400,13 @@ function onTreeContextMenu(event: MouseEvent, data: TreeNode, _node: any) {
   contextMenu.nodeId = data.id;
   contextMenu.isActive = !!data.isActive;
   contextMenu.connId = data.connId || "";
-  contextMenu.dbName = data.dbName || "";
   contextMenu.configIndex = data.configIndex ?? -1;
   contextMenu.config = data.config || null;
 }
 
 function onContextMenuAction(action: string) {
   closeContextMenu();
-  const { nodeId, configIndex, config, dbName } = contextMenu;
+  const { nodeId, configIndex, config } = contextMenu;
   const configId = config?.id;
   switch (action) {
     case "connect":
@@ -457,15 +414,10 @@ function onContextMenuAction(action: string) {
       break;
     case "open-database":
       if (configId) enterDatabase(configId);
-      else if (config) handleConnectAndGo(config);
       break;
     case "console":
       if (configId) {
-        consoleConnId.value = configId;
-        onConsoleConnChange();
-      } else if (config) {
-        // 直接去独立控制台页
-        router.push({ path: "/mysql/console" });
+        enterConsole(configId);
       }
       break;
     case "test":
@@ -480,39 +432,15 @@ function onContextMenuAction(action: string) {
     case "delete":
       if (configIndex >= 0) deleteConfig(configId);
       break;
-    case "refresh-databases":
-      if (configIndex >= 0) refreshDatabases(`saved_${configIndex}`);
-      else if (configId) refreshDatabases(nodeId);
-      break;
-    case "open-table":
-      open_table(configId, dbName);
-      break;
-    case "console-db":
-      if (configId && dbName) {
-        consoleConnId.value = configId;
-        consoleDatabase.value = dbName;
-        onConsoleConnChange();
-      }
-      break;
-    case "drop-db":
-      if (configId && dbName) dropDatabase(configId, dbName);
-      break;
   }
 }
 
 // ==================== 树节点交互 ====================
 
 function onTreeNodeClick(data: TreeNode) {
-  // 左键点击：如果是连接节点，选中它；如果是数据库节点，打开表
+  // 左键点击：如果是连接节点，选中它
   if (data.nodeType === "connection") {
-    // 选中连接后更新控制台连接选择
-    if (data.isActive && data.connId) {
-      consoleConnId.value = data.connId;
-      //onConsoleConnChange();
-      open_table(data.connId, data.dbName);
-    }
-  } else if (data.nodeType === "database") {
-    open_table(data.connId, data.dbName);
+    handleConnectAndGoToTable(data.config);
   }
 }
 
@@ -522,20 +450,15 @@ function onTreeNodeDblClick(_event: MouseEvent, data: TreeNode) {
   if (data.nodeType === "connection") {
     if (data.isActive && connId) {
       // 已连接，直接跳转 table 页
-      open_table(connId, "");
+      open_table(connId);
     } else if (data.config) {
       // 未连接，先连接再跳转
       handleConnectAndGoToTable(data.config);
     }
-  } else if (data.nodeType === "database") {
-    open_table(connId, data.dbName);
   }
 }
 
-function open_table(connId, dbName) {
-  if (dbName === undefined) {
-    dbName = "";
-  }
+function open_table(connId: string) {
   const conn = activeConnections.value.find((c) => c.id === connId);
   if (conn === undefined) {
     return;
@@ -544,7 +467,6 @@ function open_table(connId, dbName) {
     path: "/mysql/table",
     query: {
       connection_id: connId,
-      database: dbName,
       configName: conn?.configName || "",
     },
   });
@@ -554,73 +476,18 @@ function open_table(connId, dbName) {
 async function handleConnectAndGoToTable(config: ConnectionConfig) {
   connecting.value = true;
   try {
-    await connect(config);
-    ElMessage.success("连接成功");
-    await refreshActiveConnections();
-    buildTreeData();
-    open_table(config.id, "");
+    const conn = activeConnections.value.find((c) => c.id === config.id);
+    if (conn === undefined) {
+      await connect(config);
+      ElMessage.success("连接成功");
+      await refreshActiveConnections();
+      buildTreeData();
+    }
+    open_table(config.id);
   } catch (e: any) {
     ElMessage.error(e?.message || "连接失败");
   } finally {
     connecting.value = false;
-  }
-}
-
-async function onTreeNodeExpand(data: TreeNode, node: any) {
-  // 展开节点时加载数据库列表
-  if (data.nodeType === "connection" && data.isActive && data.connId) {
-    await loadDatabasesForNode(data.connId, node);
-  }
-}
-
-async function loadDatabasesForNode(connId: string, node: any) {
-  // 如果已经有子节点且不是 loading，跳过
-  const currentChildren = node.data.children;
-  if (
-    currentChildren &&
-    currentChildren.length > 0 &&
-    currentChildren[0]?.nodeType !== "loading"
-  ) {
-    return;
-  }
-
-  // 显示 loading
-  node.data.children = [
-    { id: `${connId}_loading`, label: "加载中...", nodeType: "loading" },
-  ];
-  treeData.value = [...treeData.value];
-
-  try {
-    const res: any = await listDatabases(connId);
-    if (res.code === 0) {
-      const dbs: string[] = res.data || [];
-      node.data.children = dbs.map((db) => ({
-        id: `${connId}_db_${db}`,
-        label: db,
-        nodeType: "database" as const,
-        connId,
-        dbName: db,
-      }));
-    } else {
-      node.data.children = [];
-    }
-  } catch {
-    node.data.children = [];
-  }
-  treeData.value = [...treeData.value];
-}
-
-async function refreshDatabases(nodeKey: string) {
-  const node = treeRef.value?.getNode(nodeKey);
-  if (!node) return;
-  if (
-    node.data.nodeType === "connection" &&
-    node.data.isActive &&
-    node.data.connId
-  ) {
-    node.data.children = [];
-    await loadDatabasesForNode(node.data.connId, node);
-    ElMessage.success("已刷新数据库列表");
   }
 }
 
@@ -684,19 +551,16 @@ const testing = ref(false);
 const connecting = ref(false);
 
 async function handleTest(config: ConnectionConfig) {
-  testing.value = true;
-  try {
-    const res: any = await testConnect(config);
-    if (res.code === 0) {
-      ElMessage.success(res.msg || res.data?.version_info);
-    } else {
-      ElMessage.error(res.msg);
-    }
-  } catch (e: any) {
-    ElMessage.error(e?.message || "测试连接失败");
-  } finally {
-    testing.value = false;
+  let res: any;
+  if (config === undefined) {
+    const valid = await formRef.value?.validate().catch(() => false);
+    if (!valid) return;
+    res = await testConnect({ ...formData });
+  } else {
+    res = await testConnect(config);
   }
+  testing.value = true;
+  ElMessage.success(res.msg || res.data?.version_info);
 }
 
 async function handleConnect(config: ConnectionConfig) {
@@ -709,24 +573,6 @@ async function handleConnect(config: ConnectionConfig) {
     // 自动选中新连接
     consoleConnId.value = res.data.connection_id;
     await onConsoleConnChange();
-  } catch (e: any) {
-    ElMessage.error(e?.message || "连接失败");
-  } finally {
-    connecting.value = false;
-  }
-}
-
-async function handleConnectAndGo(config: ConnectionConfig) {
-  connecting.value = true;
-  try {
-    const res: any = await connect(config);
-    ElMessage.success("连接成功");
-    await refreshActiveConnections();
-    buildTreeData();
-    router.push({
-      path: "/mysql/database",
-      query: { connection_id: res.data.connection_id },
-    });
   } catch (e: any) {
     ElMessage.error(e?.message || "连接失败");
   } finally {
@@ -761,45 +607,6 @@ function enterDatabase(connId: string) {
   });
 }
 
-async function dropDatabase(connId: string, dbName: string) {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除数据库 "${dbName}" 吗？`,
-      "危险操作",
-      {
-        type: "error",
-        confirmButtonText: "确定删除",
-        cancelButtonText: "取消",
-      }
-    );
-    const { dropDatabase: apiDropDatabase } = await import("@/api/mysql");
-    const res: any = await apiDropDatabase(connId, dbName);
-    if (res.code === 0) {
-      ElMessage.success(res.msg || "删除成功");
-      // 刷新对应树节点
-      refreshDatabases(`active_${connId}`);
-      refreshDatabasesByConnId(connId);
-    } else {
-      ElMessage.error(res.msg);
-    }
-  } catch {
-    // 取消
-  }
-}
-
-function refreshDatabasesByConnId(connId: string) {
-  // 找到所有匹配已保存连接的节点
-  savedConfigs.value.forEach((cfg, idx) => {
-    const active = activeConnections.value.find(
-      (a) =>
-        a.url === cfg.url && a.port === cfg.port && a.username === cfg.username
-    );
-    if (active?.id === connId) {
-      refreshDatabases(`saved_${idx}`);
-    }
-  });
-}
-
 // ==================== 控制台 ====================
 
 async function onConsoleConnChange() {
@@ -816,6 +623,14 @@ async function onConsoleConnChange() {
   } catch {
     consoleDatabases.value = [];
   }
+}
+
+// ---- 导航 ----
+function enterConsole(configId) {
+  router.push({
+    path: "/mysql/console",
+    query: { connection_id: configId, database: "" },
+  });
 }
 
 function addConsoleLog(
@@ -884,6 +699,7 @@ function addConsoleLog(
   display: flex;
   gap: 6px;
   align-items: center;
+  width: 100%;
   padding: 2px 0;
   overflow: hidden;
   font-size: 13px;
