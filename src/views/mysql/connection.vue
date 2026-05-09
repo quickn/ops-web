@@ -466,7 +466,7 @@ function open_table(connId: string) {
   router.push({
     path: "/mysql/table",
     query: {
-      connection_id: connId,
+      configId: connId,
       configName: conn?.configName || "",
     },
   });
@@ -571,7 +571,7 @@ async function handleConnect(config: ConnectionConfig) {
     await refreshActiveConnections();
     buildTreeData();
     // 自动选中新连接
-    consoleConnId.value = res.data.connection_id;
+    consoleConnId.value = res.data.configId;
     await onConsoleConnChange();
   } catch (e: any) {
     ElMessage.error(e?.message || "连接失败");
@@ -601,7 +601,7 @@ function enterDatabase(connId: string) {
   router.push({
     path: "/mysql/database",
     query: {
-      connection_id: connId,
+      configId: connId,
       service_name: conn?.configName || "",
     },
   });
@@ -629,7 +629,7 @@ async function onConsoleConnChange() {
 function enterConsole(configId) {
   router.push({
     path: "/mysql/console",
-    query: { connection_id: configId, database: "" },
+    query: { configId: configId, database: "" },
   });
 }
 

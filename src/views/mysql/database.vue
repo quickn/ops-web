@@ -5,7 +5,7 @@ import { useRoute, useRouter } from "vue-router";
 // ==================== 路由参数 ====================
 const route = useRoute();
 const router = useRouter();
-const connectionId = (route.query.connection_id as string) || "";
+const connectionId = (route.query.configId as string) || "";
 const configName = (route.query.configName as string) || "";
 
 // ==================== 状态 ====================
@@ -92,7 +92,7 @@ function enterTable(dbName: string) {
   router.push({
     path: "/mysql/table",
     query: {
-      connection_id: connectionId,
+      configId: connectionId,
       database: dbName,
       configName: configName,
     },
@@ -102,7 +102,7 @@ function enterTable(dbName: string) {
 function enterConsole(dbName: string) {
   router.push({
     path: "/mysql/console",
-    query: { connection_id: connectionId, database: dbName },
+    query: { configId: connectionId, database: dbName },
   });
 }
 
@@ -175,7 +175,7 @@ onMounted(() => {
             <el-icon style="margin-right: 6px; color: #e6a23c">
               <Folder />
             </el-icon>
-            <span style=" font-size: 14px;font-weight: 500">{{
+            <span style="font-size: 14px; font-weight: 500">{{
               scope.row.name
             }}</span>
           </template>

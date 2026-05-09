@@ -21,7 +21,7 @@ import { useRoute, useRouter } from "vue-router";
 // ==================== 路由参数 ====================
 const route = useRoute();
 const router = useRouter();
-const connectionId = (route.query.connection_id as string) || "";
+const connectionId = (route.query.configId as string) || "";
 const configName = (route.query.configName as string) || "";
 const databases = ref<string[]>([]);
 const currentDatabase = ref((route.query.database as string) || "");
@@ -357,7 +357,7 @@ async function handleTruncate(tableName: string) {
 function enterConsole() {
   router.push({
     path: "/mysql/console",
-    query: { connection_id: connectionId, database: currentDatabase.value },
+    query: { configId: connectionId, database: currentDatabase.value },
   });
 }
 

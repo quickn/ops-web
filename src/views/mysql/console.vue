@@ -7,7 +7,7 @@ import { ref } from "vue";
 // ==================== 路由参数 ====================
 const route = useRoute();
 const router = useRouter();
-const queryConnId = Number(route.query.connection_id as string) || "";
+const queryConnId = Number(route.query.configId as string) || "";
 const queryDb = (route.query.database as string) || "";
 
 // ==================== 状态 ====================
