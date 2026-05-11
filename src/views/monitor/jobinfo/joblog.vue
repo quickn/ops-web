@@ -6,34 +6,34 @@
     destroy-on-close
     :close-on-click-modal="false"
   >
-    <el-table
-      v-loading="loading"
-      :data="logData"
-      border
-      max-height="500"
-    >
-      <el-table-column label="任务ID" prop="jobId" width="80" align="center"/>
-      <el-table-column label="执行器地址" prop="executorAddress" width="160" show-overflow-tooltip/>
-      <el-table-column label="调度时间" prop="triggerTime" width="170"/>
+    <el-table v-loading="loading" :data="logData" border max-height="500">
+      <el-table-column label="任务ID" prop="jobId" width="80" align="center" />
+      <el-table-column
+        label="执行器地址"
+        prop="executorAddress"
+        width="160"
+        show-overflow-tooltip
+      />
+      <el-table-column label="调度时间" prop="triggerTime" width="170" />
       <el-table-column label="调度结果" width="100" align="center">
         <template #default="{ row }">
           <el-tag
             :type="row.triggerCode === 0 ? 'success' : 'danger'"
             size="small"
           >
-            {{ row.triggerCode === 0 ? '成功' : '失败' }}
+            {{ row.triggerCode === 0 ? "成功" : "失败" }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="调度备注" prop="triggerMsg" min-width="180" show-overflow-tooltip/>
+      <el-table-column
+        label="调度备注"
+        prop="triggerMsg"
+        min-width="180"
+        show-overflow-tooltip
+      />
       <el-table-column label="操作" width="100" align="center" fixed="right">
         <template #default="{ row }">
-          <el-button
-            type="primary"
-            size="small"
-            link
-            @click="showDetail(row)"
-          >
+          <el-button type="primary" size="small" link @click="showDetail(row)">
             查看详情
           </el-button>
         </template>
@@ -58,18 +58,32 @@
       :close-on-click-modal="false"
     >
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="任务ID">{{ detailData.jobId }}</el-descriptions-item>
-        <el-descriptions-item label="执行器地址">{{ detailData.executorAddress }}</el-descriptions-item>
-        <el-descriptions-item label="调度时间">{{ detailData.triggerTime }}</el-descriptions-item>
+        <el-descriptions-item label="任务ID">{{
+          detailData.jobId
+        }}</el-descriptions-item>
+        <el-descriptions-item label="执行器地址">{{
+          detailData.executorAddress
+        }}</el-descriptions-item>
+        <el-descriptions-item label="调度时间">{{
+          detailData.triggerTime
+        }}</el-descriptions-item>
         <el-descriptions-item label="调度结果">
-          <el-tag :type="detailData.triggerCode === 0 ? 'success' : 'danger'" size="small">
-            {{ detailData.triggerCode === 0 ? '成功' : '失败' }}
+          <el-tag
+            :type="detailData.triggerCode === 0 ? 'success' : 'danger'"
+            size="small"
+          >
+            {{ detailData.triggerCode === 0 ? "成功" : "失败" }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="调度备注" :span="2">{{ detailData.triggerMsg || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="执行时间">{{ detailData.handleTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="执行耗时">{{
-            detailData.handleDuration ? detailData.handleDuration + 'ms' : '-'
+        <el-descriptions-item label="调度备注" :span="2">{{
+          detailData.triggerMsg || "-"
+        }}</el-descriptions-item>
+        <el-descriptions-item label="执行时间">{{
+          detailData.handleTime || "-"
+        }}</el-descriptions-item>
+        <el-descriptions-item label="执行耗时"
+          >{{
+            detailData.handleDuration ? detailData.handleDuration + "ms" : "-"
           }}
         </el-descriptions-item>
         <el-descriptions-item label="执行结果" :span="2">
@@ -77,11 +91,11 @@
             :type="detailData.handleCode === 0 ? 'success' : 'danger'"
             size="small"
           >
-            {{ detailData.handleCode === 0 ? '成功' : '失败' }}
+            {{ detailData.handleCode === 0 ? "成功" : "失败" }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="执行日志" :span="2">
-          <pre class="log-content">{{ detailData.handleMsg || '无日志' }}</pre>
+          <pre class="log-content">{{ detailData.handleMsg || "无日志" }}</pre>
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
@@ -89,14 +103,15 @@
 </template>
 
 <script setup lang="ts">
-import {getJobLogPage} from "@/api/monitor/jobinfo";
-import {JobLog} from "@/api/monitor/jobinfo/types";
+import { getJobLogPage } from "@/api/monitor/jobinfo";
+import { JobLog } from "@/api/monitor/jobinfo/types";
 
 const props = defineProps({
-  modelValue: {type: Boolean, default: false},
-  jobId: {type: Number, required: true},
-  jobGroup: {type: Number, required: true},
-  jobDesc: {type: String, default: ""},
+  modelValue: { type: Boolean, default: false },
+  jobId: { type: Number, required: true },
+  jobGroup: { type: Number, required: true },
+  jobDesc: { type: String, default: "" },
+  configId: { type: Number, required: true },
 });
 
 const emit = defineEmits<{
@@ -123,8 +138,13 @@ const detailData = ref<JobLog>({});
 /** 加载调度日志 */
 function loadLogData() {
   loading.value = true;
-  getJobLogPage({...queryParams, jobId: props.jobId, jobGroup: props.jobGroup})
-    .then(({data}) => {
+  getJobLogPage({
+    ...queryParams,
+    configId: props.configId,
+    jobId: props.jobId,
+    jobGroup: props.jobGroup,
+  })
+    .then(({ data }) => {
       logData.value = data.records || [];
       total.value = data.total || 0;
     })
@@ -155,17 +175,17 @@ watch(
 
 <style scoped>
 .log-content {
-  margin: 0;
-  padding: 12px;
   max-height: 300px;
+  padding: 12px;
+  margin: 0;
   overflow-y: auto;
   font-family: monospace;
   font-size: 13px;
   line-height: 1.6;
-  white-space: pre-wrap;
+  color: #303133;
   word-break: break-all;
+  white-space: pre-wrap;
   background-color: #f5f7fa;
   border-radius: 4px;
-  color: #303133;
 }
 </style>

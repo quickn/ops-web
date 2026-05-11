@@ -9,6 +9,7 @@ import {
   NacosConfigPublish,
   NacosServiceInstanceAction,
 } from "./types";
+import { getByType } from "@/api/accountConfig";
 
 /**
  * 获取配置列表
@@ -136,12 +137,8 @@ export function offlineServiceInstance(
 
 /**
  * 获取 Nacos 服务器配置列表
- * GET /pyApi/accountConfig/list?type=nacos
+ * 使用 accountConfig 模块的 getByType 接口
  */
-export function getNacosServerList(): AxiosPromise<any> {
-  return request({
-    url: "/pyApi/accountConfig/list",
-    method: "get",
-    params: { type: "nacos" },
-  });
+export function getNacosServerList() {
+  return getByType("nacos");
 }

@@ -5,33 +5,35 @@
         ref="queryFormRef"
         :model="queryParams"
         :inline="true"
-        style="display: flex; align-items: center; flex-wrap: wrap"
+        style="display: flex; flex-wrap: wrap; align-items: center"
       >
-        <el-form-item prop="jobGroup" style="width: 130px">
+        <el-form-item prop="configId" label="选择服务" style="width: 200px">
           <el-select
-            v-model="queryParams.jobGroup"
-            placeholder="选择任务分组"
+            v-model="queryParams.configId"
+            placeholder="选择服务"
             clearable
+            @change="handleServerChange"
           >
             <el-option
-              v-for="item in jobGroupList"
+              v-for="item in serviceList"
               :key="item.id"
-              :label="item.title"
+              :label="item.configName || item.url"
               :value="item.id"
             />
           </el-select>
         </el-form-item>
 
-        <el-form-item prop="serviceId" style="width: 120px">
+        <el-form-item prop="jobGroup" label="选择任务分组" style="width: 300px">
           <el-select
-            v-model="queryParams.serviceId"
-            placeholder="选择服务"
+            v-model="queryParams.jobGroup"
+            placeholder="选择任务分组"
             clearable
+            @change="handleJobGroupChange"
           >
             <el-option
-              v-for="item in serviceList"
+              v-for="item in jobGroupList"
               :key="item.id"
-              :label="item.name"
+              :label="item.title"
               :value="item.id"
             />
           </el-select>
@@ -61,21 +63,21 @@
             placeholder="全部"
             clearable
           >
-            <el-option label="运行中" :value="1"/>
-            <el-option label="已停止" :value="0"/>
+            <el-option label="运行中" :value="1" />
+            <el-option label="已停止" :value="0" />
           </el-select>
         </el-form-item>
 
         <el-form-item>
           <el-button type="primary" @click="handleQuery">
             <el-icon>
-              <Search/>
+              <Search />
             </el-icon>
             搜索
           </el-button>
           <el-button @click="resetQuery">
             <el-icon>
-              <Refresh/>
+              <Refresh />
             </el-icon>
             重置
           </el-button>
@@ -84,7 +86,7 @@
         <el-form-item style="margin-left: auto">
           <el-button type="success" @click="handleAdd">
             <el-icon>
-              <Plus/>
+              <Plus />
             </el-icon>
             新增
           </el-button>
@@ -100,8 +102,13 @@
         highlight-current-row
         border
       >
-        <el-table-column label="任务ID" prop="id" width="80" align="center"/>
-        <el-table-column label="任务描述" prop="jobDesc" width="180" show-overflow-tooltip/>
+        <el-table-column label="任务ID" prop="id" width="80" align="center" />
+        <el-table-column
+          label="任务描述"
+          prop="jobDesc"
+          width="180"
+          show-overflow-tooltip
+        />
         <el-table-column label="所属服务" prop="serviceName" width="120">
           <template #default="scope">
             <el-tag v-if="scope.row.serviceName" type="info">
@@ -110,29 +117,39 @@
             <span v-else style="color: #999">未关联</span>
           </template>
         </el-table-column>
-        <el-table-column label="负责人" prop="author" width="100" align="center"/>
+        <el-table-column
+          label="负责人"
+          prop="author"
+          width="100"
+          align="center"
+        />
         <el-table-column label="调度类型" width="150" align="center">
           <template #default="scope">
             <el-tag
               :type="scope.row.scheduleType === 'NONE' ? 'info' : 'success'"
               size="small"
             >
-              {{ getScheduleTypeText(scope.row.scheduleType) }}:{{ scope.row.scheduleConf }}
+              {{ getScheduleTypeText(scope.row.scheduleType) }}:{{
+                scope.row.scheduleConf
+              }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="运行模式" width="200" align="center">
           <template #default="scope">
-            <el-tag size="small" type="info">{{
-                getGlueTypeText(scope.row.glueType)
-              }}:{{ scope.row.executorHandler }}
+            <el-tag size="small" type="info"
+              >{{ getGlueTypeText(scope.row.glueType) }}:{{
+                scope.row.executorHandler
+              }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="scope">
-            <el-tag :type="scope.row.triggerStatus === 1 ? 'success' : 'danger'">
-              {{ scope.row.triggerStatus === 1 ? '运行中' : '已停止' }}
+            <el-tag
+              :type="scope.row.triggerStatus === 1 ? 'success' : 'danger'"
+            >
+              {{ scope.row.triggerStatus === 1 ? "运行中" : "已停止" }}
             </el-tag>
           </template>
         </el-table-column>
@@ -145,7 +162,7 @@
               @click="handleEdit(scope.row)"
             >
               <el-icon>
-                <Edit/>
+                <Edit />
               </el-icon>
               编辑
             </el-button>
@@ -156,22 +173,24 @@
               @click="handleQueryLog(scope.row)"
             >
               <el-icon>
-                <Document/>
+                <Document />
               </el-icon>
               查看日志
             </el-button>
-            <el-dropdown @command="(cmd: string) => handleCommand(cmd, scope.row)">
+            <el-dropdown
+              @command="(cmd: string) => handleCommand(cmd, scope.row)"
+            >
               <el-button type="primary" size="small" link>
                 更多
                 <el-icon>
-                  <ArrowDown/>
+                  <ArrowDown />
                 </el-icon>
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="trigger">
                     <el-icon>
-                      <CaretRight/>
+                      <CaretRight />
                     </el-icon>
                     执行一次
                   </el-dropdown-item>
@@ -180,7 +199,7 @@
                     command="start"
                   >
                     <el-icon>
-                      <VideoPlay/>
+                      <VideoPlay />
                     </el-icon>
                     启动
                   </el-dropdown-item>
@@ -189,13 +208,13 @@
                     command="stop"
                   >
                     <el-icon>
-                      <VideoPause/>
+                      <VideoPause />
                     </el-icon>
                     停止
                   </el-dropdown-item>
                   <el-dropdown-item command="delete" divided>
                     <el-icon>
-                      <Delete/>
+                      <Delete />
                     </el-icon>
                     删除
                   </el-dropdown-item>
@@ -237,6 +256,7 @@
       :job-id="currentLogJobId"
       :job-group="currentLogJobGroup"
       :job-desc="currentLogJobDesc"
+      :config-id="queryParams.configId!"
     />
   </div>
 </template>
@@ -254,11 +274,18 @@ import {
   VideoPause,
   VideoPlay,
 } from "@element-plus/icons-vue";
-import {deleteJob, jobGroupPageList, listJobPage, startJob, stopJob, triggerJob,} from "@/api/monitor/jobinfo";
-import {JobInfo, JobInfoGroup} from "@/api/monitor/jobinfo/types";
-import {listAll} from "@/api/monitor/service";
-import {ServiceInfo} from "@/api/monitor/service/types";
-import {useRouter} from "vue-router";
+import {
+  deleteJob,
+  jobGroupPageList,
+  listJobPage,
+  startJob,
+  stopJob,
+  triggerJob,
+} from "@/api/monitor/jobinfo";
+import { JobInfo, JobInfoGroup } from "@/api/monitor/jobinfo/types";
+import { getByType } from "@/api/accountConfig";
+import { AccountConfig } from "@/api/accountConfig/types";
+import { useRouter } from "vue-router";
 import JobInfoEdit from "./edit.vue";
 import JobLog from "./joblog.vue";
 
@@ -289,18 +316,18 @@ const queryParams = reactive({
   jobGroup: undefined as number | undefined,
   jobDesc: "",
   executorHandler: "",
-  serviceId: undefined as number | undefined,
+  configId: undefined as number | undefined,
   triggerStatus: undefined as number | undefined,
 });
 
 const dataList = ref<JobInfo[]>([]);
-const serviceList = ref<ServiceInfo[]>([]);
+const serviceList = ref<AccountConfig[]>([]);
 const jobGroupList = ref<JobInfoGroup[]>([]);
 
 /** 查询 */
 function handleQuery() {
   loading.value = true;
-  listJobPage(queryParams).then(({data}) => {
+  listJobPage(queryParams).then(({ data }) => {
     dataList.value = data.records;
     total.value = data.total;
     loading.value = false;
@@ -309,17 +336,52 @@ function handleQuery() {
 
 /** 获取服务列表 */
 function loadServiceList() {
-  listAll().then(({data}) => {
+  getByType("xxlJob").then(({ data }) => {
     serviceList.value = data;
+    if (serviceList.value.length > 0) {
+      queryParams.configId = serviceList.value[0].id;
+    }
+    loadJobGroupList();
   });
+}
+
+/** 切换任务分组 */
+function handleJobGroupChange() {
+  if (queryParams.configId) {
+    handleQuery();
+  } else {
+    dataList.value = [];
+    total.value = 0;
+  }
+}
+
+/** 切换 Nacos 服务器 */
+function handleServerChange() {
+  if (queryParams.configId) {
+    // 重置任务分组
+    queryParams.jobGroup = undefined;
+    jobGroupList.value = [];
+    // 重新加载任务分组
+    loadJobGroupList();
+  } else {
+    // 清空服务选择时，清空相关数据
+    queryParams.jobGroup = undefined;
+    jobGroupList.value = [];
+    dataList.value = [];
+    total.value = 0;
+  }
 }
 
 /** 获取任务分组列表 */
 function loadJobGroupList() {
-  jobGroupPageList().then(({data}) => {
+  if (queryParams.configId == undefined) {
+    return;
+  }
+  jobGroupPageList(queryParams.configId).then(({ data }) => {
     jobGroupList.value = data;
     if (jobGroupList.value.length > 0) {
       queryParams.jobGroup = jobGroupList.value[0].id;
+      handleQuery();
     }
   });
 }
@@ -331,7 +393,7 @@ function resetQuery() {
   queryParams.jobGroup = undefined;
   queryParams.jobDesc = "";
   queryParams.executorHandler = "";
-  queryParams.serviceId = undefined;
+  queryParams.configId = undefined;
   queryParams.triggerStatus = undefined;
   handleQuery();
 }
@@ -399,7 +461,7 @@ function handleStart(row: JobInfo) {
     cancelButtonText: "取消",
     type: "info",
   }).then(() => {
-    startJob(row.id!).then(() => {
+    startJob(queryParams.configId!, row.id!).then(() => {
       ElMessage.success("启动成功");
       handleQuery();
     });
@@ -413,7 +475,7 @@ function handleStop(row: JobInfo) {
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    stopJob(row.id!).then(() => {
+    stopJob(queryParams.configId!, row.id!).then(() => {
       ElMessage.success("停止成功");
       handleQuery();
     });
@@ -427,7 +489,7 @@ function handleTrigger(row: JobInfo) {
     cancelButtonText: "取消",
     type: "info",
   }).then(() => {
-    triggerJob(row.id!).then(() => {
+    triggerJob(queryParams.configId!, row.id!).then(() => {
       ElMessage.success("执行成功");
       handleQuery();
     });
@@ -442,7 +504,7 @@ function handleDelete(id: number) {
     type: "warning",
   }).then(() => {
     loading.value = true;
-    deleteJob(id)
+    deleteJob(queryParams.configId!, id)
       .then(() => {
         ElMessage.success("删除成功");
         handleQuery();
@@ -474,8 +536,7 @@ function getGlueTypeText(type?: string): string {
 
 onMounted(() => {
   loadServiceList();
-  loadJobGroupList();
-  handleQuery();
+  //handleQuery();
 });
 </script>
 

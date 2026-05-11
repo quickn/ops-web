@@ -8,6 +8,8 @@ export interface JobInfoGroup {
  */
 export interface JobInfo extends PageQuery {
   id?: number;
+  /** 配置ID */
+  configId?: number;
   /** 任务分组ID */
   jobGroup?: number;
   /** 所属服务ID */
@@ -89,6 +91,8 @@ export interface MisfireStrategyOption {
 export interface JobLog {
   /** 日志ID */
   id?: number;
+  /** 配置ID */
+  configId?: number;
   /** 任务分组ID */
   jobGroup?: number;
   /** 任务ID */
