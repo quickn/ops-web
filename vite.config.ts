@@ -55,10 +55,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
               env.VITE_APP_TARGET_BASE_API
             ), // 替换 /dev-api 为 target 接口地址
         },
-        // 代理2：添加新的代理配置
+        // 代理2：添加新的代理配置（Python后端，含WebSocket支持）
         [env.VITE_APP_BASE_API_PY]: {
           target: env.VITE_APP_TARGET_URL_PY, // 第二个代理的目标地址
           changeOrigin: true,
+          ws: true, // 支持WebSocket代理
           rewrite: (path) =>
             path.replace(
               new RegExp("^" + env.VITE_APP_BASE_API_PY),

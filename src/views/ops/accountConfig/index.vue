@@ -348,7 +348,7 @@ async function loadServiceOptions() {
             <el-option value="nacos" label="Nacos" />
             <el-option value="xxlJob" label="XXLJob" />
             <el-option value="redis" label="Redis" />
-            <el-option value="ssh" label="SSH" />
+            <el-option value="SSH" label="SSH" />
           </el-select>
         </el-form-item>
         <el-form-item label="配置名称" prop="configName">

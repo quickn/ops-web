@@ -4,7 +4,7 @@ import type { AccountConfig, ApiResponse } from "./types";
 const SAVED_BASE = "/pyApi/accountConfig";
 
 
-/** 获取所有保存的连接配置 */
+/** 通过类型获取保存的连接配置 */
 export function getByType(type) {
   return request<ApiResponse<AccountConfig[]>>({
     url: SAVED_BASE + "/list",
