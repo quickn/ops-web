@@ -1,6 +1,7 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
 import { FileInfo } from "./types";
+import { NginxFile } from "@/api/nginx/types";
 
 /**
  * 上传文件
@@ -15,8 +16,8 @@ export function uploadFileApi(file: File): AxiosPromise<FileInfo> {
     method: "post",
     data: formData,
     headers: {
-      "Content-Type": "multipart/form-data",
-    },
+      "Content-Type": "multipart/form-data"
+    }
   });
 }
 
@@ -29,6 +30,15 @@ export function deleteFileApi(filePath?: string) {
   return request({
     url: "/api/v1/files",
     method: "delete",
-    params: { filePath: filePath },
+    params: { filePath: filePath }
+  });
+}
+
+
+export function getByPath(queryParams?: NginxFile): AxiosPromise<[]> {
+  return request({
+    url: "/fileCmd/getByPath",
+    method: "get",
+    params: queryParams
   });
 }

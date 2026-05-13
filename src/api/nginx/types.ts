@@ -3,5 +3,7 @@
  */
 export interface NginxFile {
   path: string;
+  filePath: string;
   agentId?: number;
+  conf: string;
 }

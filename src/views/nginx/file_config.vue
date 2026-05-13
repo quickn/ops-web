@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import {javascript} from "@codemirror/lang-javascript";
-import {oneDark} from "@codemirror/theme-one-dark";
-import {basicSetup, EditorView} from "codemirror";
-import {autocompletion} from "@codemirror/autocomplete";
+import { javascript } from "@codemirror/lang-javascript";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { basicSetup, EditorView } from "codemirror";
+import { autocompletion } from "@codemirror/autocomplete";
 import {
   addConfig,
   checkConfigApi,
   deleteConfig,
   getAgentList,
-  getConfig,
   listFiles,
   saveAndReloadConfigApi,
 } from "@/api/nginx";
-import {NginxFile} from "@/api/nginx/types";
-import {FileInfo} from "@/api/monitor/file-sync/types"
-import {AgentConfig} from "@/api/monitor/agent/types";
+import { getByPath } from "@/api/file";
+import { NginxFile } from "@/api/nginx/types";
+import { FileInfo } from "@/api/monitor/file-sync/types";
+import { AgentConfig } from "@/api/monitor/agent/types";
 
 defineOptions({
   name: "NginxFile",
@@ -34,10 +34,13 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const queryParams = reactive<NginxFile>({path: "/usr/local/nginx", agentId: undefined});
+const queryParams = reactive<NginxFile>({
+  path: "/usr/local/nginx",
+  agentId: undefined,
+});
 const deptList = ref<FileInfo[]>();
 const agentList = ref<AgentConfig[]>([]);
-const breadcrumbList = ref<Array<{name: string, path: string}>>([]);
+const breadcrumbList = ref<Array<{ name: string; path: string }>>([]);
 
 const formData = reactive<NginxFile>({
   fileName: null,
@@ -53,13 +56,13 @@ function enterDirectory(dirName: string) {
 
 /** 更新面包屑导航 */
 function updateBreadcrumb() {
-  const paths = queryParams.path.split('/').filter(p => p);
+  const paths = queryParams.path.split("/").filter((p) => p);
   breadcrumbList.value = [
-    { name: '根目录', path: '/' },
+    { name: "根目录", path: "/" },
     ...paths.map((p, index) => ({
       name: p,
-      path: '/' + paths.slice(0, index + 1).join('/')
-    }))
+      path: "/" + paths.slice(0, index + 1).join("/"),
+    })),
   ];
 }
 
@@ -77,7 +80,7 @@ function handleQuery() {
     return;
   }
   loading.value = true;
-  listFiles(queryParams).then(({data}) => {
+  listFiles(queryParams).then(({ data }) => {
     deptList.value = data;
     loading.value = false;
   });
@@ -85,7 +88,7 @@ function handleQuery() {
 
 /** 加载Agent列表 */
 function loadAgentList() {
-  getAgentList().then(({data}) => {
+  getAgentList().then(({ data }) => {
     if (data) {
       agentList.value = data || [];
     }
@@ -144,20 +147,25 @@ async function openDialog(fileName?: string) {
     initCodeContent();
     dialog.title = "编辑文档";
     queryParams.fileNamePath = `${queryParams.path}/${fileName}`;
-    getConfig(queryParams).then(({data}) => {
-      form.value.commandContent = data;
+    getByPath(queryParams).then(({ data }) => {
+      form.value.commandContent = data || "";
     });
   } else {
     dialogEdit.visible = true;
   }
 }
 
-/** 表单提交 */
+/** 验证配置 */
 function checkConfig() {
   loading.value = true;
   if (form.value.commandContent) {
     form.value.commandContent = getCommanContent();
     queryParams.conf = form.value.commandContent;
+    if (!queryParams.conf || queryParams.conf === "") {
+      ElMessage.warning("请填写配置");
+      loading.value = false;
+      return;
+    }
     checkConfigApi(queryParams)
       .then(() => {
         ElMessage.success("校验通过");
@@ -166,6 +174,8 @@ function checkConfig() {
         loading.value = false;
         queryParams.conf = null;
       });
+  } else {
+    loading.value = false;
   }
 }
 
@@ -182,11 +192,12 @@ function saveAndReloadConfig() {
         loading.value = false;
         queryParams.conf = null;
       });
+  } else {
+    loading.value = false;
   }
 }
 
-function reloadConfig() {
-}
+function reloadConfig() {}
 
 /** 关闭弹窗 */
 function closeDialog() {
@@ -213,7 +224,7 @@ const codeData = reactive({
 });
 
 let editor: any;
-const {form} = toRefs(codeData);
+const { form } = toRefs(codeData);
 
 // 初始化编辑器
 function initCodeContent() {
@@ -225,7 +236,7 @@ function initCodeContent() {
           basicSetup,
           javascript(),
           oneDark,
-          autocompletion({override: [myCompletions]}),
+          autocompletion({ override: [myCompletions] }),
           // EditorView.updateListener.of((v) => {
           //   console.log(v.state.doc.toString())
           // }),
@@ -255,14 +266,10 @@ function initCodeContent() {
 
 // 获取当前编辑器中的内容字符串
 function getCommanContent() {
-  if (editor) {
+  if (!editor) {
     return null;
   }
-  let str = "";
-  editor.state.doc.children.forEach((el) => {
-    str += el.text.join("\n") + "\n";
-  });
-  return str.slice(0, -1);
+  return editor.state.doc.toString();
 }
 
 /** 重置表单  */
@@ -272,8 +279,8 @@ function resetForm() {
 }
 
 const rules = reactive({
-  fileName: [{required: true, message: "文件名", trigger: "blur"}],
-  fileNamePath: [{required: true, message: "文件路径", trigger: "blur"}],
+  fileName: [{ required: true, message: "文件名", trigger: "blur" }],
+  fileNamePath: [{ required: true, message: "文件路径", trigger: "blur" }],
 });
 
 onMounted(() => {
@@ -285,8 +292,12 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true"
-               style="display: flex; align-items: center; flex-wrap: wrap">
+      <el-form
+        ref="queryFormRef"
+        :model="queryParams"
+        :inline="true"
+        style="display: flex; flex-wrap: wrap; align-items: center"
+      >
         <el-form-item label="Agent" prop="agentId">
           <el-select
             v-model="queryParams.agentId"
@@ -299,7 +310,9 @@ onMounted(() => {
             <el-option
               v-for="agent in agentList"
               :key="agent.id"
-              :label="`${agent.serviceName} - ${agent.hostname || `Agent-${agent.id}`}`"
+              :label="`${agent.serviceName} - ${
+                agent.hostname || `Agent-${agent.id}`
+              }`"
               :value="agent.id"
             />
           </el-select>
@@ -315,11 +328,11 @@ onMounted(() => {
         </el-form-item>
         <el-form-item>
           <el-button class="filter-item" type="primary" @click="handleQuery">
-            <i-ep-search/>
+            <i-ep-search />
             搜索
           </el-button>
           <el-button @click="resetQuery">
-            <i-ep-refresh/>
+            <i-ep-refresh />
             重置
           </el-button>
         </el-form-item>
@@ -329,7 +342,7 @@ onMounted(() => {
             type="success"
             @click="openDialog()"
           >
-            <i-ep-plus/>
+            <i-ep-plus />
             新增
           </el-button>
           <el-button
@@ -338,7 +351,7 @@ onMounted(() => {
             :disabled="ids.length === 0"
             @click="handleDelete()"
           >
-            <i-ep-delete/>
+            <i-ep-delete />
             删除
           </el-button>
         </el-form-item>
@@ -347,14 +360,11 @@ onMounted(() => {
 
     <!-- 面包屑导航 -->
     <el-breadcrumb separator="/" style="margin: 16px 0">
-      <el-breadcrumb-item
-        v-for="(item, index) in breadcrumbList"
-        :key="index"
-      >
+      <el-breadcrumb-item v-for="(item, index) in breadcrumbList" :key="index">
         <a
           v-if="index < breadcrumbList.length - 1"
           @click.prevent="handleBreadcrumbClick(item.path)"
-          style="cursor: pointer; color: #409eff"
+          style=" color: #409eff;cursor: pointer"
         >
           {{ item.name }}
         </a>
@@ -363,36 +373,53 @@ onMounted(() => {
     </el-breadcrumb>
 
     <el-card>
-
       <el-table
         v-loading="loading"
         :data="deptList"
         row-key="name"
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" align="center"/>
-        <el-table-column prop="name" label="文件名称" min-width="200" show-overflow-tooltip>
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column
+          prop="name"
+          label="文件名称"
+          min-width="200"
+          show-overflow-tooltip
+        >
           <template #default="scope">
-            <div style="display: flex; align-items: center; gap: 8px">
-              <el-icon v-if="scope.row.type === 'directory'" style="cursor: pointer; color: #409eff" @click="enterDirectory(scope.row.name)">
+            <div style="display: flex; gap: 8px; align-items: center">
+              <el-icon
+                v-if="scope.row.type === 'directory'"
+                style=" color: #409eff;cursor: pointer"
+                @click="enterDirectory(scope.row.name)"
+              >
                 <i-ep-folder />
               </el-icon>
               <el-icon v-else style="color: #67c23a">
                 <i-ep-document />
               </el-icon>
-              <span v-if="scope.row.type === 'directory'" style="cursor: pointer; color: #409eff" @click="enterDirectory(scope.row.name)">
+              <span
+                v-if="scope.row.type === 'directory'"
+                style=" color: #409eff;cursor: pointer"
+                @click="enterDirectory(scope.row.name)"
+              >
                 {{ scope.row.name }}
               </span>
               <span v-else>{{ scope.row.name }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="type" label="类型" width="80" align="center"/>
-        <el-table-column prop="permissions" label="权限" width="120" align="center"/>
-        <el-table-column prop="owner" label="所有者" width="100"/>
-        <el-table-column prop="group" label="用户组" width="100"/>
-        <el-table-column prop="size" label="大小" width="100" align="center"/>
-        <el-table-column prop="modifyTime" label="修改时间" width="180"/>
+        <el-table-column prop="type" label="类型" width="80" align="center" />
+        <el-table-column
+          prop="permissions"
+          label="权限"
+          width="120"
+          align="center"
+        />
+        <el-table-column prop="owner" label="所有者" width="100" />
+        <el-table-column prop="group" label="用户组" width="100" />
+        <el-table-column prop="size" label="大小" width="100" align="center" />
+        <el-table-column prop="modifyTime" label="修改时间" width="180" />
 
         <el-table-column label="操作" fixed="right" align="left" width="120">
           <template #default="scope">
@@ -403,7 +430,7 @@ onMounted(() => {
               size="small"
               @click.stop="openDialog(scope.row.name)"
             >
-              <i-ep-edit/>
+              <i-ep-edit />
               编辑
             </el-button>
           </template>
@@ -440,11 +467,11 @@ onMounted(() => {
         label-width="80px"
       >
         <el-form-item label="文件名称" prop="name">
-          <el-input v-model="formData.fileName" placeholder="文件名称"/>
+          <el-input v-model="formData.fileName" placeholder="文件名称" />
         </el-form-item>
 
         <el-form-item label="文件路径" prop="name">
-          <el-input v-model="formData.fileNamePath" placeholder="文件路径"/>
+          <el-input v-model="formData.fileNamePath" placeholder="文件路径" />
         </el-form-item>
       </el-form>
 

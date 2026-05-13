@@ -35,7 +35,7 @@ service.interceptors.response.use(
     if (code === "00000") {
       return response.data;
     }
-    if (code === "500") {
+    if (msg !== undefined && msg !== "一切ok") {
       ElMessage.error(msg || "系统出错");
       return Promise.reject(new Error(msg || "Error"));
     }

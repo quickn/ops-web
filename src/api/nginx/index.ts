@@ -23,16 +23,6 @@ export function getAgentList() {
   return originServerList({});
 }
 
-/**
- * 部门下拉列表
- */
-export function getConfig(queryParams?: NginxFile): AxiosPromise<[]> {
-  return request({
-    url: "/config/nginx/getConfig",
-    method: "get",
-    params: queryParams,
-  });
-}
 
 /**
  * 获取部门详情
@@ -41,7 +31,7 @@ export function getConfig(queryParams?: NginxFile): AxiosPromise<[]> {
  */
 export function addConfig(data?: NginxFile) {
   return request({
-    url: "/config/nginx/addConfig",
+    url: "/nginx/addConfig",
     method: "post",
     data: data,
   });
@@ -55,7 +45,7 @@ export function addConfig(data?: NginxFile) {
  */
 export function checkConfigApi(data?: NginxFile) {
   return request({
-    url: "/config/nginx/check",
+    url: "/nginx/check",
     method: "post",
     data: data,
   });
@@ -68,7 +58,7 @@ export function checkConfigApi(data?: NginxFile) {
  */
 export function saveAndReloadConfigApi(data?: NginxFile) {
   return request({
-    url: "/config/nginx/save",
+    url: "/nginx/save",
     method: "put",
     data: data,
   });
@@ -81,7 +71,7 @@ export function saveAndReloadConfigApi(data?: NginxFile) {
  */
 export function deleteConfig(ids: number) {
   return request({
-    url: "/config/nginx/delete/" + ids,
+    url: "/nginx/delete/" + ids,
     method: "delete",
   });
 }
