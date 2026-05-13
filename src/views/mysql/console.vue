@@ -37,6 +37,9 @@ const outputLogs = ref<
   { type: "info" | "error" | "sql" | "result"; text: string; time: string }[]
 >([]);
 
+// TAB 切换
+const activeTab = ref("result");
+
 // ==================== 方法 ====================
 
 async function loadConnections() {
@@ -259,129 +262,113 @@ onMounted(() => {
       </el-tag>
     </div>
 
-    <el-row :gutter="12" style="height: calc(100vh - 240px); min-height: 400px">
+    <div class="console-body">
       <!-- SQL 编辑区 -->
-      <el-col :span="14" style="height: 100%">
-        <el-card
-          shadow="never"
-          style="display: flex; flex-direction: column; height: 100%"
-        >
-          <template #header>
-            <span><i-ep-edit /> SQL 编辑器</span>
+      <el-card shadow="never" class="editor-card">
+        <template #header>
+          <span><i-ep-edit /> SQL 编辑器</span>
+        </template>
+        <el-input
+          v-model="sqlInput"
+          type="textarea"
+          :rows="9"
+          :placeholder="`在此输入 SQL 语句...\n\n快捷键: Ctrl+Enter 执行 | Ctrl+↑↓ 历史记录`"
+          resize="none"
+          class="sql-editor"
+          @keydown="onKeydown"
+        />
+      </el-card>
+
+      <!-- TAB 切换栏 -->
+      <el-tabs v-model="activeTab" class="page-tabs">
+        <el-tab-pane label="结果" name="result" />
+        <el-tab-pane label="输出日志" name="log" />
+      </el-tabs>
+
+      <!-- 内容区 -->
+      <div class="result-section">
+        <!-- 结果内容 -->
+        <div v-if="activeTab === 'result'" class="tab-pane-content">
+          <template v-if="resultType === 'query'">
+            <div style="margin-bottom: 6px; font-size: 13px; color: #67c23a">
+              返回 {{ resultRowCount }} 行
+            </div>
+            <el-table
+              :data="resultRecords.slice(0, 200)"
+              border
+              size="small"
+              stripe
+            >
+              <el-table-column
+                v-for="col in resultColumns"
+                :key="col"
+                :label="col"
+                :prop="col"
+                min-width="100"
+                show-overflow-tooltip
+              >
+                <template #default="scope">
+                  <span
+                    v-if="scope.row[col] === null"
+                    style="font-style: italic; color: #ccc"
+                    >NULL</span
+                  >
+                  <span v-else>{{ scope.row[col] }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div
+              v-if="resultRecords.length > 200"
+              style="margin-top: 6px; font-size: 12px; color: #e6a23c"
+            >
+              仅显示前 200 条，共 {{ resultRowCount }} 条
+            </div>
           </template>
-          <div style="display: flex; flex: 1; flex-direction: column">
-            <el-input
-              v-model="sqlInput"
-              type="textarea"
-              :rows="10"
-              :placeholder="`在此输入 SQL 语句...\n\n快捷键: Ctrl+Enter 执行 | Ctrl+↑↓ 历史记录`"
-              style="flex: 1"
-              resize="none"
-              class="sql-editor"
-              @keydown="onKeydown"
+          <template v-else-if="resultType === 'execute'">
+            <el-result
+              icon="success"
+              title="执行成功"
+              :sub-title="resultMessage"
             />
-          </div>
-        </el-card>
-      </el-col>
-
-      <!-- 结果区 -->
-      <el-col :span="10" style="height: 100%">
-        <el-card
-          shadow="never"
-          style="display: flex; flex-direction: column; height: 100%"
-        >
-          <template #header>
-            <span><i-ep-data-analysis /> 结果</span>
+            <div style="font-size: 14px; color: #909399; text-align: center">
+              影响行数: {{ resultAffectedRows }}
+            </div>
           </template>
-          <div style="overflow: auto">
-            <!-- 查询结果 -->
-            <template v-if="resultType === 'query'">
-              <div style="margin-bottom: 6px; font-size: 13px; color: #67c23a">
-                返回 {{ resultRowCount }} 行
-              </div>
-              <el-table
-                :data="resultRecords.slice(0, 200)"
-                border
-                size="small"
-                max-height="600px"
-                stripe
-              >
-                <el-table-column
-                  v-for="col in resultColumns"
-                  :key="col"
-                  :label="col"
-                  :prop="col"
-                  min-width="100"
-                  show-overflow-tooltip
-                >
-                  <template #default="scope">
-                    <span
-                      v-if="scope.row[col] === null"
-                      style="font-style: italic; color: #ccc"
-                      >NULL</span
-                    >
-                    <span v-else>{{ scope.row[col] }}</span>
-                  </template>
-                </el-table-column>
-              </el-table>
-              <div
-                v-if="resultRecords.length > 200"
-                style="margin-top: 6px; font-size: 12px; color: #e6a23c"
-              >
-                仅显示前 200 条，共 {{ resultRowCount }} 条
-              </div>
-            </template>
+          <el-empty v-else description="等待执行 SQL..." />
+        </div>
 
-            <!-- 执行结果 -->
-            <template v-else-if="resultType === 'execute'">
-              <el-result
-                icon="success"
-                title="执行成功"
-                :sub-title="resultMessage"
-              />
-              <div style="font-size: 14px; color: #909399; text-align: center">
-                影响行数: {{ resultAffectedRows }}
-              </div>
-            </template>
-
-            <el-empty v-else description="等待执行 SQL..." />
+        <!-- 输出日志内容 -->
+        <div v-else-if="activeTab === 'log'" class="tab-pane-content">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: flex-end;
+              margin-bottom: 8px;
+            "
+          >
+            <el-button size="small" text @click="clearLogs">清空日志</el-button>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <!-- 输出日志 -->
-    <el-card shadow="never" style="margin-top: 12px">
-      <template #header>
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-          "
-        >
-          <span><i-ep-notebook /> 输出日志</span>
-          <el-button size="small" text @click="clearLogs">清空日志</el-button>
-        </div>
-      </template>
-      <div class="log-area" ref="logContainer">
-        <div
-          v-if="outputLogs.length === 0"
-          style="padding: 8px 0; font-size: 13px; color: #909399"
-        >
-          暂无日志
-        </div>
-        <div
-          v-for="(log, idx) in outputLogs"
-          :key="idx"
-          class="log-line"
-          :class="`log-${log.type}`"
-        >
-          <span class="log-time">[{{ log.time }}]</span>
-          <span class="log-text">{{ log.text }}</span>
+          <div class="log-area">
+            <div
+              v-if="outputLogs.length === 0"
+              style="padding: 8px 0; font-size: 13px; color: #909399"
+            >
+              暂无日志
+            </div>
+            <div
+              v-for="(log, idx) in outputLogs"
+              :key="idx"
+              class="log-line"
+              :class="`log-${log.type}`"
+            >
+              <span class="log-time">[{{ log.time }}]</span>
+              <span class="log-text">{{ log.text }}</span>
+            </div>
+          </div>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -398,6 +385,55 @@ onMounted(() => {
   margin-bottom: 8px;
 }
 
+.page-tabs {
+  margin-bottom: 8px;
+}
+
+.page-tabs :deep(.el-tabs__header) {
+  padding: 0 4px;
+  margin-bottom: 0;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-light);
+  border-bottom: none;
+  border-radius: var(--el-border-radius-base) var(--el-border-radius-base) 0 0;
+}
+
+.page-tabs :deep(.el-tabs__content) {
+  display: none;
+}
+
+.console-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: calc(100vh - 180px);
+  min-height: 400px;
+}
+
+.editor-card {
+  flex-shrink: 0;
+}
+
+.result-section {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: var(--el-border-radius-base);
+}
+
+.tab-pane-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+}
+
 .sql-editor :deep(textarea) {
   font-family: "Cascadia Code", "Fira Code", Consolas, Monaco, monospace !important;
   font-size: 14px !important;
@@ -405,7 +441,7 @@ onMounted(() => {
 }
 
 .log-area {
-  max-height: 160px;
+  height: 100%;
   padding: 10px 12px;
   overflow-y: auto;
   font-family: "Cascadia Code", "Fira Code", Consolas, monospace;

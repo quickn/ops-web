@@ -176,6 +176,21 @@ function handleTest(config: AccountConfig) {
   ElMessage.info("测试连接功能需接入对应的连接测试接口");
 }
 
+/** 复制配置 */
+function handleCopy(config: AccountConfig) {
+  // 复制当前配置的数据，但不包含ID（作为新配置创建）
+  const copyData = { ...config };
+  delete copyData.id;
+  // 在配置名称后面加上"_副本"以区分
+  copyData.configName = `${config.configName}_副本`;
+
+  Object.assign(formData, copyData);
+  // 显式清除ID，防止 formData 残留旧值
+  formData.id = undefined;
+  dialog.title = "复制配置";
+  dialog.visible = true;
+}
+
 onMounted(async () => {
   await loadServiceOptions();
   handleQuery();
@@ -207,6 +222,7 @@ async function loadServiceOptions() {
             placeholder="请选择服务"
             clearable
             filterable
+            @change="handleQuery"
           >
             <el-option
               v-for="item in serviceOptions"
@@ -221,6 +237,7 @@ async function loadServiceOptions() {
             v-model="queryParams.type"
             placeholder="请选择类型"
             clearable
+            @change="handleQuery"
           >
             <el-option value="mysql" label="MySQL" />
             <el-option value="nacos" label="Nacos" />
@@ -301,7 +318,16 @@ async function loadServiceOptions() {
               编辑
             </el-button>
             <el-button
-              type="primary"
+              type="success"
+              link
+              size="small"
+              @click.stop="handleCopy(scope.row)"
+            >
+              <i-ep-copy-document />
+              复制
+            </el-button>
+            <el-button
+              type="danger"
               link
               size="small"
               @click.stop="handleDelete(scope.row.id)"

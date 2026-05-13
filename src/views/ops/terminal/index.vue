@@ -4,12 +4,9 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 
-import {
-  addSavedConfig,
-  deleteSavedConfig,
-  getByType,
-  updateSavedConfig,
-} from "@/api/accountConfig";
+import { useRouter } from "vue-router";
+
+import { getByType } from "@/api/accountConfig";
 
 import { listAll as listServices } from "@/api/monitor/service";
 
@@ -21,15 +18,15 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const serviceOptions = ref<ServiceInfo[]>([]);
+const router = useRouter();
 
-const configFormRef = ref(ElForm);
+const serviceOptions = ref<ServiceInfo[]>([]);
 
 const loading = ref(false);
 const connecting = ref(false);
 const collapseLeft = ref(false);
 
-let selectedServiceId = ref<string | null>(null);
+let selectedServiceId = ref<number | null>(null);
 
 const dialog = reactive<DialogOption>({
   visible: false,
@@ -37,25 +34,6 @@ const dialog = reactive<DialogOption>({
 
 const configList = ref<AccountConfig[]>([]);
 const activeConfig = ref<AccountConfig | null>(null);
-
-const formData = reactive<AccountConfig>({
-  type: "SSH",
-  configName: "",
-  url: "",
-  port: 22,
-  username: "",
-  password: "",
-});
-
-const rules = reactive({
-  configName: [
-    { required: true, message: "配置名称不能为空", trigger: "blur" },
-  ],
-  url: [{ required: true, message: "主机地址不能为空", trigger: "blur" }],
-  port: [{ required: true, message: "端口不能为空", trigger: "blur" }],
-  username: [{ required: true, message: "用户名不能为空", trigger: "blur" }],
-  password: [{ required: true, message: "密码不能为空", trigger: "blur" }],
-});
 
 /** xterm 实例 */
 let term: Terminal | null = null;
@@ -242,89 +220,22 @@ function handleQuery() {
     });
 }
 
-/** 打开弹窗 */
-function openDialog(configId?: number) {
-  dialog.visible = true;
-  if (configId) {
-    dialog.title = "编辑配置";
-    const cfg = configList.value.find((c) => c.id === configId);
-    if (cfg) {
-      Object.assign(formData, cfg);
-    }
-  } else {
-    dialog.title = "新增配置";
-    resetForm();
-  }
-}
-
-/** 表单提交 */
-function handleSubmit() {
-  configFormRef.value.validate((valid: boolean) => {
-    if (valid) {
-      const configId = formData.id;
-      loading.value = true;
-      const payload = { ...formData, type: "SSH" };
-      if (configId) {
-        updateSavedConfig(payload)
-          .then(() => {
-            ElMessage.success("修改成功");
-            closeDialog();
-            handleQuery();
-          })
-          .finally(() => (loading.value = false));
-      } else {
-        addSavedConfig(payload)
-          .then(() => {
-            ElMessage.success("新增成功");
-            closeDialog();
-            handleQuery();
-          })
-          .finally(() => (loading.value = false));
-      }
-    }
-  });
-}
-
-/** 删除配置 */
-function handleDelete(configId: number) {
-  ElMessageBox.confirm("确认删除该配置?", "警告", {
-    confirmButtonText: "确定",
-    cancelButtonText: "取消",
-    type: "warning",
-  }).then(async () => {
-    try {
-      await deleteSavedConfig(configId);
-      ElMessage.success("删除成功");
-      // 如果删除的是当前连接的配置，断开连接
-      if (activeConfig.value?.id === configId) {
-        disconnect();
-      }
-      handleQuery();
-    } catch {
-      ElMessage.error("删除失败");
-    }
-  });
-}
-
-/** 关闭弹窗 */
-function closeDialog() {
-  dialog.visible = false;
-}
-
-/** 重置表单 */
-function resetForm() {
-  configFormRef.value?.resetFields();
-  formData.id = undefined;
-  formData.configName = "";
-  formData.url = "";
-  formData.port = 22;
-  formData.username = "";
-  formData.password = "";
-}
-
 /** 点击配置卡片连接 */
 function handleConnect(config: AccountConfig) {
   connect(config);
+}
+
+/** 跳转到账号配置管理页面 */
+function handleGoAccountConfig() {
+  const allRoutes = router.getRoutes();
+  const targetRoute = allRoutes.find((r) =>
+    r.path.toLowerCase().includes("accountconfig")
+  );
+  if (targetRoute) {
+    router.push(targetRoute.path);
+  } else {
+    router.push("/ops/accountConfig");
+  }
 }
 
 /** 组件挂载 */
@@ -383,7 +294,7 @@ onUnmounted(() => {
               :value="item.id"
             />
           </el-select>
-          <el-button type="primary" size="small" @click="openDialog(undefined)">
+          <el-button type="primary" size="small" @click="handleGoAccountConfig">
             <i-ep-plus />
             新增
           </el-button>
@@ -405,18 +316,6 @@ onUnmounted(() => {
               <div class="config-addr">
                 {{ config.username }}@{{ config.url }}:{{ config.port }}
               </div>
-            </div>
-            <div class="config-actions">
-              <el-button text size="small" @click.stop="openDialog(config.id)">
-                <i-ep-edit />
-              </el-button>
-              <el-button
-                text
-                size="small"
-                @click.stop="handleDelete(config.id!)"
-              >
-                <i-ep-delete />
-              </el-button>
             </div>
           </div>
 
@@ -481,64 +380,13 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
-    <!-- 新增/编辑弹窗 -->
-    <el-dialog
-      v-model="dialog.visible"
-      :title="dialog.title"
-      width="520px"
-      @closed="closeDialog"
-    >
-      <el-form
-        ref="configFormRef"
-        :model="formData"
-        :rules="rules"
-        label-width="100px"
-      >
-        <el-form-item label="配置名称" prop="configName">
-          <el-input
-            v-model="formData.configName"
-            placeholder="例如：生产服务器"
-          />
-        </el-form-item>
-        <el-form-item label="主机地址" prop="url">
-          <el-input v-model="formData.url" placeholder="192.168.1.100" />
-        </el-form-item>
-        <el-form-item label="端口" prop="port">
-          <el-input-number
-            v-model="formData.port"
-            :min="1"
-            :max="65535"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="formData.username" placeholder="root" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input
-            v-model="formData.password"
-            type="password"
-            show-password
-            placeholder="输入密码"
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="closeDialog">取消</el-button>
-          <el-button type="primary" @click="handleSubmit">保存</el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <style scoped>
 .terminal-page {
   display: flex;
-  height: calc(100vh - 120px);
+  height: calc(100vh);
   overflow: hidden;
 }
 
