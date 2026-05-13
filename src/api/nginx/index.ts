@@ -12,7 +12,7 @@ export function listFiles(queryParams?: NginxFile): AxiosPromise<NginxFile[]> {
   return request({
     url: "/file-sync/list-files",
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
@@ -33,45 +33,55 @@ export function addConfig(data?: NginxFile) {
   return request({
     url: "/nginx/addConfig",
     method: "post",
-    data: data,
+    data: data
   });
 }
 
 /**
- *  修改部门
+ * 测试配置
  *
- * @param id
  * @param data
  */
+
 export function checkConfigApi(data?: NginxFile) {
   return request({
-    url: "/nginx/check",
+    url: "/nginx/test",
     method: "post",
-    data: data,
+    data: data
   });
 }
 
 /**
- * 删除部门
+ * 重新加载配置
  *
- * @param ids
+ * @param data
  */
+
 export function saveAndReloadConfigApi(data?: NginxFile) {
   return request({
-    url: "/nginx/save",
-    method: "put",
-    data: data,
+    url: "/nginx/reload",
+    method: "post",
+    data: data
   });
 }
 
 /**
- * 删除部门
+ * 停止Nginx
  *
- * @param ids
+ * @param data
  */
+
+export function stopNginx(data?: NginxFile) {
+  return request({
+    url: "/nginx/stop",
+    method: "post",
+    data: data
+  });
+}
+
 export function deleteConfig(ids: number) {
   return request({
     url: "/nginx/delete/" + ids,
-    method: "delete",
+    method: "delete"
   });
 }

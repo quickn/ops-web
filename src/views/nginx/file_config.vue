@@ -10,6 +10,7 @@ import {
   getAgentList,
   listFiles,
   saveAndReloadConfigApi,
+  stopNginx,
 } from "@/api/nginx";
 import { getByPath } from "@/api/file";
 import { NginxFile } from "@/api/nginx/types";
@@ -197,7 +198,11 @@ function saveAndReloadConfig() {
   }
 }
 
-function reloadConfig() {}
+function clickStopNginx() {
+  stopNginx(queryParams).then(() => {
+    ElMessage.success("停止成功");
+  });
+}
 
 /** 关闭弹窗 */
 function closeDialog() {
@@ -364,7 +369,7 @@ onMounted(() => {
         <a
           v-if="index < breadcrumbList.length - 1"
           @click.prevent="handleBreadcrumbClick(item.path)"
-          style=" color: #409eff;cursor: pointer"
+          style="color: #409eff; cursor: pointer"
         >
           {{ item.name }}
         </a>
@@ -390,7 +395,7 @@ onMounted(() => {
             <div style="display: flex; gap: 8px; align-items: center">
               <el-icon
                 v-if="scope.row.type === 'directory'"
-                style=" color: #409eff;cursor: pointer"
+                style="color: #409eff; cursor: pointer"
                 @click="enterDirectory(scope.row.name)"
               >
                 <i-ep-folder />
@@ -400,7 +405,7 @@ onMounted(() => {
               </el-icon>
               <span
                 v-if="scope.row.type === 'directory'"
-                style=" color: #409eff;cursor: pointer"
+                style="color: #409eff; cursor: pointer"
                 @click="enterDirectory(scope.row.name)"
               >
                 {{ scope.row.name }}
@@ -448,7 +453,7 @@ onMounted(() => {
         <div class="dialog-footer">
           <el-button type="primary" @click="checkConfig"> 检验配置</el-button>
           <el-button @click="saveAndReloadConfig">保存并热加载</el-button>
-          <el-button @click="reloadConfig"> 载入最新配置</el-button>
+          <el-button @click="clickStopNginx"> 停止Nginx</el-button>
         </div>
       </template>
       <div id="coder"></div>
