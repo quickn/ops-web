@@ -5,7 +5,6 @@ import { basicSetup, EditorView } from "codemirror";
 import { autocompletion } from "@codemirror/autocomplete";
 import {
   checkConfigApi,
-  getAgentList,
   listFiles,
   saveAndReloadConfigApi,
   stopNginx,
@@ -14,6 +13,7 @@ import { createFileApi, deleteFileApi, getByPathApi } from "@/api/file";
 import { FileInfo } from "@/api/monitor/file-sync/types";
 import { AgentConfig } from "@/api/monitor/agent/types";
 import { FileInfoForm } from "@/api/file/types";
+import { listAgentConfigs } from "@/api/monitor/agent";
 
 defineOptions({
   name: "NginxFile",
@@ -88,11 +88,29 @@ function handleQuery() {
 
 /** 加载Agent列表 */
 function loadAgentList() {
-  getAgentList().then(({ data }) => {
+  listAgentConfigs({ isNginx: 1 }).then(({ data }) => {
     if (data) {
       agentList.value = data || [];
     }
   });
+}
+
+/** Agent切换处理 */
+function handleAgentChange(agentId: number) {
+  // 查找选中的agent
+  const selectedAgent = agentList.value.find((agent) => agent.id === agentId);
+
+  if (selectedAgent && selectedAgent.nginxPath) {
+    // 如果agent有nginxPath配置，则使用该路径
+    queryParams.filePath = selectedAgent.nginxPath;
+  } else {
+    // 否则使用默认路径
+    queryParams.filePath = "/usr/local/nginx";
+  }
+
+  // 更新面包屑并查询
+  updateBreadcrumb();
+  handleQuery();
 }
 
 /** 删除选中文件 */
@@ -164,7 +182,6 @@ async function openDialog(fileName?: string) {
     dialog.visible = true;
     initCodeContent();
     dialog.title = "编辑文档";
-    // queryParams.filePath = `${queryParams.filePath}/${fileName}`;
     queryParams.fileName = fileName;
     getByPathApi(queryParams).then(({ data }) => {
       form.value.commandContent = data || "";
@@ -329,7 +346,7 @@ onMounted(() => {
             clearable
             filterable
             style="width: 250px"
-            @change="handleQuery"
+            @change="handleAgentChange"
           >
             <el-option
               v-for="agent in agentList"

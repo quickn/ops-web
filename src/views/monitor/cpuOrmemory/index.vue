@@ -172,7 +172,7 @@ import {
 import { cpuList, memList } from "@/api/monitor/cpuOrmemory";
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { AgentConfig, AgentConfigForm } from "@/api/monitor/agent/types";
+import { Agent, AgentForm } from "@/api/monitor/agent/types";
 import * as echarts from "echarts";
 import { formatDD } from "@/utils/common";
 const queryFormRef = ref(ElForm);
@@ -180,10 +180,10 @@ const queryFormRef = ref(ElForm);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
-const queryParams = reactive<AgentConfig>({ pageNum: 1, pageSize: 15 });
+const queryParams = reactive<Agent>({ pageNum: 1, pageSize: 15 });
 const timeType = ref<number>(1);
 const cpuListLength = ref<number>(0);
-const dataList = ref<AgentConfig[]>();
+const dataList = ref<Agent[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 const projectList = ref<ServiceInfo[]>();
 const cpuObjList = ref<ServiceInfo[]>();
@@ -192,7 +192,7 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const formData = reactive<AgentConfigForm>({
+const formData = reactive<AgentForm>({
   id: null,
   hostname: null,
   isMonitor: false,
@@ -396,7 +396,7 @@ function initPowerLineChart(arr1, arr2) {
   }
 }
 
-async function openDialog(data?: AgentConfig) {
+async function openDialog(data?: Agent) {
   if (data) {
     dialogEdit.visible = true;
     dialogEdit.title = "编辑文档";

@@ -80,9 +80,9 @@
         />
         <el-table-column label="是否在线" prop="state">
           <template #default="{ row }">
-            <el-tag :type="row.online == 1 ? 'success' : 'danger'">{{
-              row.online == 1 ? "在线" : "下线"
-            }}</el-tag>
+            <el-tag :type="row.online == 1 ? 'success' : 'danger'"
+              >{{ row.online == 1 ? "在线" : "下线" }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="终端版本" prop="clientVersion" width="100" />
@@ -90,7 +90,7 @@
         <el-table-column
           fixed="right"
           label="操作"
-          width="190"
+          width="250"
           style="padding: 0"
         >
           <template #default="scope">
@@ -123,7 +123,15 @@
               <i-ep-edit />
               编辑
             </el-button>
-
+            <el-button
+              type="success"
+              link
+              size="small"
+              @click.stop="openProxyConfigDialog(scope.row)"
+            >
+              <i-ep-setting />
+              代理配置
+            </el-button>
             <el-button
               type="primary"
               size="small"
@@ -258,21 +266,69 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 代理服务配置弹窗 -->
+    <el-dialog
+      v-model="dialogProxyConfig.visible"
+      :title="dialogProxyConfig.title"
+      width="700px"
+      @closed="closeDialog"
+    >
+      <el-form :model="proxyFormData" label-width="120px">
+        <el-form-item label="服务名">
+          <el-input v-model="proxyFormData.serviceName" placeholder="服务名" />
+        </el-form-item>
+        <el-form-item label="是否存在Nginx">
+          <el-radio-group v-model="proxyFormData.isNginx">
+            <el-radio :label="1">是</el-radio>
+            <el-radio :label="0">否</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="Nginx路径" v-if="proxyFormData.isNginx === 1">
+          <el-input
+            v-model="proxyFormData.nginxPath"
+            placeholder="/usr/local/nginx"
+          />
+        </el-form-item>
+        <el-form-item label="工作路径">
+          <el-input v-model="proxyFormData.workPath" placeholder="/opt/app" />
+        </el-form-item>
+        <el-form-item label="日志路径">
+          <el-input
+            v-model="proxyFormData.logPath"
+            placeholder="/var/log/app"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button type="primary" @click="saveProxyConfig"> 确 定</el-button>
+          <el-button @click="closeDialog"> 取 消</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import {
   addData,
+  batchHandleAgent,
   deleteByIds,
+  getAgentServerConfigForm,
   handleAgent,
   listPage,
-  batchHandleAgent,
+  saveAgentServerConfig,
 } from "@/api/monitor/agent";
 
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { AgentConfig, AgentConfigForm } from "@/api/monitor/agent/types";
+import {
+  Agent,
+  AgentForm,
+  AgentServerConfigForm,
+} from "@/api/monitor/agent/types";
 
 const queryFormRef = ref(ElForm);
 
@@ -280,9 +336,9 @@ const loading = ref(false);
 const ids = ref<number[]>([]);
 const total = ref(0);
 
-const queryParams = reactive<AgentConfig>({ pageNum: 1, pageSize: 15 });
+const queryParams = reactive<Agent>({ pageNum: 1, pageSize: 15 });
 
-const dataList = ref<AgentConfig[]>();
+const dataList = ref<Agent[]>();
 
 const serviceInfoList = ref<ServiceInfo[]>();
 
@@ -290,7 +346,12 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const formData = reactive<AgentConfigForm>({
+const dialogProxyConfig = reactive<DialogOption>({
+  visible: false,
+  title: "配置代理服务",
+});
+
+const formData = reactive<AgentForm>({
   id: null,
   serviceId: null,
   hostname: null,
@@ -305,6 +366,16 @@ const formData = reactive<AgentConfigForm>({
   isJumpServer: false,
   isOriginServer: false,
   remoteIp: null,
+});
+
+const proxyFormData = reactive<AgentServerConfigForm>({
+  id: undefined,
+  isNginx: 0,
+  nginxPath: "",
+  serviceId: undefined,
+  serviceName: "",
+  workPath: "",
+  logPath: "",
 });
 
 /** 查询 */
@@ -403,7 +474,7 @@ function batchUpgradeClients() {
   });
 }
 
-async function openDialog(data?: AgentConfig) {
+async function openDialog(data?: Agent) {
   if (data) {
     dialogEdit.visible = true;
     dialogEdit.title = "编辑文档";
@@ -422,6 +493,7 @@ async function openDialog(data?: AgentConfig) {
 /** 关闭弹窗 */
 function closeDialog() {
   dialogEdit.visible = false;
+  dialogProxyConfig.visible = false;
   resetForm();
 }
 
@@ -465,5 +537,47 @@ async function handleSubmit() {
         .finally(() => (loading.value = false));
     }
   });
+}
+
+/** 打开代理服务配置弹窗 */
+async function openProxyConfigDialog(row: Agent) {
+  dialogProxyConfig.visible = true;
+  proxyFormData.serviceId = row.serviceId;
+  proxyFormData.serviceName = row.serviceName || "";
+  proxyFormData.id = row.id || undefined;
+  proxyFormData.isNginx = 0;
+  proxyFormData.nginxPath = "";
+  proxyFormData.workPath = "";
+  proxyFormData.logPath = "";
+
+  // 尝试查询是否已有配置
+  try {
+    const { data: config } = await getAgentServerConfigForm(row.id);
+    proxyFormData.id = config.id;
+    proxyFormData.isNginx = config.isNginx;
+    proxyFormData.nginxPath = config.nginxPath;
+    proxyFormData.serviceId = config.serviceId;
+    proxyFormData.serviceName = config.serviceName;
+    proxyFormData.workPath = config.workPath;
+    proxyFormData.logPath = config.logPath;
+  } catch (error) {
+    console.error("查询代理配置失败:", error);
+  }
+}
+
+/** 保存代理服务配置 */
+function saveProxyConfig() {
+  if (!proxyFormData.serviceName) {
+    ElMessage.warning("请填写服务名");
+    return;
+  }
+  loading.value = true;
+  const savePromise = saveAgentServerConfig(proxyFormData);
+  savePromise
+    .then(() => {
+      ElMessage.success(proxyFormData.id ? "更新成功" : "新增成功");
+      closeDialog();
+    })
+    .finally(() => (loading.value = false));
 }
 </script>
