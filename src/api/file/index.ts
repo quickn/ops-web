@@ -1,7 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { FileInfo } from "./types";
-import { NginxFile } from "@/api/nginx/types";
+import { FileInfo, FileInfoForm } from "./types";
 
 /**
  * 上传文件
@@ -21,24 +20,34 @@ export function uploadFileApi(file: File): AxiosPromise<FileInfo> {
   });
 }
 
-/**
- * 删除文件
- *
- * @param filePath 文件完整路径
- */
-export function deleteFileApi(filePath?: string) {
+
+export function getByPathApi(queryParams?: FileInfoForm): AxiosPromise<[]> {
   return request({
-    url: "/api/v1/files",
-    method: "delete",
-    params: { filePath: filePath }
+    url: "/fileCmd/getFileByPath",
+    method: "get",
+    params: queryParams
   });
 }
 
 
-export function getByPath(queryParams?: NginxFile): AxiosPromise<[]> {
+/**
+ * 创建文件
+ *
+ * @param id
+ */
+export function createFileApi(data?: FileInfoForm) {
   return request({
-    url: "/fileCmd/getByPath",
-    method: "get",
-    params: queryParams
+    url: "/fileCmd/createFile",
+    method: "post",
+    params: data
+  });
+}
+
+
+export function deleteFileApi(data?: FileInfoForm) {
+  return request({
+    url: "/fileCmd/deleteFile",
+    method: "delete",
+    params: data
   });
 }

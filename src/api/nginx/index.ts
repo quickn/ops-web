@@ -24,18 +24,7 @@ export function getAgentList() {
 }
 
 
-/**
- * 获取部门详情
- *
- * @param id
- */
-export function addConfig(data?: NginxFile) {
-  return request({
-    url: "/nginx/addConfig",
-    method: "post",
-    data: data
-  });
-}
+
 
 /**
  * 测试配置

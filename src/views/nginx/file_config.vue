@@ -4,18 +4,16 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { basicSetup, EditorView } from "codemirror";
 import { autocompletion } from "@codemirror/autocomplete";
 import {
-  addConfig,
   checkConfigApi,
-  deleteConfig,
   getAgentList,
   listFiles,
   saveAndReloadConfigApi,
   stopNginx,
 } from "@/api/nginx";
-import { getByPath } from "@/api/file";
-import { NginxFile } from "@/api/nginx/types";
+import { createFileApi, deleteFileApi, getByPathApi } from "@/api/file";
 import { FileInfo } from "@/api/monitor/file-sync/types";
 import { AgentConfig } from "@/api/monitor/agent/types";
+import { FileInfoForm } from "@/api/file/types";
 
 defineOptions({
   name: "NginxFile",
@@ -35,29 +33,30 @@ const dialogEdit = reactive<DialogOption>({
   visible: false,
 });
 
-const queryParams = reactive<NginxFile>({
-  path: "/usr/local/nginx",
+const queryParams = reactive<FileInfoForm>({
+  filePath: "/usr/local/nginx",
   agentId: undefined,
 });
 const deptList = ref<FileInfo[]>();
 const agentList = ref<AgentConfig[]>([]);
 const breadcrumbList = ref<Array<{ name: string; path: string }>>([]);
 
-const formData = reactive<NginxFile>({
-  fileName: null,
-  fileNamePath: null,
+const formData = reactive<FileInfoForm>({
+  fileName: "",
+  filePath: "",
+  agentId: undefined as number | undefined,
 });
 
 /** 进入目录 */
 function enterDirectory(dirName: string) {
-  queryParams.path = `${queryParams.path}/${dirName}`;
+  queryParams.filePath = `${queryParams.filePath}/${dirName}`;
   updateBreadcrumb();
   handleQuery();
 }
 
 /** 更新面包屑导航 */
 function updateBreadcrumb() {
-  const paths = queryParams.path.split("/").filter((p) => p);
+  const paths = queryParams.filePath.split("/").filter((p) => p);
   breadcrumbList.value = [
     { name: "根目录", path: "/" },
     ...paths.map((p, index) => ({
@@ -69,7 +68,7 @@ function updateBreadcrumb() {
 
 /** 点击面包屑导航 */
 function handleBreadcrumbClick(path: string) {
-  queryParams.path = path;
+  queryParams.filePath = path;
   updateBreadcrumb();
   handleQuery();
 }
@@ -96,37 +95,55 @@ function loadAgentList() {
   });
 }
 
-function handleDelete(deptId?: number) {
-  ElMessageBox.confirm(`确认删除已选中的数据项?`, "警告", {
+/** 删除选中文件 */
+function handleDelete() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请先选择要删除的文件");
+    return;
+  }
+  const fileNames = ids.value.join("、");
+  ElMessageBox.confirm(`确认删除文件「${fileNames}」?`, "警告", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
     type: "warning",
   }).then(() => {
-    deleteConfig(deptId!).then(() => {
-      ElMessage.success("删除成功");
-      resetQuery();
-    });
+    loading.value = true;
+    const deletePromises = ids.value.map((fileName) =>
+      deleteFileApi({
+        fileName,
+        filePath: queryParams.filePath,
+        agentId: queryParams.agentId!,
+      })
+    );
+    Promise.all(deletePromises)
+      .then(() => {
+        ElMessage.success("删除成功");
+        ids.value = [];
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
   });
 }
 
 function resetQuery() {
   queryFormRef.value.resetFields();
   queryParams.agentId = undefined;
-  queryParams.path = "/usr/local/nginx";
+  queryParams.filePath = "/usr/local/nginx";
   updateBreadcrumb();
   handleQuery();
 }
 
 /** 行复选框选中记录选中ID集合 */
 function handleSelectionChange(selection: any) {
-  ids.value = selection.map((item: any) => item.id);
+  ids.value = selection.map((item: any) => item.name);
 }
 
 /** 添加数据  */
 async function handleSubmit() {
+  formData.agentId = queryParams.agentId;
   deptFormRef.value.validate((valid: any) => {
     if (valid) {
-      addConfig(formData)
+      createFileApi(formData)
         .then(() => {
           ElMessage.success("新增成功");
           closeDialog();
@@ -147,11 +164,13 @@ async function openDialog(fileName?: string) {
     dialog.visible = true;
     initCodeContent();
     dialog.title = "编辑文档";
-    queryParams.fileNamePath = `${queryParams.path}/${fileName}`;
-    getByPath(queryParams).then(({ data }) => {
+    // queryParams.filePath = `${queryParams.filePath}/${fileName}`;
+    queryParams.fileName = fileName;
+    getByPathApi(queryParams).then(({ data }) => {
       form.value.commandContent = data || "";
     });
   } else {
+    formData.filePath = queryParams.filePath;
     dialogEdit.visible = true;
   }
 }
@@ -285,7 +304,7 @@ function resetForm() {
 
 const rules = reactive({
   fileName: [{ required: true, message: "文件名", trigger: "blur" }],
-  fileNamePath: [{ required: true, message: "文件路径", trigger: "blur" }],
+  filePath: [{ required: true, message: "文件路径", trigger: "blur" }],
 });
 
 onMounted(() => {
@@ -324,7 +343,7 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="路径" prop="path">
           <el-input
-            v-model="queryParams.path"
+            v-model="queryParams.filePath"
             placeholder="请输入路径"
             clearable
             style="width: 250px"
@@ -471,12 +490,11 @@ onMounted(() => {
         :rules="rules"
         label-width="80px"
       >
-        <el-form-item label="文件名称" prop="name">
-          <el-input v-model="formData.fileName" placeholder="文件名称" />
+        <el-form-item label="文件路径" prop="filePath">
+          <el-input v-model="formData.filePath" placeholder="文件路径" />
         </el-form-item>
-
-        <el-form-item label="文件路径" prop="name">
-          <el-input v-model="formData.fileNamePath" placeholder="文件路径" />
+        <el-form-item label="文件名称" prop="fileName">
+          <el-input v-model="formData.fileName" placeholder="文件名称" />
         </el-form-item>
       </el-form>
 
