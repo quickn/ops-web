@@ -90,7 +90,7 @@
         <el-table-column
           fixed="right"
           label="操作"
-          width="250"
+          width="320"
           style="padding: 0"
         >
           <template #default="scope">
@@ -131,6 +131,15 @@
             >
               <i-ep-setting />
               代理配置
+            </el-button>
+            <el-button
+              type="warning"
+              link
+              size="small"
+              @click.stop="openWorkDirectory(scope.row)"
+            >
+              <i-ep-folder-opened />
+              工作目录
             </el-button>
             <el-button
               type="primary"
@@ -336,6 +345,9 @@ import {
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { Agent, AgentConfig, AgentForm } from "@/api/monitor/agent/types";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const queryFormRef = ref(ElForm);
 
@@ -587,5 +599,32 @@ function saveProxyConfig() {
       closeDialog();
     })
     .finally(() => (loading.value = false));
+}
+
+/** 打开工作目录 */
+async function openWorkDirectory(row: Agent) {
+  // 查询代理配置获取 workPath
+  try {
+    const { data: config } = await getAgentServerConfigForm(row.id!);
+
+    if (!config.workPath) {
+      ElMessage.warning("该服务未配置工作路径，请先在代理配置中设置 workPath");
+      return;
+    }
+
+    debugger;
+
+    // 跳转到文件管理页面，传递 agentId 和 filePath
+    router.push({
+      path: "/ops/file",
+      query: {
+        agentId: row.id,
+        filePath: config.workPath,
+      },
+    });
+  } catch (error) {
+    console.error("获取代理配置失败:", error);
+    ElMessage.error("获取工作路径失败");
+  }
 }
 </script>
