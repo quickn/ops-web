@@ -38,6 +38,7 @@ export interface AgentForm {
 export interface AgentConfig {
   id?: number;
   isNginx?: number;
+  hostname?: string;
   nginxPath?: string;
   serviceId?: number;
   serviceName?: string;

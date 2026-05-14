@@ -276,7 +276,18 @@
     >
       <el-form :model="proxyFormData" label-width="120px">
         <el-form-item label="服务名">
-          <el-input v-model="proxyFormData.serviceName" placeholder="服务名" />
+          <el-input
+            v-model="proxyFormData.serviceName"
+            placeholder="服务名"
+            disabled
+          />
+        </el-form-item>
+        <el-form-item label="hostname">
+          <el-input
+            v-model="proxyFormData.hostname"
+            placeholder="hostname"
+            disabled
+          />
         </el-form-item>
         <el-form-item label="是否存在Nginx">
           <el-radio-group v-model="proxyFormData.isNginx">
@@ -324,11 +335,7 @@ import {
 
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import {
-  Agent,
-  AgentForm,
-  AgentServerConfigForm,
-} from "@/api/monitor/agent/types";
+import { Agent, AgentConfig, AgentForm } from "@/api/monitor/agent/types";
 
 const queryFormRef = ref(ElForm);
 
@@ -368,7 +375,7 @@ const formData = reactive<AgentForm>({
   remoteIp: null,
 });
 
-const proxyFormData = reactive<AgentServerConfigForm>({
+const proxyFormData = reactive<AgentConfig>({
   id: undefined,
   isNginx: 0,
   nginxPath: "",
@@ -549,6 +556,7 @@ async function openProxyConfigDialog(row: Agent) {
   proxyFormData.nginxPath = "";
   proxyFormData.workPath = "";
   proxyFormData.logPath = "";
+  proxyFormData.hostname = row.hostname || "";
 
   // 尝试查询是否已有配置
   try {
