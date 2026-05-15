@@ -1,29 +1,5 @@
 import request from "@/utils/request";
-import { AxiosPromise } from "axios";
 import { NginxFile } from "./types";
-import { originServerList } from "@/api/monitor/agent";
-
-/**
- * 部门树形表格
- *
- * @param queryParams
- */
-export function listFiles(queryParams?: NginxFile): AxiosPromise<NginxFile[]> {
-  return request({
-    url: "/file-sync/list-files",
-    method: "get",
-    params: queryParams
-  });
-}
-
-/**
- * 获取agent列表
- */
-export function getAgentList() {
-  return originServerList({});
-}
-
-
 
 
 /**
@@ -65,12 +41,5 @@ export function stopNginx(data?: NginxFile) {
     url: "/nginx/stop",
     method: "post",
     data: data
-  });
-}
-
-export function deleteConfig(ids: number) {
-  return request({
-    url: "/nginx/delete/" + ids,
-    method: "delete"
   });
 }

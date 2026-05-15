@@ -1,7 +1,12 @@
 <template>
   <div class="app-container">
     <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true">
+      <el-form
+        ref="queryFormRef"
+        :model="queryParams"
+        :inline="true"
+        @keyup.enter="handleQuery"
+      >
         <el-form-item prop="serviceId">
           <el-select
             v-model="queryParams.serviceId"

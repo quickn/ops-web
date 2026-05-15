@@ -20,9 +20,9 @@ function checkConfig() {
   if (!fileManagementRef.value) return;
 
   loading.value = true;
-  const content = fileManagementRef.value.getCommanContent();
+  const fileContent = fileManagementRef.value.getCommanContent();
 
-  if (!content) {
+  if (!fileContent) {
     ElMessage.warning("配置内容为空");
     loading.value = false;
     return;
@@ -30,7 +30,7 @@ function checkConfig() {
 
   const queryParams = {
     ...fileManagementRef.value.queryParams,
-    conf: content,
+    fileContent: fileContent,
   };
 
   checkConfigApi(queryParams)
@@ -47,9 +47,9 @@ function saveAndReloadConfig() {
   if (!fileManagementRef.value) return;
 
   loading.value = true;
-  const content = fileManagementRef.value.getCommanContent();
+  const fileContent = fileManagementRef.value.getCommanContent();
 
-  if (!content) {
+  if (!fileContent) {
     ElMessage.warning("配置内容为空");
     loading.value = false;
     return;
@@ -57,7 +57,7 @@ function saveAndReloadConfig() {
 
   const queryParams = {
     ...fileManagementRef.value.queryParams,
-    conf: content,
+    fileContent: fileContent,
   };
 
   saveAndReloadConfigApi(queryParams)

@@ -3,10 +3,14 @@ import { javascript } from "@codemirror/lang-javascript";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { basicSetup, EditorView } from "codemirror";
 import { autocompletion } from "@codemirror/autocomplete";
-import { listFiles } from "@/api/nginx";
-import { createFileApi, deleteFileApi, getByPathApi } from "@/api/file";
-import { FileInfo } from "@/api/monitor/file-sync/types";
-import { FileInfoForm } from "@/api/file/types";
+import {
+  createFileApi,
+  deleteFileApi,
+  getByPathApi,
+  getFileListApi,
+  saveFileApi,
+} from "@/api/file";
+import { FileInfoForm, FileListInfo } from "@/api/file/types";
 
 defineOptions({
   name: "FileManagement",
@@ -39,9 +43,12 @@ const dialogEdit = reactive<DialogOption>({
 const queryParams = reactive<FileInfoForm>({
   filePath: props.filePath,
   agentId: props.agentId,
+  showHide: false,
+  onlyShowFile: false,
+  onlyShowDic: false,
 });
 
-const deptList = ref<FileInfo[]>();
+const fileList = ref<FileListInfo[]>();
 const breadcrumbList = ref<Array<{ name: string; path: string }>>([]);
 
 const formData = reactive<FileInfoForm>({
@@ -83,8 +90,8 @@ function handleQuery() {
     return;
   }
   loading.value = true;
-  listFiles(queryParams).then(({ data }) => {
-    deptList.value = data;
+  getFileListApi(queryParams).then(({ data }) => {
+    fileList.value = data;
     loading.value = false;
   });
 }
@@ -123,6 +130,9 @@ function resetQuery() {
   queryFormRef.value.resetFields();
   queryParams.agentId = props.agentId;
   queryParams.filePath = props.filePath;
+  queryParams.showHide = false;
+  queryParams.onlyShowFile = false;
+  queryParams.onlyShowDic = false;
   updateBreadcrumb();
   handleQuery();
 }
@@ -146,6 +156,41 @@ async function handleSubmit() {
         .finally(() => (loading.value = false));
     }
   });
+}
+
+/** 保存文件 */
+function handleSaveFile() {
+  const content = getCommanContent();
+  if (!content && content !== "") {
+    ElMessage.warning("编辑器未就绪，请稍后再试");
+    return;
+  }
+  loading.value = true;
+  saveFileApi({
+    fileName: queryParams.fileName,
+    filePath: queryParams.filePath,
+    fileContent: content,
+    agentId: queryParams.agentId,
+  })
+    .then(() => {
+      ElMessage.success("保存成功");
+    })
+    .finally(() => (loading.value = false));
+}
+
+/** 拷贝编辑内容到剪贴板 */
+async function handleCopyContent() {
+  const content = getCommanContent();
+  if (!content && content !== "") {
+    ElMessage.warning("编辑器未就绪，请稍后再试");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(content);
+    ElMessage.success("已复制到剪贴板");
+  } catch {
+    ElMessage.error("复制失败，请手动复制");
+  }
 }
 
 /**
@@ -269,6 +314,7 @@ onMounted(() => {
         :model="queryParams"
         :inline="true"
         style="display: flex; flex-wrap: wrap; align-items: center"
+        @submit.prevent
       >
         <el-form-item label="路径" prop="path">
           <el-input
@@ -278,6 +324,21 @@ onMounted(() => {
             style="width: 400px"
             @keyup.enter="handleQuery"
           />
+        </el-form-item>
+        <el-form-item prop="showHide">
+          <el-checkbox v-model="queryParams.showHide" @change="handleQuery">
+            显示隐藏文件
+          </el-checkbox>
+        </el-form-item>
+        <el-form-item prop="onlyShowFile">
+          <el-checkbox v-model="queryParams.onlyShowFile" @change="handleQuery">
+            只显示文件
+          </el-checkbox>
+        </el-form-item>
+        <el-form-item prop="onlyShowDic">
+          <el-checkbox v-model="queryParams.onlyShowDic" @change="handleQuery">
+            只显示目录
+          </el-checkbox>
         </el-form-item>
         <el-form-item>
           <el-button class="filter-item" type="primary" @click="handleQuery">
@@ -330,7 +391,7 @@ onMounted(() => {
     <el-card>
       <el-table
         v-loading="loading"
-        :data="deptList"
+        :data="fileList"
         row-key="name"
         @selection-change="handleSelectionChange"
       >
@@ -397,15 +458,32 @@ onMounted(() => {
       v-model="dialog.visible"
       :title="dialog.title"
       width="1000px"
+      class="file-editor-dialog"
       @closed="closeDialog"
     >
       <!-- 插槽：父组件可以自定义对话框头部操作按钮 -->
       <template #header>
         <slot name="dialog-header" :get-content="getCommanContent">
-          <div class="dialog-footer">
-            <el-button type="primary" @click="$emit('check-config')">
-              保存文件
-            </el-button>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              width: 100%;
+            "
+          >
+            <span style="font-size: 14px; color: #303133">
+              {{ queryParams.filePath }}/{{ queryParams.fileName }}
+            </span>
+            <div style="display: flex; gap: 8px">
+              <el-button @click="handleCopyContent">
+                <i-ep-document-copy />
+                拷贝内容
+              </el-button>
+              <el-button type="primary" @click="handleSaveFile">
+                保存文件
+              </el-button>
+            </div>
           </div>
         </slot>
       </template>
@@ -445,3 +523,30 @@ onMounted(() => {
     </el-dialog>
   </div>
 </template>
+
+<style>
+.el-dialog {
+  margin: 20px auto;
+}
+
+.cm-editor {
+  height: 800px;
+}
+
+.file-editor-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 94vh;
+  margin-top: 3vh !important;
+}
+
+.file-editor-dialog .el-dialog__header {
+  flex-shrink: 0;
+}
+
+.file-editor-dialog .el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+</style>

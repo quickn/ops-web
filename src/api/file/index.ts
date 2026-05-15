@@ -51,3 +51,22 @@ export function deleteFileApi(data?: FileInfoForm) {
     params: data
   });
 }
+
+
+export function saveFileApi(data?: FileInfoForm) {
+  return request({
+    url: "/fileCmd/saveFile",
+    method: "post",
+    data: data
+  });
+}
+
+export function getFileListApi(queryParams?: FileInfoForm) {
+  return request({
+    url: "/fileCmd/fileList",
+    method: "get",
+    params: queryParams
+  });
+}
+
+
