@@ -16,28 +16,15 @@
         :model="formData"
         :rules="rules"
       >
-        <div v-if="step == 0">
+        <div v-show="step == 0">
           <el-form-item label="Dockerfile：" prop="dockerfileContent">
-            <el-input
-              v-model="formData.dockerfileContent"
-              :disabled="!props.info.index"
-              style="width: 90%"
-              type="textarea"
-              :rows="15"
-              placeholder="请输入Dockerfile内容"
-              resize="none"
-            />
+            <div ref="dockerfileEditorRef" class="codemirror-container"></div>
           </el-form-item>
           <el-form-item label="DockerCompose:" prop="dockerComposeContent">
-            <el-input
-              v-model="formData.dockerComposeContent"
-              :disabled="!props.info.index"
-              style="width: 90%"
-              type="textarea"
-              :rows="15"
-              placeholder="请输入Docker Compose配置内容"
-              resize="none"
-            />
+            <div
+              ref="dockercomposeEditorRef"
+              class="codemirror-container"
+            ></div>
           </el-form-item>
         </div>
         <div v-if="step == 1">
@@ -251,6 +238,9 @@ import { ServiceInfo } from "@/api/monitor/service/types";
 import { originServerList } from "@/api/monitor/agent";
 import { listAll } from "@/api/monitor/service";
 import { ElLoading } from "element-plus";
+import { basicSetup, EditorView } from "codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { yaml } from "@codemirror/lang-yaml";
 
 const props = defineProps({
   info: {
@@ -261,6 +251,13 @@ const props = defineProps({
 const queryFormRef = ref(ElForm);
 const deptFormRef = ref(ElForm);
 const dataTableRef = ref(ElTable);
+
+// CodeMirror 编辑器实例
+let dockerfileEditor: EditorView | null = null;
+let dockercomposeEditor: EditorView | null = null;
+const dockerfileEditorRef = ref<HTMLElement | null>(null);
+const dockercomposeEditorRef = ref<HTMLElement | null>(null);
+
 const formData = reactive<LogInfo>({
   dockerfileContent: props.info.dockerfileContent || "",
   dockerComposeContent: props.info.dockerComposeContent || "",
@@ -400,29 +397,21 @@ function getDefaultDockerCompose(jar: JarPackage): string {
 }
 
 function createDockerfile(row) {
-  dockerfileContent.value = "";
-  dockerfileLoading.value = true;
   if (row.dockerfileContent && row.dockerfileContent.trim()) {
     formData.dockerfileContent = row.dockerfileContent;
   } else {
     // 否则生成默认的Dockerfile，使用正确的JAR文件名
-    formData.dockerfileContent = getDefaultDockerfile(row.dockerfileContent);
+    formData.dockerfileContent = getDefaultDockerfile(row.name);
   }
-  dockerfileLoading.value = false;
 }
 
 function createDockerCompose(row) {
-  dockerComposeContent.value = "";
-  dockerComposeContent.value = true;
   if (row.dockerComposeContent && row.dockerComposeContent.trim()) {
     formData.dockerComposeContent = row.dockerComposeContent;
   } else {
-    // 否则生成默认的Dockerfile，使用正确的JAR文件名
-    formData.dockerComposeContent = getDefaultDockerCompose(
-      row.dockerComposeContent
-    );
+    // 否则生成默认的DockerCompose，使用正确的JAR文件名
+    formData.dockerComposeContent = getDefaultDockerCompose(row.name);
   }
-  dockerfileLoading.value = false;
 }
 
 function loadAgentList() {
@@ -434,7 +423,75 @@ function loadAgentList() {
   });
 }
 
+/** 同步 CodeMirror 编辑器内容到 formData */
+function syncEditorsToFormData() {
+  if (dockerfileEditor) {
+    formData.dockerfileContent = dockerfileEditor.state.doc.toString();
+  }
+  if (dockercomposeEditor) {
+    formData.dockerComposeContent = dockercomposeEditor.state.doc.toString();
+  }
+}
+
+/** 初始化 Dockerfile CodeMirror 编辑器 */
+function initDockerfileEditor() {
+  const container = dockerfileEditorRef.value;
+  if (!container) return;
+  if (dockerfileEditor) {
+    dockerfileEditor.destroy();
+    dockerfileEditor = null;
+  }
+  const isEditable = !!props.info.index;
+  dockerfileEditor = new EditorView({
+    doc: formData.dockerfileContent || "",
+    extensions: [basicSetup, oneDark, EditorView.editable.of(isEditable)],
+    parent: container,
+  });
+}
+
+/** 初始化 DockerCompose CodeMirror 编辑器（YAML 模式） */
+function initDockercomposeEditor() {
+  const container = dockercomposeEditorRef.value;
+  if (!container) return;
+  if (dockercomposeEditor) {
+    dockercomposeEditor.destroy();
+    dockercomposeEditor = null;
+  }
+  const isEditable = !!props.info.index;
+  dockercomposeEditor = new EditorView({
+    doc: formData.dockerComposeContent || "",
+    extensions: [
+      basicSetup,
+      yaml(),
+      oneDark,
+      EditorView.editable.of(isEditable),
+    ],
+    parent: container,
+  });
+}
+
+/** 延迟初始化两个 CodeMirror 编辑器 */
+function initCodeMirrorEditors() {
+  nextTick(() => {
+    initDockerfileEditor();
+    initDockercomposeEditor();
+  });
+}
+
+/** 销毁两个 CodeMirror 编辑器 */
+function destroyCodeMirrorEditors() {
+  if (dockerfileEditor) {
+    dockerfileEditor.destroy();
+    dockerfileEditor = null;
+  }
+  if (dockercomposeEditor) {
+    dockercomposeEditor.destroy();
+    dockercomposeEditor = null;
+  }
+}
+
 function nextStep() {
+  syncEditorsToFormData();
   deptFormRef.value.validate((valid: any) => {
     if (valid) {
       if (step.value == 0) {
@@ -635,6 +692,8 @@ onActivated(() => {
   createDockerCompose(props.info);
   fetchHostList();
   fetchServiceList();
+  // v-show 使 DOM 始终存在，每次 destroy → recreate 安全地初始化
+  initCodeMirrorEditors();
 });
 
 onMounted(() => {
@@ -645,6 +704,10 @@ onMounted(() => {
     formData.deployType = 1;
   }
 });
+
+onUnmounted(() => {
+  destroyCodeMirrorEditors();
+});
 </script>
 <style>
 .top-title {
@@ -654,5 +717,19 @@ onMounted(() => {
   margin-bottom: 15px;
   font-size: 18px;
   font-weight: bold;
+}
+
+.codemirror-container {
+  width: 90%;
+  min-height: 300px;
+  max-height: 500px;
+  overflow: auto;
+  background-color: #282c34;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
+.codemirror-container .cm-editor {
+  height: 100%;
 }
 </style>

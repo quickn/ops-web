@@ -5,15 +5,21 @@
       <el-button type="primary" @click="goBack">返回</el-button>
     </div>
     <el-card shadow="never">
-      <el-form ref="deptFormRef" label-width="120px" :model="formData" :rules="rules">
+      <el-form
+        ref="deptFormRef"
+        label-width="120px"
+        :model="formData"
+        :rules="rules"
+      >
         <div v-if="step == 0">
           <el-form-item label="Dockerfile：" prop="dockerfileContent">
-            <el-input v-model="formData.dockerfileContent" style="width: 90%" type="textarea" :rows="15"
-              placeholder="请输入Dockerfile内容" resize="none" />
+            <div ref="dockerfileEditorRef" class="codemirror-container"></div>
           </el-form-item>
           <el-form-item label="DockerCompose:" prop="dockerComposeContent">
-            <el-input v-model="formData.dockerComposeContent" style="width: 90%" type="textarea" :rows="15"
-              placeholder="请输入Docker Compose配置内容" resize="none" />
+            <div
+              ref="dockercomposeEditorRef"
+              class="codemirror-container"
+            ></div>
           </el-form-item>
         </div>
       </el-form>
@@ -25,22 +31,13 @@
   </div>
 </template>
 <script setup lang="ts">
-import {
-  listData,
-  deleteByIds,
-  addData,
-  putData,
-  syncData,
-  jarData,
-  agentList,
-  deploy,
-} from "@/api/monitor/project";
+import { putData } from "@/api/monitor/project";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { listPage } from "@/api/monitor/agent";
-import { listAll } from "@/api/monitor/service";
-import { de, el } from "element-plus/es/locale";
-import { ElLoading } from "element-plus";
+import { basicSetup, EditorView } from "codemirror";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { yaml } from "@codemirror/lang-yaml";
+
 const props = defineProps({
   info: {
     type: Object,
@@ -50,6 +47,12 @@ const props = defineProps({
 const queryFormRef = ref(ElForm);
 const deptFormRef = ref(ElForm);
 const dataTableRef = ref(ElTable);
+
+// CodeMirror 编辑器实例
+let dockerfileEditor: EditorView | null = null;
+let dockercomposeEditor: EditorView | null = null;
+const dockerfileEditorRef = ref<HTMLElement | null>(null);
+const dockercomposeEditorRef = ref<HTMLElement | null>(null);
 const formData = reactive<LogInfo>({
   dockerfileContent: props.info.dockerfileContent || "",
   dockerComposeContent: props.info.dockerComposeContent || "",
@@ -85,6 +88,7 @@ const rules = reactive({
     { required: true, message: "环境服务不能为空", trigger: "change" },
   ],
 });
+
 /** 保存Dockerfile */
 function handleSaveDockerfile() {
   if (!dockerfileContent.value.trim()) {
@@ -103,6 +107,7 @@ function handleSaveDockerfile() {
       dockerfileLoading.value = false;
     });
 }
+
 /** 保存Docker Compose */
 function handleSaveDockerCompose() {
   if (!dockerComposeContent.value.trim()) {
@@ -121,6 +126,7 @@ function handleSaveDockerCompose() {
       dockerComposeLoading.value = false;
     });
 }
+
 function showDockerfileDialog(row) {
   dockerfileContent.value = "";
   dockerfileLoading.value = true;
@@ -133,9 +139,7 @@ function showDockerfileDialog(row) {
   dockerfileDialogVisible.value = true;
   dockerfileLoading.value = false;
 }
-function handleFileTypeChange(value) {
-  formData.sourceAgentId = "";
-}
+
 /** 获取默认Dockerfile */
 function getDefaultDockerfile(jar: JarPackage): string {
   const jarFileName = props.info.name || "app.jar";
@@ -172,31 +176,29 @@ function getDefaultDockerCompose(jar: JarPackage): string {
       - TZ=Asia/Shanghai
       - JAVA_OPTS=-Xms256m -Xmx512m -Duser.timezone=Asia/Shanghai`;
 }
+
 function createDockerfile(row) {
-  dockerfileContent.value = "";
-  dockerfileLoading.value = true;
   if (row.dockerfileContent && row.dockerfileContent.trim()) {
     formData.dockerfileContent = row.dockerfileContent;
   } else {
     // 否则生成默认的Dockerfile，使用正确的JAR文件名
-    formData.dockerfileContent = getDefaultDockerfile(row.dockerfileContent);
+    formData.dockerfileContent = getDefaultDockerfile(row.name);
   }
-  dockerfileLoading.value = false;
 }
+
 function createDockerCompose(row) {
-  dockerComposeContent.value = "";
-  dockerComposeContent.value = true;
   if (row.dockerComposeContent && row.dockerComposeContent.trim()) {
     formData.dockerComposeContent = row.dockerComposeContent;
   } else {
-    // 否则生成默认的Dockerfile，使用正确的JAR文件名
-    formData.dockerComposeContent = getDefaultDockerCompose(
-      row.dockerComposeContent
-    );
+    // 否则生成默认的DockerCompose，使用正确的JAR文件名
+    formData.dockerComposeContent = getDefaultDockerCompose(row.name);
   }
-  dockerfileLoading.value = false;
 }
+
 function deployBtn() {
+  // 同步 CodeMirror 编辑器内容到 formData
+  syncEditorsToFormData();
+
   putData({
     id: props.info.id,
     dockerfileContent: formData.dockerfileContent,
@@ -205,13 +207,81 @@ function deployBtn() {
     ElMessage.success("配置保存成功");
   });
 }
+
 function goBack() {
   emit("changePage", "page");
 }
+
 onActivated(() => {
   createDockerfile(props.info);
   createDockerCompose(props.info);
+  // 延迟初始化 CodeMirror 编辑器
+  initCodeMirrorEditors();
 });
+
+onUnmounted(() => {
+  destroyCodeMirrorEditors();
+});
+
+/** 同步 CodeMirror 编辑器内容到 formData */
+function syncEditorsToFormData() {
+  if (dockerfileEditor) {
+    formData.dockerfileContent = dockerfileEditor.state.doc.toString();
+  }
+  if (dockercomposeEditor) {
+    formData.dockerComposeContent = dockercomposeEditor.state.doc.toString();
+  }
+}
+
+/** 初始化 Dockerfile CodeMirror 编辑器 */
+function initDockerfileEditor() {
+  const container = dockerfileEditorRef.value;
+  if (!container) return;
+  if (dockerfileEditor) {
+    dockerfileEditor.destroy();
+    dockerfileEditor = null;
+  }
+  dockerfileEditor = new EditorView({
+    doc: formData.dockerfileContent || "",
+    extensions: [basicSetup, oneDark, EditorView.editable.of(true)],
+    parent: container,
+  });
+}
+
+/** 初始化 DockerCompose CodeMirror 编辑器（YAML 模式） */
+function initDockercomposeEditor() {
+  const container = dockercomposeEditorRef.value;
+  if (!container) return;
+  if (dockercomposeEditor) {
+    dockercomposeEditor.destroy();
+    dockercomposeEditor = null;
+  }
+  dockercomposeEditor = new EditorView({
+    doc: formData.dockerComposeContent || "",
+    extensions: [basicSetup, yaml(), oneDark, EditorView.editable.of(true)],
+    parent: container,
+  });
+}
+
+/** 延迟初始化两个 CodeMirror 编辑器 */
+function initCodeMirrorEditors() {
+  nextTick(() => {
+    initDockerfileEditor();
+    initDockercomposeEditor();
+  });
+}
+
+/** 销毁两个 CodeMirror 编辑器 */
+function destroyCodeMirrorEditors() {
+  if (dockerfileEditor) {
+    dockerfileEditor.destroy();
+    dockerfileEditor = null;
+  }
+  if (dockercomposeEditor) {
+    dockercomposeEditor.destroy();
+    dockercomposeEditor = null;
+  }
+}
 </script>
 <style>
 .top-title {
@@ -221,5 +291,19 @@ onActivated(() => {
   margin-bottom: 15px;
   font-size: 18px;
   font-weight: bold;
+}
+
+.codemirror-container {
+  width: 90%;
+  min-height: 300px;
+  max-height: 500px;
+  overflow: auto;
+  background-color: #282c34;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+}
+
+.codemirror-container .cm-editor {
+  height: 100%;
 }
 </style>
