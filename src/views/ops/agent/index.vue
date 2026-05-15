@@ -284,7 +284,7 @@ import {
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { Agent, AgentForm } from "@/api/monitor/agent/types";
-import ProxyConfigDialog from "./ProxyConfigDialog.vue";
+import ProxyConfigDialog from "./AgentConfigDialog.vue";
 
 const queryFormRef = ref(ElForm);
 

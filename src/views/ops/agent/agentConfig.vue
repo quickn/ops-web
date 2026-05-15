@@ -135,7 +135,7 @@ import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { AgentConfig } from "@/api/monitor/agent/types";
 import { useRouter } from "vue-router";
-import ProxyConfigDialog from "./ProxyConfigDialog.vue";
+import ProxyConfigDialog from "./AgentConfigDialog.vue";
 
 defineOptions({
   name: "AgentConfig",

@@ -120,7 +120,7 @@ export function saveAgentServerConfig(data: AgentConfig) {
 export function updateAgentServerConfig(data: AgentConfig) {
   return request({
     url: "/agent-config",
-    method: "put",
+    method: "post",
     data: data
   });
 }
