@@ -133,15 +133,6 @@
               代理配置
             </el-button>
             <el-button
-              type="warning"
-              link
-              size="small"
-              @click.stop="openWorkDirectory(scope.row)"
-            >
-              <i-ep-folder-opened />
-              工作目录
-            </el-button>
-            <el-button
               type="primary"
               size="small"
               link
@@ -276,58 +267,8 @@
       </template>
     </el-dialog>
 
-    <!-- 代理服务配置弹窗 -->
-    <el-dialog
-      v-model="dialogProxyConfig.visible"
-      :title="dialogProxyConfig.title"
-      width="700px"
-      @closed="closeDialog"
-    >
-      <el-form :model="proxyFormData" label-width="120px">
-        <el-form-item label="服务名">
-          <el-input
-            v-model="proxyFormData.serviceName"
-            placeholder="服务名"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="hostname">
-          <el-input
-            v-model="proxyFormData.hostname"
-            placeholder="hostname"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="是否存在Nginx">
-          <el-radio-group v-model="proxyFormData.isNginx">
-            <el-radio :label="1">是</el-radio>
-            <el-radio :label="0">否</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="Nginx路径" v-if="proxyFormData.isNginx === 1">
-          <el-input
-            v-model="proxyFormData.nginxPath"
-            placeholder="/usr/local/nginx"
-          />
-        </el-form-item>
-        <el-form-item label="工作路径">
-          <el-input v-model="proxyFormData.workPath" placeholder="/opt/app" />
-        </el-form-item>
-        <el-form-item label="日志路径">
-          <el-input
-            v-model="proxyFormData.logPath"
-            placeholder="/var/log/app"
-          />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="saveProxyConfig"> 确 定</el-button>
-          <el-button @click="closeDialog"> 取 消</el-button>
-        </div>
-      </template>
-    </el-dialog>
+    <!-- 代理服务配置弹窗组件 -->
+    <ProxyConfigDialog ref="proxyConfigDialogRef" @success="handleQuery" />
   </div>
 </template>
 
@@ -336,18 +277,14 @@ import {
   addData,
   batchHandleAgent,
   deleteByIds,
-  getAgentServerConfigForm,
   handleAgent,
   listPage,
-  saveAgentServerConfig,
 } from "@/api/monitor/agent";
 
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
-import { Agent, AgentConfig, AgentForm } from "@/api/monitor/agent/types";
-import { useRouter } from "vue-router";
-
-const router = useRouter();
+import { Agent, AgentForm } from "@/api/monitor/agent/types";
+import ProxyConfigDialog from "./ProxyConfigDialog.vue";
 
 const queryFormRef = ref(ElForm);
 
@@ -363,11 +300,6 @@ const serviceInfoList = ref<ServiceInfo[]>();
 
 const dialogEdit = reactive<DialogOption>({
   visible: false,
-});
-
-const dialogProxyConfig = reactive<DialogOption>({
-  visible: false,
-  title: "配置代理服务",
 });
 
 const formData = reactive<AgentForm>({
@@ -387,15 +319,7 @@ const formData = reactive<AgentForm>({
   remoteIp: null,
 });
 
-const proxyFormData = reactive<AgentConfig>({
-  id: undefined,
-  isNginx: 0,
-  nginxPath: "",
-  serviceId: undefined,
-  serviceName: "",
-  workPath: "",
-  logPath: "",
-});
+const proxyConfigDialogRef = ref<InstanceType<typeof ProxyConfigDialog>>();
 
 /** 查询 */
 function handleQuery() {
@@ -436,6 +360,16 @@ function deleteById(id) {
         handleQuery();
       })
       .finally(() => (loading.value = false));
+  });
+}
+
+/** 打开代理服务配置弹窗 */
+function openProxyConfigDialog(row: Agent) {
+  proxyConfigDialogRef.value?.open({
+    id: row.id,
+    serviceId: row.serviceId,
+    serviceName: row.serviceName || "",
+    hostname: row.hostname || "",
   });
 }
 
@@ -512,7 +446,6 @@ async function openDialog(data?: Agent) {
 /** 关闭弹窗 */
 function closeDialog() {
   dialogEdit.visible = false;
-  dialogProxyConfig.visible = false;
   resetForm();
 }
 
@@ -556,75 +489,5 @@ async function handleSubmit() {
         .finally(() => (loading.value = false));
     }
   });
-}
-
-/** 打开代理服务配置弹窗 */
-async function openProxyConfigDialog(row: Agent) {
-  dialogProxyConfig.visible = true;
-  proxyFormData.serviceId = row.serviceId;
-  proxyFormData.serviceName = row.serviceName || "";
-  proxyFormData.id = row.id || undefined;
-  proxyFormData.isNginx = 0;
-  proxyFormData.nginxPath = "";
-  proxyFormData.workPath = "";
-  proxyFormData.logPath = "";
-  proxyFormData.hostname = row.hostname || "";
-
-  // 尝试查询是否已有配置
-  try {
-    const { data: config } = await getAgentServerConfigForm(row.id);
-    proxyFormData.id = config.id;
-    proxyFormData.isNginx = config.isNginx;
-    proxyFormData.nginxPath = config.nginxPath;
-    proxyFormData.serviceId = config.serviceId;
-    proxyFormData.serviceName = config.serviceName;
-    proxyFormData.workPath = config.workPath;
-    proxyFormData.logPath = config.logPath;
-  } catch (error) {
-    console.error("查询代理配置失败:", error);
-  }
-}
-
-/** 保存代理服务配置 */
-function saveProxyConfig() {
-  if (!proxyFormData.serviceName) {
-    ElMessage.warning("请填写服务名");
-    return;
-  }
-  loading.value = true;
-  const savePromise = saveAgentServerConfig(proxyFormData);
-  savePromise
-    .then(() => {
-      ElMessage.success(proxyFormData.id ? "更新成功" : "新增成功");
-      closeDialog();
-    })
-    .finally(() => (loading.value = false));
-}
-
-/** 打开工作目录 */
-async function openWorkDirectory(row: Agent) {
-  // 查询代理配置获取 workPath
-  try {
-    const { data: config } = await getAgentServerConfigForm(row.id!);
-
-    if (!config.workPath) {
-      ElMessage.warning("该服务未配置工作路径，请先在代理配置中设置 workPath");
-      return;
-    }
-
-    debugger;
-
-    // 跳转到文件管理页面，传递 agentId 和 filePath
-    router.push({
-      path: "/ops/file",
-      query: {
-        agentId: row.id,
-        filePath: config.workPath,
-      },
-    });
-  } catch (error) {
-    console.error("获取代理配置失败:", error);
-    ElMessage.error("获取工作路径失败");
-  }
 }
 </script>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref } from "vue";
+import { useRoute } from "vue-router";
 import FileManagement from "@/views/ops/file/file.vue";
 import { checkConfigApi, saveAndReloadConfigApi, stopNginx } from "@/api/nginx";
-import { listAgentConfigs } from "@/api/monitor/agent";
-import { AgentConfig } from "@/api/monitor/agent/types";
 
 defineOptions({
   name: "NginxFileManagement",
@@ -11,39 +10,10 @@ defineOptions({
 });
 
 const fileManagementRef = ref<InstanceType<typeof FileManagement>>();
-const agentList = ref<AgentConfig[]>([]);
 const selectedAgentId = ref<number>();
-const selectedNginxPath = ref<string>("/usr/local/nginx");
+const selectedFilePath = ref<string>("/usr/local/nginx");
 const loading = ref(false);
-
-/** 加载Agent列表 */
-function loadAgentList() {
-  listAgentConfigs({ isNginx: 1 }).then(({ data }) => {
-    if (data) {
-      agentList.value = data || [];
-      // 默认选择第一个agent
-      if (agentList.value.length > 0) {
-        handleAgentChange(agentList.value[0].id!);
-      }
-    }
-  });
-}
-
-/** Agent切换处理 */
-function handleAgentChange(agentId: number) {
-  selectedAgentId.value = agentId;
-
-  // 查找选中的agent
-  const selectedAgent = agentList.value.find((agent) => agent.id === agentId);
-
-  if (selectedAgent && selectedAgent.nginxPath) {
-    // 如果agent有nginxPath配置，则使用该路径
-    selectedNginxPath.value = selectedAgent.nginxPath;
-  } else {
-    // 否则使用默认路径
-    selectedNginxPath.value = "/usr/local/nginx";
-  }
-}
+const route = useRoute();
 
 /** 验证配置 */
 function checkConfig() {
@@ -109,43 +79,25 @@ function clickStopNginx() {
 }
 
 onMounted(() => {
-  loadAgentList();
+  const agentId = route.query.agentId ? Number(route.query.agentId) : undefined;
+  const filePath = route.query.filePath as string;
+  if (agentId) {
+    selectedAgentId.value = agentId;
+  }
+  if (filePath) {
+    selectedFilePath.value = filePath;
+  }
 });
 </script>
 
 <template>
   <div class="app-container">
-    <!-- Agent选择器 -->
-    <div class="mb-2" style="margin-bottom: 16px">
-      <el-form :inline="true">
-        <el-form-item label="Agent">
-          <el-select
-            v-model="selectedAgentId"
-            placeholder="请选择Agent"
-            clearable
-            filterable
-            style="width: 300px"
-            @change="handleAgentChange"
-          >
-            <el-option
-              v-for="agent in agentList"
-              :key="agent.id"
-              :label="`${agent.serviceName} - ${
-                agent.hostname || `Agent-${agent.id}`
-              }`"
-              :value="agent.id"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-    </div>
-
     <!-- 文件管理组件 -->
     <FileManagement
       v-if="selectedAgentId"
       ref="fileManagementRef"
       :agent-id="selectedAgentId"
-      :file-path="selectedNginxPath"
+      :file-path="selectedFilePath"
       @check-config="checkConfig"
       @save-reload="saveAndReloadConfig"
       @stop-nginx="clickStopNginx"
@@ -159,7 +111,6 @@ onMounted(() => {
         </div>
       </template>
     </FileManagement>
-
     <el-empty v-else description="请先选择Agent" />
   </div>
 </template>

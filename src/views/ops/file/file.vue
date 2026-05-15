@@ -425,7 +425,11 @@ onMounted(() => {
         label-width="80px"
       >
         <el-form-item label="文件路径" prop="filePath">
-          <el-input v-model="formData.filePath" placeholder="文件路径" />
+          <el-input
+            v-model="formData.filePath"
+            placeholder="文件路径"
+            disabled
+          />
         </el-form-item>
         <el-form-item label="文件名称" prop="fileName">
           <el-input v-model="formData.fileName" placeholder="文件名称" />

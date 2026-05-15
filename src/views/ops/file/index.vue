@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import FileManagement from "@/views/ops/file/file.vue";
 import { listAgentConfigs } from "@/api/monitor/agent";

@@ -115,6 +115,17 @@ export function saveAgentServerConfig(data: AgentConfig) {
 }
 
 /**
+ * 更新代理服务配置
+ */
+export function updateAgentServerConfig(data: AgentConfig) {
+  return request({
+    url: "/agent-config",
+    method: "put",
+    data: data
+  });
+}
+
+/**
  * 删除代理服务配置
  */
 export function deleteAgentServerConfig(ids: number) {
