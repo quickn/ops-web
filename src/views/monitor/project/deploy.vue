@@ -120,8 +120,8 @@
               type="primary"
               @click="loadAgentList"
               style="margin-left: auto"
-              >刷新</el-button
-            >
+              >刷新
+            </el-button>
           </el-form-item>
 
           <el-form-item label="选择部署服务器:">
@@ -606,7 +606,7 @@ function deployBtn() {
   });
   const agentIds = selectedRows.value.map((row) => row.id);
   deploy({
-    id: props.info.id,
+    projectId: props.info.id,
     agentIds: agentIds,
     deployType: parseInt(formData.deployType),
   })

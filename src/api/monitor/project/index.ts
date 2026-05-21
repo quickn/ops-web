@@ -58,7 +58,7 @@ export function putData(data?: ServiceInfo) {
 
 export function syncData(data?: ServiceInfo) {
   return request({
-    url: "/project/sync/" + data?.projectId,
+    url: "/project/sync",
     method: "post",
     data: data,
   });
@@ -84,7 +84,7 @@ export function agentList(
 
 export function deploy(data) {
   return request({
-    url: "/project/deploy/" + data.id,
+    url: "/project/deploy",
     method: "post",
     data: data
   });
