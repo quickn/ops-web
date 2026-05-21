@@ -90,7 +90,7 @@
         <el-table-column
           fixed="right"
           label="操作"
-          width="320"
+          width="400"
           style="padding: 0"
         >
           <template #default="scope">
@@ -131,6 +131,15 @@
             >
               <i-ep-setting />
               代理配置
+            </el-button>
+            <el-button
+              type="warning"
+              size="small"
+              link
+              @click.stop="openCommandDialog(scope.row)"
+            >
+              <i-ep-connection />
+              命令
             </el-button>
             <el-button
               type="primary"
@@ -269,6 +278,9 @@
 
     <!-- 代理服务配置弹窗组件 -->
     <ProxyConfigDialog ref="proxyConfigDialogRef" @success="handleQuery" />
+
+    <!-- 命令弹窗组件 -->
+    <CommandDialog ref="commandDialogRef" />
   </div>
 </template>
 
@@ -285,6 +297,7 @@ import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { Agent, AgentForm } from "@/api/monitor/agent/types";
 import ProxyConfigDialog from "./AgentConfigDialog.vue";
+import CommandDialog from "./CommandDialog.vue";
 
 const queryFormRef = ref(ElForm);
 
@@ -320,6 +333,7 @@ const formData = reactive<AgentForm>({
 });
 
 const proxyConfigDialogRef = ref<InstanceType<typeof ProxyConfigDialog>>();
+const commandDialogRef = ref<InstanceType<typeof CommandDialog>>();
 
 /** 查询 */
 function handleQuery() {
@@ -369,6 +383,14 @@ function openProxyConfigDialog(row: Agent) {
     id: row.id,
     serviceId: row.serviceId,
     serviceName: row.serviceName || "",
+    hostname: row.hostname || "",
+  });
+}
+
+/** 打开命令弹窗 */
+function openCommandDialog(row: Agent) {
+  commandDialogRef.value?.open({
+    id: row.id!,
     hostname: row.hostname || "",
   });
 }

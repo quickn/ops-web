@@ -79,6 +79,21 @@ export function batchHandleAgent(ids: number[], cmd: string) {
 }
 
 /**
+ * 发送指令到Agent并返回响应
+ *
+ * @param agentId
+ * @param cmd
+ * @param timeout
+ */
+export function sendCmd(agentId: number, cmd: string, timeout?: number) {
+  return request({
+    url: "/agent/sendCmd",
+    method: "get",
+    params: { agentId, cmd, timeout }
+  });
+}
+
+/**
  * 获取代理服务配置列表
  */
 export function listAgentConfigs(
