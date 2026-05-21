@@ -29,3 +29,19 @@ export interface FileInfoForm {
   onlyShowFile?: boolean;
   onlyShowDic?: boolean;
 }
+
+/**
+ * 文件同步参数（通过跳板机同步文件）
+ */
+export interface SyncFileParam {
+  /** 源服务器 agent ID */
+  sourceAgentId?: number;
+  /** 跳板机 agent ID */
+  jumpAgentId?: number;
+  /** 跳板机服务 ID */
+  jumpServiceId?: number;
+  /** 源文件完整路径 */
+  sourcePath?: string;
+  /** 同步类型：1=从源服务器 rsync 到跳板机并分发 */
+  syncType?: number;
+}

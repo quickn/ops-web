@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { FileInfo, FileInfoForm } from "./types";
+import { FileInfo, FileInfoForm, SyncFileParam } from "./types";
 
 /**
  * 上传文件
@@ -69,4 +69,14 @@ export function getFileListApi(queryParams?: FileInfoForm) {
   });
 }
 
+/**
+ * 通过跳板机同步文件
+ */
+export function syncFileByJumpServer(data?: SyncFileParam) {
+  return request({
+    url: "/fileCmd/syncFileByJumpServer",
+    method: "post",
+    params: data
+  });
+}
 

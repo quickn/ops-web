@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import FileManagement from "@/views/ops/file/file.vue";
 import { listAgentConfigs } from "@/api/monitor/agent";
@@ -16,6 +16,22 @@ const agentList = ref<AgentConfig[]>([]);
 const selectedAgentId = ref<number>();
 const selectedFilePath = ref<string>("/usr/local/nginx");
 const loading = ref(false);
+
+/** 当前选中 agent 的 serviceId */
+const currentServiceId = computed(() => {
+  return agentList.value.find((a) => a.id === selectedAgentId.value)?.serviceId;
+});
+
+/** 当前选中 agent 的 serviceName */
+const currentServiceName = computed(() => {
+  return agentList.value.find((a) => a.id === selectedAgentId.value)
+    ?.serviceName;
+});
+
+/** 当前选中 agent 的 hostname */
+const currentHostname = computed(() => {
+  return agentList.value.find((a) => a.id === selectedAgentId.value)?.hostname;
+});
 
 /** 加载Agent列表 */
 function loadAgentList() {
@@ -67,6 +83,9 @@ onMounted(() => {
       ref="fileManagementRef"
       :agent-id="selectedAgentId"
       :file-path="selectedFilePath"
+      :service-id="currentServiceId"
+      :service-name="currentServiceName"
+      :hostname="currentHostname"
     />
 
     <el-empty v-else description="请先选择Agent" />

@@ -9,8 +9,11 @@ import {
   getByPathApi,
   getFileListApi,
   saveFileApi,
+  syncFileByJumpServer,
 } from "@/api/file";
-import { FileInfoForm, FileListInfo } from "@/api/file/types";
+import { FileInfoForm, FileListInfo, SyncFileParam } from "@/api/file/types";
+import { listAll } from "@/api/monitor/service";
+import { ServiceInfo } from "@/api/monitor/service/types";
 
 defineOptions({
   name: "FileManagement",
@@ -20,11 +23,17 @@ defineOptions({
 interface Props {
   agentId?: number;
   filePath?: string;
+  serviceId?: number;
+  serviceName?: string;
+  hostname?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   agentId: undefined,
   filePath: "/usr/local/nginx",
+  serviceId: undefined,
+  serviceName: undefined,
+  hostname: undefined,
 });
 
 const queryFormRef = ref(ElForm);
@@ -38,6 +47,15 @@ const dialog = reactive<DialogOption>({
 
 const dialogEdit = reactive<DialogOption>({
   visible: false,
+});
+
+/** 同步对话框状态 */
+const syncDialog = reactive({
+  visible: false,
+  loading: false,
+  targetServiceIds: [] as number[],
+  serviceList: [] as ServiceInfo[],
+  syncType: 1,
 });
 
 const queryParams = reactive<FileInfoForm>({
@@ -193,6 +211,63 @@ async function handleCopyContent() {
   }
 }
 
+/** 打开同步对话框 */
+function openSyncDialog() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请先选择要同步的文件");
+    return;
+  }
+  // 加载服务列表
+  listAll().then(({ data }) => {
+    if (data) {
+      syncDialog.serviceList = data.filter(
+        (item) => item.id !== props.serviceId
+      );
+    }
+    syncDialog.targetServiceIds = [];
+    syncDialog.visible = true;
+  });
+}
+
+/** 关闭同步对话框 */
+function closeSyncDialog() {
+  syncDialog.visible = false;
+  syncDialog.targetServiceIds = [];
+}
+
+/** 执行文件同步 */
+async function handleSyncSubmit() {
+  if (syncDialog.targetServiceIds.length === 0) {
+    ElMessage.warning("请选择目标环境");
+    return;
+  }
+
+  syncDialog.loading = true;
+  const syncPromises = ids.value.flatMap((fileName) =>
+    syncDialog.targetServiceIds.map((serviceId) => {
+      const params: SyncFileParam = {
+        sourceAgentId: queryParams.agentId,
+        jumpServiceId: serviceId,
+        sourcePath: `${queryParams.filePath}/${fileName}`,
+        syncType: 1,
+      };
+      return syncFileByJumpServer(params);
+    })
+  );
+
+  Promise.all(syncPromises)
+    .then(() => {
+      ElMessage.success("同步完成");
+      closeSyncDialog();
+    })
+    .catch(() => {
+      ElMessage.error("同步失败，请检查日志");
+    })
+    .finally(() => {
+      syncDialog.loading = false;
+    });
+}
+
 /**
  * 打开弹窗
  *
@@ -316,6 +391,18 @@ onMounted(() => {
         style="display: flex; flex-wrap: wrap; align-items: center"
         @submit.prevent
       >
+        <!-- 当前服务器信息 -->
+
+        <el-form-item>
+          <el-alert
+            v-if="props.hostname"
+            :title="`${props.serviceName || '未知服务'} / ${props.hostname}`"
+            type="info"
+            :closable="false"
+            show-icon
+          />
+        </el-form-item>
+
         <el-form-item label="路径" prop="path">
           <el-input
             v-model="queryParams.filePath"
@@ -367,6 +454,14 @@ onMounted(() => {
           >
             <i-ep-delete />
             删除
+          </el-button>
+          <el-button
+            type="warning"
+            :disabled="ids.length === 0"
+            @click="openSyncDialog()"
+          >
+            <i-ep-upload />
+            同步
           </el-button>
           <!-- 插槽：父组件可以自定义操作按钮 -->
           <slot name="operations"></slot>
@@ -488,6 +583,60 @@ onMounted(() => {
         </slot>
       </template>
       <div id="coder"></div>
+    </el-dialog>
+
+    <!-- 文件同步对话框 -->
+    <el-dialog
+      v-model="syncDialog.visible"
+      title="文件同步"
+      width="600px"
+      @closed="closeSyncDialog"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="源文件">
+          <el-tag
+            v-for="name in ids"
+            :key="name"
+            style="margin: 2px"
+            type="info"
+          >
+            {{ name }}
+          </el-tag>
+        </el-form-item>
+        <el-form-item label="源路径">
+          <span style="color: #606266">{{ queryParams.filePath }}</span>
+        </el-form-item>
+        <el-form-item label="目标环境">
+          <el-select
+            v-model="syncDialog.targetServiceIds"
+            multiple
+            placeholder="请选择目标环境"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in syncDialog.serviceList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="同步方式">
+          <el-radio-group v-model="syncDialog.syncType" disabled>
+            <el-radio :value="1"> 从源服务器 rsync 到跳板机并分发 </el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="closeSyncDialog">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="syncDialog.loading"
+          @click="handleSyncSubmit"
+        >
+          开始同步
+        </el-button>
+      </template>
     </el-dialog>
 
     <el-dialog
