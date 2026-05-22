@@ -593,6 +593,12 @@ onMounted(() => {
       @closed="closeSyncDialog"
     >
       <el-form label-width="100px">
+        <el-form-item label="源服务">
+          <span style="color: #606266"
+            >{{ props.serviceName || "未知服务" }} /
+            {{ props.hostname || "未知主机" }}</span
+          >
+        </el-form-item>
         <el-form-item label="源文件">
           <el-tag
             v-for="name in ids"
