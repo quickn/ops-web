@@ -43,7 +43,7 @@ interface DefaultSettings {
 }
 
 const defaultSettings: DefaultSettings = {
-  title: "BS-Monitor",
+  title: "Cloud-OPS",
   showSettings: true,
   tagsView: true,
   fixedHeader: false,
