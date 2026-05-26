@@ -1,9 +1,10 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { useUserStoreHook } from "@/store/modules/user";
+import { getApiBaseUrl, getApiBaseUrlPy } from "@/utils/api-config";
 
 // 创建 axios 实例
 const service = axios.create({
-  baseURL: import.meta.env.VITE_APP_BASE_API,
+  baseURL: getApiBaseUrl(),
   timeout: 50000,
   headers: { "Content-Type": "application/json;charset=utf-8" },
 });
@@ -17,9 +18,9 @@ service.interceptors.request.use(
     }
     // 根据条件动态设置 baseURL
     if (config.url.startsWith("/pyApi/")) {
-      config.baseURL = import.meta.env.VITE_APP_BASE_API_PY;
+      config.baseURL = getApiBaseUrlPy();
     } else {
-      config.baseURL = import.meta.env.VITE_APP_BASE_API;
+      config.baseURL = getApiBaseUrl();
     }
     return config;
   },
