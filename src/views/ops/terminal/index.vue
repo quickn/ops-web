@@ -13,6 +13,8 @@ import { listAll as listServices } from "@/api/monitor/service";
 import type { AccountConfig } from "@/api/accountConfig/types";
 import type { ServiceInfo } from "@/api/monitor/service/types";
 
+import { getApiBaseUrlPy } from "@/utils/api-config";
+
 defineOptions({
   name: "Terminal",
   inheritAttrs: false,
@@ -130,20 +132,9 @@ function connect(config: AccountConfig) {
 
   // 构建 WebSocket URL
   // 开发环境直连 Python 后端，生产环境通过同域代理
-  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const isDev = import.meta.env.DEV;
-  debugger;
 
-  let wsBase: string;
-  if (isDev) {
-    // 开发环境：直接连接 Python 后端（Vite 代理对 WS 需要额外配置 ws:true）
-    const pyTarget =
-      import.meta.env.VITE_APP_TARGET_URL_PY || "http://localhost:18080";
-    wsBase = pyTarget.replace(/^https?:/, wsProtocol).replace(/\/$/, "");
-  } else {
-    // 生产环境：通过 nginx 同域代理
-    wsBase = `${wsProtocol}//${window.location.host}`;
-  }
+  let wsBase = getApiBaseUrlPy();
+  debugger;
 
   const wsUrl = `${wsBase}/terminal/ws?configId=${encodeURIComponent(
     config.id
