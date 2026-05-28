@@ -41,6 +41,14 @@
           <i-ep-upload />
           批量升级客户端
         </el-button>
+        <el-button
+          type="success"
+          :disabled="ids.length === 0"
+          @click="batchCommand"
+        >
+          <i-ep-connection />
+          批量命令下发
+        </el-button>
       </div>
       <el-table
         ref="dataTableRef"
@@ -281,6 +289,9 @@
 
     <!-- 命令弹窗组件 -->
     <CommandDialog ref="commandDialogRef" />
+
+    <!-- 批量命令弹窗组件 -->
+    <BatchCommandDialog ref="batchCommandDialogRef" />
   </div>
 </template>
 
@@ -298,6 +309,7 @@ import { ServiceInfo } from "@/api/monitor/service/types";
 import { Agent, AgentForm } from "@/api/monitor/agent/types";
 import ProxyConfigDialog from "./AgentConfigDialog.vue";
 import CommandDialog from "./CommandDialog.vue";
+import BatchCommandDialog from "./BatchCommandDialog.vue";
 
 const queryFormRef = ref(ElForm);
 
@@ -334,6 +346,9 @@ const formData = reactive<AgentForm>({
 
 const proxyConfigDialogRef = ref<InstanceType<typeof ProxyConfigDialog>>();
 const commandDialogRef = ref<InstanceType<typeof CommandDialog>>();
+const batchCommandDialogRef = ref<InstanceType<typeof BatchCommandDialog>>();
+
+const selectedRows = ref<Agent[]>([]);
 
 /** 查询 */
 function handleQuery() {
@@ -358,6 +373,7 @@ function resetQuery() {
 /** 行checkbox 选中事件 */
 function handleSelectionChange(selection: any) {
   ids.value = selection.map((item: any) => item.id);
+  selectedRows.value = selection;
 }
 
 /** 删除角色 */
@@ -427,6 +443,19 @@ function restartAgent(id) {
       })
       .finally(() => (loading.value = false));
   });
+}
+
+/** 批量命令下发 */
+function batchCommand() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请先选择要下发命令的Agent");
+    return;
+  }
+  const agentList = selectedRows.value.map((item) => ({
+    id: item.id!,
+    hostname: item.hostname || "",
+  }));
+  batchCommandDialogRef.value?.open(agentList);
 }
 
 function batchUpgradeClients() {
