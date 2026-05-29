@@ -21,42 +21,6 @@
       </el-card>
     </el-row>
 
-    <!-- API配置管理 -->
-    <el-row class="mb-8">
-      <el-card class="w-full">
-        <template #header>
-          <div class="flex justify-between items-center">
-            <span class="text-[16px] font-bold">后端服务地址配置</span>
-            <el-button type="primary" @click="showApiConfigDialog">
-              <i-ep-setting />
-              配置服务地址
-            </el-button>
-          </div>
-        </template>
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="Java后端地址">
-            <el-tag type="success" size="large">{{
-              apiConfig.targetUrl
-            }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="Python后端地址">
-            <el-tag type="success" size="large">{{
-              apiConfig.targetUrlPy
-            }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="默认Java后端">
-            <el-text type="info" size="small">{{
-              apiConfig.defaultTargetUrl
-            }}</el-text>
-          </el-descriptions-item>
-          <el-descriptions-item label="默认Python后端">
-            <el-text type="info" size="small">{{
-              apiConfig.defaultTargetUrlPy
-            }}</el-text>
-          </el-descriptions-item>
-        </el-descriptions>
-      </el-card>
-    </el-row>
     <!-- <el-card>
       <template #header>
         <el-button v-hasPerm="['sys:dept:add']" type="success" @click="openDialog()">

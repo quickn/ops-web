@@ -11,6 +11,9 @@
           {{ $t("login.title") }}
         </span>
         <lang-select class="text-white! cursor-pointer" />
+        <span class="ml-2 cursor-pointer text-white" @click="openServerConfig">
+          <i-ep-setting class="text-xl" />
+        </span>
       </div>
 
       <el-form-item prop="username">
@@ -88,6 +91,9 @@
         <span class="ml-4"> {{ $t("login.password") }}: 123456</span>
       </div>-->
     </el-form>
+
+    <!-- 后端服务地址配置弹窗 -->
+    <ServerConfigDialog ref="serverConfigDialogRef" />
   </div>
 </template>
 
@@ -95,6 +101,7 @@
 import router from "@/router";
 import LangSelect from "@/components/LangSelect/index.vue";
 import SvgIcon from "@/components/SvgIcon/index.vue";
+import ServerConfigDialog from "./ServerConfigDialog.vue";
 
 // 状态管理依赖
 import { useUserStore } from "@/store/modules/user";
@@ -106,6 +113,16 @@ import { LoginData } from "@/api/auth/types";
 
 const userStore = useUserStore();
 const route = useRoute();
+
+/**
+ * 后端服务配置弹窗
+ */
+const serverConfigDialogRef = ref<InstanceType<typeof ServerConfigDialog>>();
+
+/** 打开后端服务配置弹窗 */
+function openServerConfig() {
+  serverConfigDialogRef.value?.open();
+}
 
 /**
  * 按钮loading
