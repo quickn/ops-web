@@ -15,6 +15,10 @@ import type { ServiceInfo } from "@/api/monitor/service/types";
 
 import { getApiBaseUrlPy } from "@/utils/api-config";
 
+// @ts-ignore - zmodem.js is CJS module
+import Zmodem from "zmodem.js";
+import { createZmodemManager } from "./zmodem-manager";
+
 defineOptions({
   name: "Terminal",
   inheritAttrs: false,
@@ -41,6 +45,15 @@ const activeConfig = ref<AccountConfig | null>(null);
 let term: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let socket: WebSocket | null = null;
+let zmManager: ReturnType<typeof createZmodemManager> | null = null;
+
+/** ZMODEM 下载进度 */
+const zmProgress = reactive({
+  visible: false,
+  fileName: "",
+  percentage: 0,
+  receivedText: "",
+});
 
 const terminalRef = ref<HTMLDivElement>();
 
@@ -100,6 +113,10 @@ function sendResize() {
 /** 销毁终端 */
 function disposeTerminal() {
   disconnect();
+  if (zmManager) {
+    zmManager.destroy();
+    zmManager = null;
+  }
   if (term) {
     term.dispose();
     term = null;
@@ -134,13 +151,42 @@ function connect(config: AccountConfig) {
   // 开发环境直连 Python 后端，生产环境通过同域代理
 
   let wsBase = getApiBaseUrlPy();
-  debugger;
 
   const wsUrl = `${wsBase}/terminal/ws?configId=${encodeURIComponent(
     config.id
   )}`;
   socket = new WebSocket(wsUrl);
   socket.binaryType = "arraybuffer";
+
+  // 创建 ZMODEM 管理器（用于 rz/sz 文件传输）
+  if (zmManager) zmManager.destroy();
+  zmManager = createZmodemManager({
+    writeToTerminal: (data: Uint8Array) => term?.write(data),
+    sendToSocket: (data: Uint8Array) => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(data);
+      }
+    },
+    onProgress: (
+      pct: number,
+      name: string,
+      received: number,
+      total: number
+    ) => {
+      zmProgress.visible = true;
+      zmProgress.fileName = name;
+      zmProgress.percentage = pct;
+      zmProgress.receivedText = `${formatBytes(received)} / ${formatBytes(
+        total
+      )}`;
+      if (pct >= 100) {
+        setTimeout(() => (zmProgress.visible = false), 2000);
+      }
+    },
+    onTransferComplete: () => {
+      ElMessage.success("ZMODEM 传输完成");
+    },
+  });
 
   socket.onopen = () => {
     connecting.value = false;
@@ -158,13 +204,10 @@ function connect(config: AccountConfig) {
   };
 
   socket.onmessage = (event) => {
-    if (term) {
-      if (typeof event.data === "string") {
-        term.write(event.data);
-      } else {
-        // 二进制数据（ArrayBuffer）转为 Uint8Array 写入
-        term.write(new Uint8Array(event.data));
-      }
+    // 通过 ZModem 管理器处理入站数据
+    // 管理器自动检测 ZMODEM 协议并分流：普通数据→终端，文件数据→下载/上传
+    if (zmManager && event.data) {
+      zmManager.processIncoming(event.data);
     }
   };
 
@@ -186,6 +229,10 @@ function disconnect() {
   if (socket) {
     socket.close();
     socket = null;
+  }
+  if (zmManager) {
+    zmManager.destroy();
+    zmManager = null;
   }
   connecting.value = false;
   activeConfig.value = null;
@@ -227,6 +274,14 @@ function handleGoAccountConfig() {
   } else {
     router.push("/ops/accountConfig");
   }
+}
+
+/** 格式化字节数 */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + " " + units[i];
 }
 
 /** 组件挂载 */
@@ -359,6 +414,21 @@ onUnmounted(() => {
             </el-button>
           </el-tooltip>
         </div>
+      </div>
+
+      <!-- ZMODEM 下载进度条 -->
+      <div v-if="zmProgress.visible" class="zm-progress-bar">
+        <div class="zm-progress-info">
+          <span class="zm-progress-name">{{ zmProgress.fileName }}</span>
+          <span class="zm-progress-text">{{ zmProgress.percentage }}%</span>
+        </div>
+        <el-progress
+          :percentage="zmProgress.percentage"
+          :stroke-width="8"
+          :show-text="false"
+          color="#67c23a"
+        />
+        <div class="zm-progress-detail">{{ zmProgress.receivedText }}</div>
       </div>
 
       <div class="terminal-container" ref="terminalRef" />
@@ -531,6 +601,41 @@ onUnmounted(() => {
   flex: 1;
   padding: 4px 8px;
   overflow: hidden;
+}
+
+/* ZMODEM 进度条 */
+.zm-progress-bar {
+  padding: 8px 16px 4px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+
+  .zm-progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .zm-progress-name {
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .zm-progress-text {
+    flex-shrink: 0;
+    margin-left: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #67c23a;
+  }
+
+  .zm-progress-detail {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--el-text-color-secondary);
+  }
 }
 
 .terminal-placeholder {
