@@ -47,12 +47,13 @@ let fitAddon: FitAddon | null = null;
 let socket: WebSocket | null = null;
 let zmManager: ReturnType<typeof createZmodemManager> | null = null;
 
-/** ZMODEM 下载进度 */
+/** ZMODEM 传输进度 */
 const zmProgress = reactive({
   visible: false,
   fileName: "",
   percentage: 0,
   receivedText: "",
+  isUpload: false, // 是否为上传（rz），用于显示取消按钮
 });
 
 const terminalRef = ref<HTMLDivElement>();
@@ -171,7 +172,8 @@ function connect(config: AccountConfig) {
       pct: number,
       name: string,
       received: number,
-      total: number
+      total: number,
+      isUpload: boolean
     ) => {
       zmProgress.visible = true;
       zmProgress.fileName = name;
@@ -179,6 +181,7 @@ function connect(config: AccountConfig) {
       zmProgress.receivedText = `${formatBytes(received)} / ${formatBytes(
         total
       )}`;
+      zmProgress.isUpload = isUpload;
       if (pct >= 100) {
         setTimeout(() => (zmProgress.visible = false), 2000);
       }
@@ -236,6 +239,14 @@ function disconnect() {
   }
   connecting.value = false;
   activeConfig.value = null;
+}
+
+/** 取消当前 ZMODEM 上传 */
+function cancelUpload() {
+  if (zmManager) {
+    zmManager.cancelUpload();
+    zmProgress.visible = false;
+  }
 }
 
 /** 查询 SSH 配置列表 */
@@ -416,11 +427,23 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- ZMODEM 下载进度条 -->
+      <!-- ZMODEM 传输进度条 -->
       <div v-if="zmProgress.visible" class="zm-progress-bar">
         <div class="zm-progress-info">
           <span class="zm-progress-name">{{ zmProgress.fileName }}</span>
-          <span class="zm-progress-text">{{ zmProgress.percentage }}%</span>
+          <span class="zm-progress-right">
+            <span class="zm-progress-text">{{ zmProgress.percentage }}%</span>
+            <el-button
+              v-if="zmProgress.isUpload"
+              type="danger"
+              size="small"
+              text
+              @click="cancelUpload"
+              title="取消上传"
+            >
+              取消
+            </el-button>
+          </span>
         </div>
         <el-progress
           :percentage="zmProgress.percentage"
@@ -623,12 +646,18 @@ onUnmounted(() => {
     white-space: nowrap;
   }
 
-  .zm-progress-text {
+  .zm-progress-right {
+    display: flex;
+    align-items: center;
     flex-shrink: 0;
+    gap: 8px;
     margin-left: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #67c23a;
+
+    .zm-progress-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: #67c23a;
+    }
   }
 
   .zm-progress-detail {

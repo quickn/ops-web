@@ -1,13 +1,13 @@
 /**
- * ZMODEM 集成管理器
+ * ZMODEM 文件传输管理器
  *
- * 集成 zmodem.js 与 xterm.js + WebSocket，
- * 实现终端内的 ZMODEM 文件上传/下载（rz/sz）。
+ * 集成 zmodem.js 与 xterm.js + WebSocket，实现终端内的 sz(下载) / rz(上传)。
  *
  * 设计要点：
- * - Sentry 由 processIncoming 按需懒加载创建，贯穿整个 WebSocket 连接生命周期
- * - 传输完成后不重建 Sentry，由 Sentry 内置的 session_end 机制自动恢复透传模式
- * - 避免销毁/重建 Sentry 导致残留 ZMODEM 协议数据被误判为新会话
+ * - 上传使用 abort() 结束会话，确保 Sentry 同步恢复透传模式
+ * - 64KB 分块上传，支持 200MB+ 大文件
+ * - 下载使用动态分块存储，避免大文件 OOM
+ * - 支持随时取消上传
  */
 
 import { ElMessage } from "element-plus";
@@ -19,14 +19,15 @@ interface ZmodemConfig {
   writeToTerminal: (data: Uint8Array) => void;
   /** 通过 WebSocket 将数据发送给远端 */
   sendToSocket: (data: Uint8Array) => void;
-  /** 传输完成回调（session 级别，整个 ZMODEM 会话结束时触发） */
+  /** 传输完成回调 */
   onTransferComplete?: () => void;
-  /** 下载进度回调 (percentage, fileName, received, total) */
+  /** 进度回调 (percentage, fileName, received, total, isUpload) */
   onProgress?: (
     pct: number,
     name: string,
     received: number,
-    total: number
+    total: number,
+    isUpload: boolean
   ) => void;
 }
 
@@ -36,8 +37,11 @@ export function createZmodemManager(config: ZmodemConfig) {
 
   let sentry: any = null;
   let session: any = null;
+  let uploadCancelled = false;
 
-  /** 浏览器下载 Blob 到本地磁盘 */
+  // ==================== 工具函数 ====================
+
+  /** 浏览器下载 Blob */
   function saveToDisk(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob);
     const el = document.createElement("a");
@@ -50,118 +54,100 @@ export function createZmodemManager(config: ZmodemConfig) {
     URL.revokeObjectURL(url);
   }
 
-  /**
-   * 接收文件：使用 "input"/"complete" 事件流式收集
-   * 优化：预分配缓冲区 + 节流进度回调
-   */
-  function saveReceivedFile(xfer: any, details: any) {
+  /** 格式化字节数为可读字符串 */
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    if (bytes < 1024 * 1024 * 1024)
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB";
+  }
+
+  /** 终止会话并清理状态 */
+  function abortSession(sess: any) {
+    if (!sess) return;
+    try {
+      sess.abort();
+    } catch (_) {
+      // abort() 同步清理 _zsession
+    }
+
+    if (session === sess) {
+      session = null;
+      onTransferComplete?.();
+    }
+  }
+
+  // ==================== sz 下载（远端 → 浏览器） ====================
+
+  function handleReceiveFile(xfer: any, details: any) {
     const name = details?.name || "download";
     const size = details?.size || 0;
 
-    // 对超大文件（如 > 500MB）退回动态模式，避免 OOM
-    const MAX_PREALLOC = 500 * 1024 * 1024;
-    let buffer: Uint8Array;
-    let receivedBytes = 0;
-
-    if (size > 0 && size <= MAX_PREALLOC) {
-      try {
-        buffer = new Uint8Array(size);
-      } catch {
-        buffer = new Uint8Array(0);
-      }
-    } else {
-      buffer = new Uint8Array(0);
-    }
-
-    const dynamicChunks: Uint8Array[] = [];
-    const usePreAllocated = buffer.byteLength > 0;
-
-    // 节流：最多每 200ms 回调一次进度
+    const chunks: Uint8Array[] = [];
+    let received = 0;
     let lastProgressTime = 0;
-    let lastPct = 0;
 
-    function throttleProgress(force = false) {
-      if (!onProgress || size === 0) return;
-      const now = Date.now();
-      const pct = Math.min(Math.round((receivedBytes / size) * 100), 100);
-      if (force || pct !== lastPct || now - lastProgressTime >= 200) {
-        lastProgressTime = now;
-        lastPct = pct;
-        onProgress(pct, name, receivedBytes, size);
-      }
-    }
-
-    // 每收到一个数据块
     xfer.on("input", (payload: Uint8Array) => {
-      if (
-        usePreAllocated &&
-        receivedBytes + payload.length <= buffer.byteLength
-      ) {
-        buffer.set(payload, receivedBytes);
-      } else {
-        dynamicChunks.push(new Uint8Array(payload));
+      chunks.push(new Uint8Array(payload));
+      received += payload.length;
+
+      // 节流进度回调
+      if (onProgress && size > 0) {
+        const now = Date.now();
+        const pct = Math.min(Math.round((received / size) * 100), 100);
+        if (pct >= 100 || now - lastProgressTime >= 200) {
+          lastProgressTime = now;
+          onProgress(pct, name, received, size, false);
+        }
       }
-      receivedBytes += payload.length;
-      throttleProgress();
     });
 
-    // 单个文件接收完成
     xfer.on("complete", () => {
       try {
-        let blob: Blob;
-        if (usePreAllocated && receivedBytes === buffer.byteLength) {
-          blob = new Blob([buffer]);
-        } else if (usePreAllocated && receivedBytes < buffer.byteLength) {
-          blob = new Blob([buffer.subarray(0, receivedBytes)]);
-        } else {
-          blob = new Blob(dynamicChunks);
-        }
+        const blob = new Blob(chunks);
         saveToDisk(blob, name);
-        ElMessage.success(`文件接收完成: ${name}`);
+        ElMessage.success(`下载完成: ${name} (${formatBytes(received)})`);
+        onProgress?.(100, name, received, size, false);
       } catch (e: any) {
         ElMessage.error("文件保存失败: " + (e?.message || e));
-      } finally {
-        throttleProgress(true);
-        // 单个文件完成时不重置 sentry/session
-        // ZMODEM 会话级别的结束由 processIncoming 检测 session_end 统一处理
       }
     });
 
-    // 开始接收
     xfer.accept().catch((e: any) => {
       console.error("ZMODEM receive error:", e);
-      ElMessage.error("ZMODEM 接收失败: " + (e?.message || e));
+      ElMessage.error("ZMODEM 接收失败");
     });
   }
 
-  /**
-   * 计算 batch info：files_remaining / bytes_remaining 表示
-   * "包括当前文件在内，还剩多少文件/字节"
-   */
-  function buildFileBatch(fileList: File[]) {
-    const totalBytes = fileList.reduce((sum, f) => sum + f.size, 0);
-    let bytesRemaining = totalBytes;
-    return fileList
-      .map((f) => {
-        const br = bytesRemaining;
-        bytesRemaining -= f.size;
-        return { file: f, bytesRemaining: br };
-      })
-      .map((item, i, arr) => ({
-        ...item,
-        filesRemaining: arr.length - i,
-      }));
+  // ==================== rz 上传（浏览器 → 远端） ====================
+
+  /** 构建批量上传信息 */
+  function buildBatch(files: File[]) {
+    const total = files.reduce((s, f) => s + f.size, 0);
+    let remaining = total;
+    return files.map((f, i) => {
+      remaining -= f.size;
+      return {
+        file: f,
+        filesRemaining: files.length - i, // zmodem.js 要求 ≥1
+        bytesRemaining: remaining + f.size, // 包含当前文件
+      };
+    });
   }
 
-  /** 发送单个文件（分块读取，避免一次性加载大文件到内存） */
-  function sendSingleFile(
-    sendSession: any,
+  /** 上传单个文件 */
+  function uploadFile(
+    sess: any,
     file: File,
     filesRemaining: number,
     bytesRemaining: number
   ): Promise<void> {
-    const CHUNK_SIZE = 32 * 1024; // 32KB 分块
-    const fileInfo = {
+    const CHUNK_SIZE = 64 * 1024; // 64KB
+    // 是否为最后一个文件（filesRemaining=1 表示当前文件是最后一个）
+    const isLast = filesRemaining <= 1;
+
+    const info = {
       name: file.name,
       size: file.size,
       mtime: new Date(file.lastModified),
@@ -169,135 +155,140 @@ export function createZmodemManager(config: ZmodemConfig) {
       bytes_remaining: bytesRemaining,
     };
 
-    return sendSession.send_offer(fileInfo).then((xfer: any) => {
-      if (!xfer) return; // 被远端跳过
+    return sess.send_offer(info).then((xfer: any) => {
+      if (!xfer) return Promise.resolve();
+      if (uploadCancelled) return Promise.reject(new Error("已取消"));
 
       return new Promise<void>((resolve, reject) => {
         let offset = 0;
 
-        // 分块发送：每次读取 CHUNK_SIZE，用 send() 逐块发送，最后 end()
-        function sendNextChunk() {
+        function pump() {
+          if (uploadCancelled) {
+            reject(new Error("已取消"));
+            return;
+          }
+
           if (offset >= file.size) {
-            // 所有数据已发送，结束传输
-            xfer.end().then(resolve).catch(reject);
+            if (isLast) {
+              // 最后一个文件：发送 ZEOF 后立即 resolve，不等待远端确认。
+              // zmodem.js 的 xfer.end() 在 files_remaining=1 时会等待
+              // 会话状态机转入"下一个文件/结束"阶段，但我们必须先结束会话
+              // （abort）才能推动状态机 —— 否则形成死锁，进度永远卡在 99%。
+              try {
+                xfer.end();
+              } catch (_) {}
+              onProgress?.(100, file.name, file.size, file.size, true);
+              resolve();
+            } else {
+              // 非最后一个文件：正常等待远端 ZEOF 确认
+              xfer.end().then(() => {
+                onProgress?.(100, file.name, file.size, file.size, true);
+                resolve();
+              }).catch(reject);
+            }
             return;
           }
 
           const end = Math.min(offset + CHUNK_SIZE, file.size);
-          const slice = file.slice(offset, end);
+          const reader = new FileReader();
 
-          const chunkReader = new FileReader();
-          chunkReader.onload = () => {
-            const data = new Uint8Array(chunkReader.result as ArrayBuffer);
+          reader.onload = () => {
             try {
-              xfer.send(data);
-            } catch (e: any) {
+              xfer.send(new Uint8Array(reader.result as ArrayBuffer));
+            } catch (e) {
               reject(e);
               return;
             }
             offset = end;
 
-            // 节流进度
+            // 发送中最多 99%，100% 由 xfer.end() 或 isLast 分支触发
             if (onProgress && file.size > 0) {
-              const pct = Math.round((offset / file.size) * 100);
-              onProgress(pct, file.name, offset, file.size);
+              const pct = Math.min(
+                Math.round((offset / file.size) * 100),
+                99
+              );
+              onProgress(pct, file.name, offset, file.size, true);
             }
 
-            // 让出主线程，避免阻塞 UI
-            setTimeout(sendNextChunk, 0);
+            setTimeout(pump, 0);
           };
-          chunkReader.onerror = () => reject(new Error("文件读取失败"));
-          chunkReader.readAsArrayBuffer(slice);
+          reader.onerror = () => reject(new Error("文件读取失败"));
+          reader.readAsArrayBuffer(file.slice(offset, end));
         }
 
-        sendNextChunk();
+        pump();
       });
     });
   }
 
-  /**
-   * 安全关闭 ZMODEM 会话：先尝试 close()，失败则 abort() 强制终止。
-   *
-   * close() 路径：发送 ZFIN 握手，session_end 在收到远端 ZFIN 后由
-   *   processIncoming 检测并触发 onTransferComplete。
-   *
-   * abort() 路径：发送 CAN 序列，_on_session_end() 同步清理 _zsession，
-   *   但 processIncoming 只有在下一条 WS 消息到达时才会检测到会话结束。
-   *   为避免 onTransferComplete 延迟/丢失，abort 后显式触发。
-   */
-  function safeCloseSession(sess: any) {
-    try {
-      sess.close();
-      // close() 成功（ZFIN 已发出），会话将在收到远端 ZFIN 后自然结束
-      // processIncoming 届时会检测到并调用 onTransferComplete
-      return;
-    } catch (e: any) {
-      console.warn(
-        "ZMODEM close() failed, falling back to abort():",
-        e?.message || e
-      );
-    }
+  /** 打开文件选择器并上传 */
+  function startUpload(sendSession: any) {
+    uploadCancelled = false;
 
-    // close() 失败，使用 abort() 强制终止
-    try {
-      sess.abort();
-    } catch (_) {
-      // abort() 通常不抛异常
-    }
-
-    // abort() 已同步触发 _on_session_end → _zsession 已清空
-    // 但 processIncoming 不会立即执行，需要显式通知完成
-    if (session) {
-      session = null;
-      onTransferComplete?.();
-    }
-  }
-
-  /** 发送文件：打开文件选择器 → 通过 ZMODEM 协议发送 */
-  function sendFilesFromPicker(sendSession: any) {
     const input = document.createElement("input");
     input.type = "file";
     input.multiple = true;
     input.style.display = "none";
     document.body.appendChild(input);
 
+    let picked = false;
+
     input.onchange = async () => {
-      // 无论是否选择文件，都在 finally 中清理 input
+      picked = true;
       try {
-        if (!input.files || input.files.length === 0) {
+        const files = input.files;
+        if (!files || files.length === 0) {
+          abortSession(sendSession);
           return;
         }
 
-        const fileList = Array.from(input.files);
-        ElMessage.info(`正在发送 ${fileList.length} 个文件...`);
+        const fileList = Array.from(files);
+        const totalSize = fileList.reduce((s, f) => s + f.size, 0);
+        ElMessage.info(
+          `开始上传 ${fileList.length} 个文件 (${formatBytes(totalSize)})...`
+        );
 
-        const batch = buildFileBatch(fileList);
+        const batch = buildBatch(fileList);
 
         for (const { file, filesRemaining, bytesRemaining } of batch) {
-          await sendSingleFile(
-            sendSession,
-            file,
-            filesRemaining,
-            bytesRemaining
-          );
-          ElMessage.success(`${file.name} 发送完成`);
+          if (uploadCancelled) break;
+          await uploadFile(sendSession, file, filesRemaining, bytesRemaining);
+          if (!uploadCancelled) {
+            ElMessage.success(`${file.name} 上传完成`);
+          }
         }
       } catch (e: any) {
-        ElMessage.error("文件发送失败: " + (e?.message || e));
+        if (e?.message !== "已取消") {
+          ElMessage.error("上传失败: " + (e?.message || "未知错误"));
+        }
       } finally {
         document.body.removeChild(input);
-        // 在所有 UI 消息之后立即关闭会话，减少竞态窗口
-        // close() 失败时自动降级为 abort() 兜底
-        safeCloseSession(sendSession);
+        if (!uploadCancelled) {
+          abortSession(sendSession);
+        }
       }
     };
+
+    // 检测用户取消文件选择器
+    const onFocus = () => {
+      window.removeEventListener("focus", onFocus);
+      setTimeout(() => {
+        if (!picked) {
+          document.body.removeChild(input);
+          abortSession(sendSession);
+          ElMessage.warning("已取消上传");
+        }
+      }, 300);
+    };
+    window.addEventListener("focus", onFocus);
 
     input.click();
   }
 
-  /** 创建 Sentry（懒加载，仅当检测到 ZMODEM 数据时才创建） */
+  // ==================== Sentry 管理 ====================
+
   function createSentry() {
-    if (sentry) return; // 避免重复创建
+    if (sentry) return;
 
     sentry = new Zmodem.Sentry({
       sender(octets: number[]) {
@@ -307,33 +298,25 @@ export function createZmodemManager(config: ZmodemConfig) {
         writeToTerminal(new Uint8Array(octets));
       },
       on_detect(detection: any) {
-        // 自动确认 ZMODEM 检测
         session = detection.confirm();
 
         if (session.type === "receive") {
-          // 远端执行 sz（浏览器接收文件）
+          // sz: 远端发送文件到浏览器
           session.on("offer", (xfer: any) => {
-            const details = xfer.get_details();
-            saveReceivedFile(xfer, details);
+            handleReceiveFile(xfer, xfer.get_details());
           });
           try {
             session.start();
-          } catch (_) {
-            // session.start() 可能抛异常但实际不影响
-          }
+          } catch (_) {}
         } else if (session.type === "send") {
-          // 远端执行 rz（浏览器发送文件到远端）
+          // rz: 浏览器发送文件到远端
           try {
             session.start();
-          } catch (_) {
-            // session.start() 可能抛异常但实际不影响
-          }
-          // 异步弹出文件选择器，不阻塞 on_detect 回调
-          setTimeout(() => sendFilesFromPicker(session), 0);
+          } catch (_) {}
+          setTimeout(() => startUpload(session), 0);
         }
       },
       on_retract() {
-        // ZMODEM 检测被撤销（非 ZMODEM 数据），清理会话引用
         if (session && !sentry?.get_confirmed_session()) {
           session = null;
         }
@@ -341,11 +324,11 @@ export function createZmodemManager(config: ZmodemConfig) {
     });
   }
 
-  /** 处理来自 WebSocket 的入站数据，交由 Sentry 解析 */
+  // ==================== 公共接口 ====================
+
+  /** 处理 WebSocket 入站数据 */
   function processIncoming(rawData: string | ArrayBuffer) {
-    if (!sentry) {
-      createSentry();
-    }
+    if (!sentry) createSentry();
 
     let bytes: Uint8Array;
     if (typeof rawData === "string") {
@@ -355,34 +338,38 @@ export function createZmodemManager(config: ZmodemConfig) {
     }
 
     try {
-      // zmodem.js consume() 需要 number[]
-      // 使用扩展运算符比 Array.from() 快 ~30%
       sentry.consume([...bytes]);
     } catch (e: any) {
-      console.warn("ZMODEM sentry consume error:", e.message || e);
+      console.warn("ZMODEM consume error:", e.message || e);
     }
 
-    // 检测 ZMODEM 会话是否已自然结束
-    // Sentry 内部通过 session_end 事件自动清理 _zsession
-    const currentSession = sentry.get_confirmed_session();
-    if (!currentSession && session) {
+    // 检测会话自然结束（如 sz 下载完成）
+    const cur = sentry.get_confirmed_session();
+    if (!cur && session) {
       session = null;
       onTransferComplete?.();
     }
   }
 
-  /** 销毁，清理 Sentry（仅在断开连接时调用） */
+  /** 取消当前上传 */
+  function cancelUpload() {
+    if (session) {
+      uploadCancelled = true;
+      abortSession(session);
+    }
+  }
+
+  /** 销毁（断开连接时调用） */
   function destroy() {
     if (session) {
       try {
-        session.close();
-      } catch (_) {
-        // 忽略关闭错误
-      }
+        session.abort();
+      } catch (_) {}
+      session = null;
     }
     sentry = null;
-    session = null;
+    uploadCancelled = false;
   }
 
-  return { processIncoming, destroy };
+  return { processIncoming, destroy, cancelUpload };
 }
