@@ -59,6 +59,7 @@ async function openDialog(data?: ServiceInfo) {
       formData.name = undefined;
       formData.sort = undefined;
       formData.isMonitor = false;
+      formData.workPath = undefined;
     }
     dialogEdit.visible = true;
   }
@@ -70,6 +71,7 @@ function resetForm() {
   formRef.value.clearValidate();
   formData.id = null;
   formData.sort = 1;
+  formData.workPath = undefined;
 }
 
 /** 关闭弹窗 */
@@ -101,7 +103,12 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <div class="search-container">
-      <el-form ref="queryFormRef" :model="queryParams" :inline="true" style="display: flex; align-items: center; flex-wrap: wrap">
+      <el-form
+        ref="queryFormRef"
+        :model="queryParams"
+        :inline="true"
+        style="display: flex; flex-wrap: wrap; align-items: center"
+      >
         <el-form-item prop="keywords" label="" style="width: 150px">
           <el-input
             v-model="queryParams.name"
@@ -146,6 +153,12 @@ onMounted(() => {
         <!--        <el-table-column type="selection" width="55" align="center" />-->
         <el-table-column label="ID" prop="id" width="90" />
         <el-table-column label="服务名" prop="name" width="90" />
+        <el-table-column
+          label="工作路径"
+          prop="workPath"
+          min-width="100"
+          show-overflow-tooltip
+        />
         <el-table-column label="是否监控" prop="isMonitor" width="100" />
         <el-table-column label="排序" prop="sort" width="100" />
         <el-table-column label="操作" fixed="right" align="left" width="200">
@@ -197,6 +210,10 @@ onMounted(() => {
       >
         <el-form-item label="服务名" prop="name">
           <el-input v-model="formData.name" placeholder="服务名" />
+        </el-form-item>
+
+        <el-form-item label="工作路径" prop="workPath">
+          <el-input v-model="formData.workPath" placeholder="请输入工作路径" />
         </el-form-item>
 
         <el-form-item label="是否开启监控" prop="isMonitor">

@@ -6,4 +6,5 @@ export interface ServiceInfo extends PageQuery {
   name?: string;
   isMonitor: false,
   sort?: number;
+  workPath?: string;
 }

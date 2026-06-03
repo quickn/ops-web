@@ -42,6 +42,8 @@ export interface SyncFileParam {
   jumpServiceId?: number;
   /** 源文件完整路径 */
   sourcePath?: string;
+  /** 目标文件完整路径 */
+  targetPath?: string;
   /** 同步类型：1=从源服务器 rsync 到跳板机并分发 */
   syncType?: number;
 }

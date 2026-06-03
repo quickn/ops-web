@@ -58,9 +58,32 @@ const syncDialog = reactive({
   syncType: 1,
 });
 
+/** 获取选中服务的 workPath 列表 */
+const selectedWorkPaths = computed(() => {
+  if (syncDialog.targetServiceIds.length === 0) return [];
+
+  return syncDialog.targetServiceIds
+    .map((id) => {
+      const service = syncDialog.serviceList.find((s) => s.id === id);
+      if (!service) return null;
+
+      const workPath = service.workPath || "";
+      // 目标路径：workPath + 文件名（替换掉源路径）
+      const targetPath =
+        workPath + queryParams.filePath.replace(queryParams.workPath, "");
+      return {
+        name: service.name,
+        workPath: workPath || "未配置工作路径",
+        targetPath: targetPath,
+      };
+    })
+    .filter(Boolean);
+});
+
 const queryParams = reactive<FileInfoForm>({
   filePath: props.filePath,
   agentId: props.agentId,
+  workPath: props.filePath,
   showHide: false,
   onlyShowFile: false,
   onlyShowDic: false,
@@ -241,14 +264,20 @@ async function handleSyncSubmit() {
     ElMessage.warning("请选择目标环境");
     return;
   }
-
   syncDialog.loading = true;
   const syncPromises = ids.value.flatMap((fileName) =>
     syncDialog.targetServiceIds.map((serviceId) => {
+      const service = syncDialog.serviceList.find((s) => s.id === serviceId);
+      const workPath = service?.workPath || "";
+      const sourcePath = `${queryParams.filePath}/${fileName}`;
+      const filePath = sourcePath.replace(queryParams.workPath, "");
+      // 构建目标路径：workPath + 文件名（替换掉源路径中的filePath部分）
+      const targetPath = workPath ? `${workPath}${filePath}` : sourcePath;
       const params: SyncFileParam = {
         sourceAgentId: queryParams.agentId,
         jumpServiceId: serviceId,
-        sourcePath: `${queryParams.filePath}/${fileName}`,
+        sourcePath: sourcePath,
+        targetPath: targetPath,
         syncType: 1,
       };
       return syncFileByJumpServer(params);
@@ -626,6 +655,33 @@ onMounted(() => {
               :value="item.id"
             />
           </el-select>
+        </el-form-item>
+        <el-form-item v-if="selectedWorkPaths.length > 0" label="目标路径">
+          <div style="width: 100%">
+            <div
+              v-for="(path, index) in selectedWorkPaths"
+              :key="index"
+              style="
+                padding: 8px 12px;
+                margin-bottom: 8px;
+                background: #f5f7fa;
+                border-left: 3px solid #409eff;
+                border-radius: 4px;
+              "
+            >
+              <div style="margin-bottom: 4px">
+                <span style="font-weight: 500; color: #303133">{{
+                  path.name
+                }}</span>
+              </div>
+              <div style="margin-bottom: 2px; font-size: 12px; color: #909399">
+                工作路径: {{ path.workPath }}
+              </div>
+              <div style="font-size: 12px; color: #67c23a">
+                同步到: {{ path.targetPath }}
+              </div>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="同步方式">
           <el-radio-group v-model="syncDialog.syncType" disabled>
