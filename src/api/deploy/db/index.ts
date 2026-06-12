@@ -11,7 +11,19 @@ export function compareTableStructure(
   });
 }
 
-
+/** 表结构同步 - 比对两个数据库的表结构差异 */
+export function syncTableStructure(params: {
+  sourceConfigId: number;
+  sourceDatabase: string;
+  targetConfigId: number;
+  targetDatabase: string;
+}): AxiosPromise<string> {
+  return request({
+    url: "/pyApi/db/syncTableStructure",
+    method: "get",
+    params
+  });
+}
 
 export function syncDataMenu(
   queryParams?: string
