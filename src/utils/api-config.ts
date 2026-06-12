@@ -20,6 +20,10 @@ export function getApiBaseUrl(): string {
 export function getApiBaseUrlPy(): string {
   const stored = localStorage.getItem(STORAGE_KEY_TARGET_URL_PY);
   if (stored) {
+    // 如果 localStorage 存储了完整URL，开发环境仍应使用代理前缀避免跨域
+    if (import.meta.env.DEV) {
+      return import.meta.env.VITE_APP_BASE_API_PY;
+    }
     return getTargetUrlPy();
   }
   // 默认使用环境变量配置

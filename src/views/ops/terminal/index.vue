@@ -149,11 +149,15 @@ function connect(config: AccountConfig) {
   activeConfig.value = config;
 
   // 构建 WebSocket URL
-  // 开发环境直连 Python 后端，生产环境通过同域代理
+  // 开发环境通过 Vite 代理转发（/py-api → http://localhost:18080），需要保留后端 /pyApi 前缀
+  // 生产环境直接请求同域 /pyApi 路径
 
-  let wsBase = getApiBaseUrlPy();
+  const wsBase = getApiBaseUrlPy();
+  // 开发环境：代理前缀 /py-api 会被剥离，需要额外拼接 /pyApi 使其最终发给后端路径为 /pyApi/terminal/ws
+  // 生产环境：VITE_APP_BASE_API_PY 本身就是 /pyApi，直接拼接即可
+  const apiPath = import.meta.env.DEV ? '/pyApi' : '';
 
-  const wsUrl = `${wsBase}/terminal/ws?configId=${encodeURIComponent(
+  const wsUrl = `${wsBase}${apiPath}/terminal/ws?configId=${encodeURIComponent(
     config.id
   )}`;
   socket = new WebSocket(wsUrl);
