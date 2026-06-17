@@ -9,6 +9,8 @@ import { getListByServiceId } from "@/api/docker";
 
 import { ServiceInfo } from "@/api/monitor/service/types";
 
+import LogAnalysisDialog from "@/components/LogAnalysisDialog.vue";
+
 const queryFormRef = ref(ElForm);
 
 const loading = ref(false);
@@ -26,6 +28,8 @@ const options = [
 ];
 
 const dockerList = ref<string[]>();
+
+const analysisDialogVisible = ref(false);
 
 function replaceAll(str: string, find: string, replace: string) {
   return str.replace(new RegExp(find, "g"), replace);
@@ -47,6 +51,11 @@ function handleQuery() {
     container!.innerHTML = data;
     loading.value = false;
   });
+}
+
+/** 打开日志分析对话框 */
+function logAnalysis() {
+  analysisDialogVisible.value = true;
 }
 
 /** 重置查询 */
@@ -163,6 +172,10 @@ function handleSelectChange(serviceId: number) {
             <i-ep-search />
             搜索
           </el-button>
+          <el-button type="primary" @click="logAnalysis">
+            <i-ep-search />
+            日志分析
+          </el-button>
           <el-button @click="resetQuery">
             <i-ep-refresh />
             重置
@@ -171,6 +184,11 @@ function handleSelectChange(serviceId: number) {
       </el-form>
     </div>
     <div v-loading="loading" class="txt" id="log_div"></div>
+    
+    <LogAnalysisDialog
+      v-model:visible="analysisDialogVisible"
+      :query-params="queryParams"
+    />
   </div>
 </template>
 

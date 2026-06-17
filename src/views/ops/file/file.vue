@@ -14,6 +14,9 @@ import {
 import { FileInfoForm, FileListInfo, SyncFileParam } from "@/api/file/types";
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
+import LogAnalysisDialog from "@/components/LogAnalysisDialog.vue";
+import { LogCmdForm } from "@/api/monitor/log/types";
+import { de } from "element-plus/es/locale";
 
 defineOptions({
   name: "FileManagement",
@@ -57,6 +60,10 @@ const syncDialog = reactive({
   serviceList: [] as ServiceInfo[],
   syncType: 1,
 });
+
+/** 日志分析对话框状态 */
+const analysisDialogVisible = ref(false);
+const analysisQueryParams = ref<LogCmdForm | null>(null);
 
 /** 获取选中服务的 workPath 列表 */
 const selectedWorkPaths = computed(() => {
@@ -258,7 +265,30 @@ function closeSyncDialog() {
   syncDialog.targetServiceIds = [];
 }
 
-/** 执行文件同步 */
+/** 打开日志分析对话框 */
+function openLogAnalysis(fileName: string) {
+  if (!props.serviceId) {
+    ElMessage.warning("未配置服务ID");
+    return;
+  }
+  if (!props.agentId) {
+    ElMessage.warning("未配置Agent ID");
+    return;
+  }
+  const filePath = `${queryParams.filePath}/${fileName}`;
+  analysisQueryParams.value = {
+    serviceId: props.serviceId,
+    filePath: filePath,
+    agentId: props.agentId,
+  };
+  analysisDialogVisible.value = true;
+}
+
+/** 关闭日志分析对话框 */
+function closeAnalysisDialog() {
+  analysisDialogVisible.value = false;
+  analysisQueryParams.value = null;
+}
 async function handleSyncSubmit() {
   if (syncDialog.targetServiceIds.length === 0) {
     ElMessage.warning("请选择目标环境");
@@ -561,7 +591,7 @@ onMounted(() => {
         <el-table-column prop="size" label="大小" width="100" align="center" />
         <el-table-column prop="modifyTime" label="修改时间" width="180" />
 
-        <el-table-column label="操作" fixed="right" align="left" width="120">
+        <el-table-column label="操作" fixed="right" align="left" width="160">
           <template #default="scope">
             <el-button
               v-if="scope.row.type === 'file'"
@@ -572,6 +602,16 @@ onMounted(() => {
             >
               <i-ep-edit />
               编辑
+            </el-button>
+            <el-button
+              v-if="scope.row.type === 'file'"
+              type="primary"
+              link
+              size="small"
+              @click.stop="openLogAnalysis(scope.row.name)"
+            >
+              <i-ep-view />
+              日志分析
             </el-button>
           </template>
         </el-table-column>
@@ -732,6 +772,11 @@ onMounted(() => {
         </div>
       </template>
     </el-dialog>
+
+    <LogAnalysisDialog
+      v-model:visible="analysisDialogVisible"
+      :query-params="analysisQueryParams"
+    />
   </div>
 </template>
 

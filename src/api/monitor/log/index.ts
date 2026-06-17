@@ -21,9 +21,19 @@ export function fileLogList(
   queryParams?: LogCmdForm
 ): AxiosPromise<string> {
   return request({
-    url: "/agent/getLogsByServiceId",
+    url: "/log/realTime",
     method: "get",
     params: queryParams,
+  });
+}
+
+export function fileLogAnalysis(
+  queryParams?: LogCmdForm
+): AxiosPromise<string> {
+  return request({
+    url: "/log/analysis",
+    method: "get",
+    params: queryParams
   });
 }
 
