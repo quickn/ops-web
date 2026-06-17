@@ -47,6 +47,7 @@ async function performAnalysis() {
 
   loading.value = true;
   try {
+    props.queryParams.timeout = 120;
     const { data } = await fileLogAnalysis(props.queryParams);
     // data 是一个数组，每个元素包含 code, data(string), agentId, msgType
     const responseList: LogAnalysisResponse[] = Array.isArray(data) ? data : [data];

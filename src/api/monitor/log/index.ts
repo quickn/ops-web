@@ -1,6 +1,7 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
 import {LogCmdForm, LogInfo} from "./types";
+import { de } from "element-plus/es/locale";
 
 /**
  * 部门树形表格
@@ -33,7 +34,8 @@ export function fileLogAnalysis(
   return request({
     url: "/log/analysis",
     method: "get",
-    params: queryParams
+    params: queryParams,
+    timeout: 120000
   });
 }
 

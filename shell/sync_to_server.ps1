@@ -52,7 +52,7 @@ else
 # 4. 构建项目
 # 执行构建
 Write-Host "Running pnpm build..." -ForegroundColor Yellow
-# pnpm run build
+pnpm run build
 
 # 5. 使用 rsync 同步文件（如果可用）或使用 scp
 Write-Host "Syncing files to server..." -ForegroundColor Yellow
