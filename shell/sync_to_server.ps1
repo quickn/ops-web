@@ -21,16 +21,22 @@ if (-Not (Test-Path $PROJECT_ROOT)) {
 }
 Write-Host "OK: Project root exists: $PROJECT_ROOT" -ForegroundColor Green
 
-# 2. 确保远程目录存在
-Write-Host "Creating remote directory..." -ForegroundColor Yellow
-ssh $SERVER "mkdir -p $REMOTE_DIR"
+# 2. 清空远程目录内容（保留目录本身）
+Write-Host "Clearing remote directory contents..." -ForegroundColor Yellow
+ssh $SERVER "find $REMOTE_DIR -mindepth 1 -delete"
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "OK: Remote directory cleared" -ForegroundColor Green
+} else {
+    Write-Host "WARNING: Failed to clear remote directory, will create if needed" -ForegroundColor Yellow
+    ssh $SERVER "mkdir -p $REMOTE_DIR"
+}
 
-# 3. 构建项目
+# 4. 构建项目
 # 执行构建
 Write-Host "Running pnpm build..." -ForegroundColor Yellow
 pnpm run build
 
-# 4. 使用 rsync 同步文件（如果可用）或使用 scp
+# 5. 使用 rsync 同步文件（如果可用）或使用 scp
 Write-Host "Syncing files to server..." -ForegroundColor Yellow
 
 # 尝试使用 rsync
