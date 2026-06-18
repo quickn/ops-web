@@ -17,11 +17,14 @@ export interface LogCmdForm {
   fileName?: string;
   keyword?: string | undefined;
   keyword1?: string | undefined;
+  startTime?: string | undefined;
+  endTime?: string | undefined;
   createDate?: string;
   logLevel?: string;
   timeout?: number;
   cmd?: string;
   grepPara?: string;
+  action?: string;
 }
 
 export interface LogCluster {

@@ -421,6 +421,14 @@ function resetForm() {
   deptFormRef.value.clearValidate();
 }
 
+/** 格式化文件大小为KB单位 */
+function formatFileSize(bytes: number | string): string {
+  if (!bytes || bytes === 0) return '0 KB';
+  const numBytes = typeof bytes === 'string' ? parseInt(bytes, 10) : bytes;
+  const kb = (numBytes / 1024).toFixed(2);
+  return `${kb} KB`;
+}
+
 const rules = reactive({
   fileName: [{ required: true, message: "文件名", trigger: "blur" }],
   filePath: [{ required: true, message: "文件路径", trigger: "blur" }],
@@ -588,7 +596,11 @@ onMounted(() => {
         />
         <el-table-column prop="owner" label="所有者" width="100" />
         <el-table-column prop="group" label="用户组" width="100" />
-        <el-table-column prop="size" label="大小" width="100" align="center" />
+        <el-table-column prop="size" label="大小" width="130" align="center">
+          <template #default="scope">
+            {{ formatFileSize(scope.row.size) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="modifyTime" label="修改时间" width="180" />
 
         <el-table-column label="操作" fixed="right" align="left" width="160">

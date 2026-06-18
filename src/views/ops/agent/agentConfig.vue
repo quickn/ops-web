@@ -85,6 +85,15 @@
               打开工作目录
             </el-button>
             <el-button
+              type="warning"
+              link
+              size="small"
+              @click.stop="openLogDirectory(scope.row)"
+            >
+              <i-ep-folder-opened />
+              打开日志目录
+            </el-button>
+            <el-button
               type="success"
               link
               size="small"
@@ -227,6 +236,20 @@ async function openWorkDirectory(row: AgentConfig) {
     query: {
       agentId: row.id,
       filePath: row.workPath,
+    },
+  });
+}
+
+async function openLogDirectory(row: AgentConfig) {
+  if (!row.logPath) {
+    ElMessage.warning("该服务未配置日志路径，请先在配置中设置日志路径");
+    return;
+  }
+  router.push({
+    path: "/ops/file",
+    query: {
+      agentId: row.id,
+      filePath: row.logPath,
     },
   });
 }

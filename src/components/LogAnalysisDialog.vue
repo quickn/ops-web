@@ -27,6 +27,12 @@ const dialogVisible = computed({
 const loading = ref(false);
 const analysisData = ref<LogAnalysisResult | null>(null);
 
+// 时间范围筛选
+const timeRange = reactive({
+  minTime: "",
+  maxTime: ""
+});
+
 // 监听对话框打开，自动触发分析
 watch(
   () => props.visible,
@@ -36,6 +42,78 @@ watch(
     }
   }
 );
+
+// 执行带时间范围的日志分析
+async function performAnalysisWithTimeRange() {
+  if (!props.queryParams) return;
+
+  loading.value = true;
+  try {
+    const params: LogCmdForm = {
+      ...props.queryParams,
+      timeout: 120,
+      action: "analyze"
+    };
+
+    // 添加时间范围参数
+    if (timeRange.minTime) {
+      params.startTime = timeRange.minTime;
+    }
+    if (timeRange.maxTime) {
+      params.endTime = timeRange.maxTime;
+    }
+
+    const { data } = await fileLogAnalysis(params);
+    // data 是一个数组，每个元素包含 code, data(string), agentId, msgType
+    const responseList: LogAnalysisResponse[] = Array.isArray(data) ? data : [data];
+
+    // 合并所有 code=0 的分析结果
+    const mergedResult: LogAnalysisResult = {
+      totalLines: 0,
+      totalClusters: 0,
+      clusters: [],
+      minTime: undefined,
+      maxTime: undefined
+    };
+
+    let clusterIdCounter = 1;
+
+    responseList.forEach((response) => {
+      if (response.code === 0) {
+        // 解析 data 字段（可能是字符串或对象）
+        const parsedData = typeof response.data === "string"
+          ? JSON.parse(response.data)
+          : response.data;
+        if (parsedData.totalLines) {
+          mergedResult.totalLines += parsedData.totalLines || 0;
+          mergedResult.minTime = parsedData.minTime || mergedResult.minTime;
+          mergedResult.maxTime = parsedData.maxTime || mergedResult.maxTime;
+        }
+        if (parsedData && parsedData.clusters) {
+          // 重新分配 clusterId 并合并 clusters
+          parsedData.clusters.forEach((cluster: LogCluster) => {
+            mergedResult.clusters.push({
+              ...cluster,
+              clusterId: clusterIdCounter++
+            });
+          });
+        }
+      }
+    });
+
+    mergedResult.totalClusters = mergedResult.clusters.length;
+
+    // 按 count 降序排序
+    mergedResult.clusters.sort((a, b) => b.count - a.count);
+
+    analysisData.value = mergedResult;
+  } catch (error) {
+    ElMessage.error("日志分析失败");
+    console.error("Analysis error:", error);
+  } finally {
+    loading.value = false;
+  }
+}
 
 function handleClose() {
   analysisData.value = null;
@@ -56,7 +134,9 @@ async function performAnalysis() {
     const mergedResult: LogAnalysisResult = {
       totalLines: 0,
       totalClusters: 0,
-      clusters: []
+      clusters: [],
+      minTime: undefined,
+      maxTime: undefined
     };
 
     let clusterIdCounter = 1;
@@ -67,10 +147,12 @@ async function performAnalysis() {
         const parsedData = typeof response.data === "string"
           ? JSON.parse(response.data)
           : response.data;
-
-        if (parsedData && parsedData.clusters) {
+        if (parsedData.totalLines) {
           mergedResult.totalLines += parsedData.totalLines || 0;
-
+          mergedResult.minTime = parsedData.minTime || mergedResult.minTime;
+          mergedResult.maxTime = parsedData.maxTime || mergedResult.maxTime;
+        }
+        if (parsedData && parsedData.clusters) {
           // 重新分配 clusterId 并合并 clusters
           parsedData.clusters.forEach((cluster: LogCluster) => {
             mergedResult.clusters.push({
@@ -125,7 +207,40 @@ function getProgressColor(percentage: number): string {
     <div v-loading="loading" class="log-analysis-container">
       <template v-if="analysisData">
         <!-- 统计概览 -->
-        <div class="stat-value">总日志行数: {{ analysisData.totalLines }}</div>
+        <el-card class="overview-card" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>统计概览</span>
+              <el-button type="primary" size="small" @click="performAnalysisWithTimeRange">
+                <i-ep-search />
+                开始分析
+              </el-button>
+            </div>
+          </template>
+          <el-form :inline="true" style="margin-bottom: 16px">
+            <el-form-item label="最小时间">
+              <el-date-picker
+                v-model="timeRange.minTime"
+                type="datetime"
+                placeholder="选择最小时间"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DD HH:mm"
+                style="width: 220px"
+              />
+            </el-form-item>
+            <el-form-item label="最大时间">
+              <el-date-picker
+                v-model="timeRange.maxTime"
+                type="datetime"
+                placeholder="选择最大时间"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DD HH:mm"
+                style="width: 220px"
+              />
+            </el-form-item>
+          </el-form>
+          <div class="stat-value">总日志行数: {{ analysisData.totalLines }}  最小时间: {{ analysisData.minTime }} 最大时间: {{ analysisData.maxTime }}</div>
+        </el-card>
 
         <!-- 聚类详情 -->
         <el-card class="clusters-card" shadow="hover">
@@ -265,6 +380,10 @@ function getProgressColor(percentage: number): string {
   height: calc(100vh - 200px);
   overflow-y: auto;
   padding: 20px;
+}
+
+.overview-card {
+  margin-bottom: 20px;
 }
 
 .overview-card,
