@@ -25,7 +25,6 @@
 
         <el-form-item label="" style="margin-left: auto">
           <el-button
-            v-hasPerm="['sys:dept:add']"
             type="success"
             @click="openDialog()"
           >
@@ -33,11 +32,10 @@
             新增
           </el-button>
           <el-button
-            v-hasPerm="['sys:dept:add']"
             type="success"
             @click="backupDialog()"
           >
-            <i-ep-plus />
+            <i-ep-collection />
             备份
           </el-button>
         </el-form-item>
@@ -57,6 +55,18 @@
         <el-table-column
           label="应用名称"
           prop="name"
+          width="150"
+          align="center"
+        />
+        <el-table-column
+          label="源目录"
+          prop="sourceDir"
+          width="150"
+          align="center"
+        />
+        <el-table-column
+          label="目标目录"
+          prop="targetDir"
           width="150"
           align="center"
         />
