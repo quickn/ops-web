@@ -324,7 +324,6 @@ const ids = ref<number[]>([]);
 const total = ref(0);
 const deptFormRef = ref(ElForm);
 const queryParams = reactive<LogInfo>({ pageSize: 10, pageNum: 1 });
-const hostList = ref<ServiceInfo[]>([]);
 const deployEdit = reactive<DialogOption>({
   visible: false,
 });
@@ -333,7 +332,6 @@ const dataList = ref<LogInfo[]>();
 // Dockerfile相关
 const dockerfileDialogVisible = ref(false);
 const dockerfileLoading = ref(false);
-const currentJarName = ref<string>();
 const serviceInfoList = ref<ServiceInfo[]>();
 const dialogEdit = reactive<DialogOption>({
   visible: false,
@@ -465,14 +463,18 @@ async function handleSubmit() {
   });
 }
 async function handlebackupSubmit(index) {
+  loading.value = true;
   backupEdit.visible = false;
   formBackupData.type = index;
-  backup(formBackupData)
-    .then(() => {
-      ElMessage.success("备份成功");
-      handleQuery();
-    })
-    .finally(() => (loading.value = false));
+  try {
+    await backup(formBackupData);
+    ElMessage.success("备份成功");
+    handleQuery();
+  } catch (error) {
+    ElMessage.error("备份失败");
+  } finally {
+    loading.value = false;
+  }
 }
 /** 保存Dockerfile */
 function handleSaveDockerfile() {

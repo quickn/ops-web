@@ -1,6 +1,6 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import {LogCmdForm, LogInfo} from "./types";
+import { LogCmdForm, LogInfo } from "./types";
 
 /**
  * 部门树形表格
@@ -13,7 +13,7 @@ export function listData(
   return request({
     url: "/project/page",
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
@@ -23,7 +23,7 @@ export function fileLogList(
   return request({
     url: "/agent/getLogsByServiceId",
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
@@ -35,7 +35,7 @@ export function fileLogList(
 export function deleteByIds(id?: string) {
   return request({
     url: "/project/" + id,
-    method: "delete",
+    method: "delete"
   });
 }
 
@@ -43,7 +43,7 @@ export function addData(data?: ServiceInfo) {
   return request({
     url: "/project",
     method: "post",
-    data: data,
+    data: data
   });
 }
 
@@ -52,7 +52,7 @@ export function putData(data?: ServiceInfo) {
   return request({
     url: "/project/" + data?.id,
     method: "put",
-    data: data,
+    data: data
   });
 }
 
@@ -60,7 +60,7 @@ export function syncData(data?: ServiceInfo) {
   return request({
     url: "/project/sync",
     method: "post",
-    data: data,
+    data: data
   });
 }
 
@@ -68,7 +68,7 @@ export function jarData(data?: ServiceInfo) {
   return request({
     url: "/jar/page",
     method: "get",
-    data: data,
+    data: data
   });
 }
 
@@ -78,7 +78,7 @@ export function agentList(
   return request({
     url: "/agent/list",
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
@@ -96,14 +96,15 @@ export function deployList(
   return request({
     url: "/project/deploy-records/" + queryParams?.id,
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
-export function backup(data?: ServiceInfo) {
+export function backup(data: any) {
   return request({
     url: "/project/backup",
     method: "post",
-    data: data,
+    timeout: 1000 * 60 * 10,
+    data: data
   });
 }

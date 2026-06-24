@@ -30,6 +30,14 @@ export function updateById(data?: DockerContainerInfo) {
   });
 }
 
+export function deleteById(id: number) {
+  return request({
+    url: "/docker/container/delete/" + id,
+    method: "delete",
+  });
+}
+
+
 /**
  * 重启服务
  *
