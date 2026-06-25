@@ -19,6 +19,8 @@ interface ZmodemConfig {
   writeToTerminal: (data: Uint8Array) => void;
   /** 通过 WebSocket 将数据发送给远端 */
   sendToSocket: (data: Uint8Array) => void;
+  /** 获取 WebSocket 缓冲队列大小 */
+  getBufferedAmount?: () => number;
   /** 传输完成回调 */
   onTransferComplete?: () => void;
   /** 进度回调 (percentage, fileName, received, total, isUpload) */
@@ -31,8 +33,8 @@ interface ZmodemConfig {
   ) => void;
 }
 
-export function createZmodemManager(config: ZmodemConfig) {
-  const { writeToTerminal, sendToSocket, onTransferComplete, onProgress } =
+export function createZmodemManager(config: ZmodemManager) {
+  const { writeToTerminal, sendToSocket, getBufferedAmount, onTransferComplete, onProgress } =
     config;
 
   let sentry: any = null;
@@ -144,9 +146,10 @@ export function createZmodemManager(config: ZmodemConfig) {
     bytesRemaining: number
   ): Promise<void> {
     const CHUNK_SIZE = 64 * 1024; // 64KB
+    const MAX_BUFFER_SIZE = 512 * 1024; // 512KB 最大缓冲（降低阈值）
     // 是否为最后一个文件（filesRemaining=1 表示当前文件是最后一个）
     const isLast = filesRemaining <= 1;
-
+  
     const info = {
       name: file.name,
       size: file.size,
@@ -154,44 +157,66 @@ export function createZmodemManager(config: ZmodemConfig) {
       files_remaining: filesRemaining,
       bytes_remaining: bytesRemaining,
     };
-
+  
     return sess.send_offer(info).then((xfer: any) => {
       if (!xfer) return Promise.resolve();
       if (uploadCancelled) return Promise.reject(new Error("已取消"));
-
+  
       return new Promise<void>((resolve, reject) => {
         let offset = 0;
-
+  
         function pump() {
           if (uploadCancelled) {
             reject(new Error("已取消"));
             return;
           }
-
+  
           if (offset >= file.size) {
-            if (isLast) {
-              // 最后一个文件：发送 ZEOF 后立即 resolve，不等待远端确认。
-              // zmodem.js 的 xfer.end() 在 files_remaining=1 时会等待
-              // 会话状态机转入"下一个文件/结束"阶段，但我们必须先结束会话
-              // （abort）才能推动状态机 —— 否则形成死锁，进度永远卡在 99%。
-              try {
-                xfer.end();
-              } catch (_) {}
-              onProgress?.(100, file.name, file.size, file.size, true);
-              resolve();
-            } else {
-              // 非最后一个文件：正常等待远端 ZEOF 确认
-              xfer.end().then(() => {
-                onProgress?.(100, file.name, file.size, file.size, true);
-                resolve();
-              }).catch(reject);
-            }
+            // 所有数据已读取完毕，等待 WebSocket 缓冲区清空
+            const checkBufferEmpty = () => {
+              const buffered = getBufferedAmount?.() || 0;
+              if (buffered > 0) {
+                // 更新进度：总大小 - 缓冲区剩余 = 已发送
+                const actualSent = file.size - buffered;
+                if (onProgress && file.size > 0) {
+                  const pct = Math.round((actualSent / file.size) * 100);
+                  // 确保进度不超过99%，直到真正完成
+                  onProgress(Math.min(pct, 99), file.name, actualSent, file.size, true);
+                }
+                // 等待缓冲区清空
+                setTimeout(checkBufferEmpty, 50);
+              } else {
+                // 缓冲区已清空，发送100%进度，然后结束会话
+                if (onProgress && file.size > 0) {
+                  onProgress(100, file.name, file.size, file.size, true);
+                }
+                // 添加一点延迟确保UI更新完成
+                setTimeout(() => {
+                  finishUpload();
+                }, 100);
+              }
+            };
+            checkBufferEmpty();
             return;
           }
-
+  
+          // 检查 WebSocket 缓冲区大小，避免积压过多数据
+          const buffered = getBufferedAmount?.() || 0;
+          if (buffered > MAX_BUFFER_SIZE) {
+            // 更新进度：显示实际已发送的量
+            const actualSent = offset - buffered;
+            if (onProgress && file.size > 0) {
+              const pct = Math.min(Math.round((actualSent / file.size) * 100), 99);
+              onProgress(pct, file.name, Math.max(0, actualSent), file.size, true);
+            }
+            // 缓冲区过大，延迟发送
+            setTimeout(pump, 100);
+            return;
+          }
+  
           const end = Math.min(offset + CHUNK_SIZE, file.size);
           const reader = new FileReader();
-
+  
           reader.onload = () => {
             try {
               xfer.send(new Uint8Array(reader.result as ArrayBuffer));
@@ -200,22 +225,32 @@ export function createZmodemManager(config: ZmodemConfig) {
               return;
             }
             offset = end;
-
-            // 发送中最多 99%，100% 由 xfer.end() 或 isLast 分支触发
-            if (onProgress && file.size > 0) {
-              const pct = Math.min(
-                Math.round((offset / file.size) * 100),
-                99
-              );
-              onProgress(pct, file.name, offset, file.size, true);
-            }
-
+  
+            // 继续发送下一块
             setTimeout(pump, 0);
           };
           reader.onerror = () => reject(new Error("文件读取失败"));
           reader.readAsArrayBuffer(file.slice(offset, end));
         }
 
+        function finishUpload() {
+          if (isLast) {
+            // 最后一个文件：发送 ZEOF 后立即 resolve，不等待远端确认。
+            try {
+              xfer.end();
+              resolve();
+            } catch (e) {
+              console.error('Error ending transfer:', e);
+              reject(e);
+            }
+          } else {
+            // 非最后一个文件：正常等待远端 ZEOF 确认
+            xfer.end().then(() => {
+              resolve();
+            }).catch(reject);
+          }
+        }
+  
         pump();
       });
     });

@@ -34,10 +34,6 @@ const collapseLeft = ref(false);
 
 let selectedServiceId = ref<number | null>(null);
 
-const dialog = reactive<DialogOption>({
-  visible: false,
-});
-
 const configList = ref<AccountConfig[]>([]);
 const activeConfig = ref<AccountConfig | null>(null);
 
@@ -67,7 +63,7 @@ function initTerminal() {
     fontSize: 14,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     theme: {
-      background: "#1e1e1e",
+      background: "#000",
       foreground: "#d4d4d4",
       cursor: "#ffffff",
       selectionBackground: "#264f78",
@@ -155,9 +151,8 @@ function connect(config: AccountConfig) {
   const wsBase = getApiBaseUrlPy();
   // 开发环境：代理前缀 /py-api 会被剥离，需要额外拼接 /pyApi 使其最终发给后端路径为 /pyApi/terminal/ws
   // 生产环境：VITE_APP_BASE_API_PY 本身就是 /pyApi，直接拼接即可
-  const apiPath = import.meta.env.DEV ? '/pyApi' : '';
 
-  const wsUrl = `${wsBase}${apiPath}/terminal/ws?configId=${encodeURIComponent(
+  const wsUrl = `${wsBase}/terminal/ws?configId=${encodeURIComponent(
     config.id
   )}`;
   socket = new WebSocket(wsUrl);
@@ -171,6 +166,9 @@ function connect(config: AccountConfig) {
       if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(data);
       }
+    },
+    getBufferedAmount: () => {
+      return socket?.bufferedAmount || 0;
     },
     onProgress: (
       pct: number,
@@ -626,7 +624,7 @@ onUnmounted(() => {
 
 .terminal-container {
   flex: 1;
-  padding: 4px 8px;
+  background-color: #000;
   overflow: hidden;
 }
 
