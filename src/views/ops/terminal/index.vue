@@ -52,6 +52,8 @@ interface TerminalSession {
     receivedText: string;
     isUpload: boolean;
   };
+  heartbeatTimer?: number; // 心跳定时器
+  lastActivityTime?: number; // 最后活动时间
 }
 
 /** 所有终端会话 */
@@ -267,10 +269,17 @@ function establishConnection(session: TerminalSession) {
         sendResize(session);
       });
     }
+    
+    // 启动心跳保活机制
+    startHeartbeat(session);
+    
     ElMessage.success("已连接到 " + config.configName);
   };
 
   session.socket.onmessage = (event) => {
+    // 更新最后活动时间
+    session.lastActivityTime = Date.now();
+    
     // 通过 ZModem 管理器处理入站数据
     // 管理器自动检测 ZMODEM 协议并分流：普通数据→终端，文件数据→下载/上传
     if (session.zmManager && event.data) {
@@ -280,11 +289,13 @@ function establishConnection(session: TerminalSession) {
 
   session.socket.onerror = () => {
     connecting.value = false;
+    stopHeartbeat(session);
     ElMessage.error("连接失败");
   };
 
   session.socket.onclose = () => {
     connecting.value = false;
+    stopHeartbeat(session);
     if (session.term) {
       session.term.writeln("\r\n\x1b[33m会话已断开\x1b[0m");
     }
@@ -293,6 +304,7 @@ function establishConnection(session: TerminalSession) {
 
 /** 断开指定会话连接 */
 function disconnectSession(session: TerminalSession) {
+  stopHeartbeat(session);
   if (session.socket) {
     session.socket.close();
     session.socket = null;
@@ -400,6 +412,48 @@ function formatBytes(bytes: number): string {
   return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + " " + units[i];
 }
 
+/** 启动心跳保活机制 */
+function startHeartbeat(session: TerminalSession) {
+  // 初始化最后活动时间
+  session.lastActivityTime = Date.now();
+  
+  // 清除旧的心跳定时器（如果存在）
+  if (session.heartbeatTimer) {
+    clearInterval(session.heartbeatTimer);
+  }
+  
+  // 每30秒发送一次心跳
+  session.heartbeatTimer = window.setInterval(() => {
+    const now = Date.now();
+    const timeSinceLastActivity = now - (session.lastActivityTime || 0);
+    
+    // 检查连接状态
+    if (!session.socket || session.socket.readyState !== WebSocket.OPEN) {
+      stopHeartbeat(session);
+      return;
+    }
+    
+    // 超过60秒无活动，发送空字符串维持连接
+    if (timeSinceLastActivity >= 60000) {
+      try {
+        session.socket.send('');
+        session.lastActivityTime = now;
+      } catch (error) {
+        console.warn('心跳发送失败:', error);
+        stopHeartbeat(session);
+      }
+    }
+  }, 30000);
+}
+
+/** 停止心跳保活机制 */
+function stopHeartbeat(session: TerminalSession) {
+  if (session.heartbeatTimer) {
+    clearInterval(session.heartbeatTimer);
+    session.heartbeatTimer = undefined;
+  }
+}
+
 /** 组件挂载 */
 onMounted(() => {
   loadServiceOptions();
@@ -419,10 +473,14 @@ async function loadServiceOptions() {
 /** 组件卸载 */
 onUnmounted(() => {
   // 销毁所有会话
-  sessions.value.forEach(session => disposeSession(session));
+  sessions.value.forEach(session => {
+    stopHeartbeat(session);
+    disposeSession(session);
+  });
   sessions.value = [];
   window.removeEventListener("resize", () => {});
 });
+
 </script>
 
 <template>
