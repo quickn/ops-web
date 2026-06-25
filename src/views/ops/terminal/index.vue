@@ -37,28 +37,65 @@ let selectedServiceId = ref<number | null>(null);
 const configList = ref<AccountConfig[]>([]);
 const activeConfig = ref<AccountConfig | null>(null);
 
-/** xterm 实例 */
-let term: Terminal | null = null;
-let fitAddon: FitAddon | null = null;
-let socket: WebSocket | null = null;
-let zmManager: ReturnType<typeof createZmodemManager> | null = null;
+/** 终端会话类型 */
+interface TerminalSession {
+  id: string;
+  config: AccountConfig;
+  term: Terminal | null;
+  fitAddon: FitAddon | null;
+  socket: WebSocket | null;
+  zmManager: ReturnType<typeof createZmodemManager> | null;
+  progress: {
+    visible: boolean;
+    fileName: string;
+    percentage: number;
+    receivedText: string;
+    isUpload: boolean;
+  };
+}
 
-/** ZMODEM 传输进度 */
-const zmProgress = reactive({
-  visible: false,
-  fileName: "",
-  percentage: 0,
-  receivedText: "",
-  isUpload: false, // 是否为上传（rz），用于显示取消按钮
+/** 所有终端会话 */
+const sessions = ref<TerminalSession[]>([]);
+/** 当前激活的会话 ID */
+const activeSessionId = ref<string | null>(null);
+/** 终端容器引用映射 */
+const terminalRefs = new Map<string, HTMLDivElement>();
+
+/** 获取当前会话 */
+const currentSession = computed(() => {
+  return sessions.value.find(s => s.id === activeSessionId.value) || null;
+});
+
+/** xterm 实例（兼容旧代码） */
+const term = computed(() => currentSession.value?.term || null);
+const fitAddon = computed(() => currentSession.value?.fitAddon || null);
+const socket = computed(() => currentSession.value?.socket || null);
+const zmManager = computed(() => currentSession.value?.zmManager || null);
+
+/** ZMODEM 传输进度（兼容旧代码） */
+const zmProgress = computed(() => {
+  return currentSession.value?.progress || {
+    visible: false,
+    fileName: "",
+    percentage: 0,
+    receivedText: "",
+    isUpload: false,
+  };
 });
 
 const terminalRef = ref<HTMLDivElement>();
 
-/** 初始化终端 */
-function initTerminal() {
-  if (!terminalRef.value || term) return;
+/** 生成唯一会话 ID */
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
-  term = new Terminal({
+/** 初始化终端 */
+function initTerminal(session: TerminalSession) {
+  const container = terminalRefs.get(session.id);
+  if (!container || session.term) return;
+
+  const newTerm = new Terminal({
     cursorBlink: true,
     fontSize: 14,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
@@ -71,53 +108,56 @@ function initTerminal() {
     allowProposedApi: true,
   });
 
-  fitAddon = new FitAddon();
-  term.loadAddon(fitAddon);
-  term.loadAddon(new WebLinksAddon());
+  const newFitAddon = new FitAddon();
+  newTerm.loadAddon(newFitAddon);
+  newTerm.loadAddon(new WebLinksAddon());
 
-  term.open(terminalRef.value);
-  fitAddon.fit();
+  newTerm.open(container);
+  newFitAddon.fit();
+
+  session.term = newTerm;
+  session.fitAddon = newFitAddon;
 
   // 监听终端输入发送到后端
-  term.onData((data) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(data);
+  newTerm.onData((data) => {
+    if (session.socket && session.socket.readyState === WebSocket.OPEN) {
+      session.socket.send(data);
     }
   });
 
   // 终端尺寸变化时通知后端
-  term.onResize(({ cols, rows }) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      //socket.send(JSON.stringify({ type: "resize", cols, rows }));
+  newTerm.onResize(({ cols, rows }) => {
+    if (session.socket && session.socket.readyState === WebSocket.OPEN) {
+      //session.socket.send(JSON.stringify({ type: "resize", cols, rows }));
     }
   });
 
   window.addEventListener("resize", () => {
-    fitAddon?.fit();
-    sendResize();
+    newFitAddon.fit();
+    sendResize(session);
   });
 }
 
 /** 通知后端终端尺寸 */
-function sendResize() {
-  if (term && socket && socket.readyState === WebSocket.OPEN) {
-    // socket.send(
-    //   JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows })
+function sendResize(session: TerminalSession) {
+  if (session.term && session.socket && session.socket.readyState === WebSocket.OPEN) {
+    // session.socket.send(
+    //   JSON.stringify({ type: "resize", cols: session.term.cols, rows: session.term.rows })
     // );
   }
 }
 
-/** 销毁终端 */
-function disposeTerminal() {
-  disconnect();
-  if (zmManager) {
-    zmManager.destroy();
-    zmManager = null;
+/** 销毁单个会话 */
+function disposeSession(session: TerminalSession) {
+  disconnectSession(session);
+  if (session.zmManager) {
+    session.zmManager.destroy();
+    session.zmManager = null;
   }
-  if (term) {
-    term.dispose();
-    term = null;
-    fitAddon = null;
+  if (session.term) {
+    session.term.dispose();
+    session.term = null;
+    session.fitAddon = null;
   }
 }
 
@@ -128,16 +168,45 @@ function connect(config: AccountConfig) {
     return;
   }
 
-  // 先断开旧连接
-  disconnect();
+  // 创建新会话
+  const sessionId = generateSessionId();
+  const newSession: TerminalSession = {
+    id: sessionId,
+    config,
+    term: null,
+    fitAddon: null,
+    socket: null,
+    zmManager: null,
+    progress: {
+      visible: false,
+      fileName: "",
+      percentage: 0,
+      receivedText: "",
+      isUpload: false,
+    },
+  };
 
-  if (!term) {
-    initTerminal();
+  sessions.value.push(newSession);
+  activeSessionId.value = sessionId;
+
+  // 等待 DOM 更新后初始化终端
+  nextTick(() => {
+    initTerminal(newSession);
+    establishConnection(newSession);
+  });
+}
+
+/** 建立连接的具体逻辑 */
+function establishConnection(session: TerminalSession) {
+  const config = session.config;
+
+  if (!session.term) {
+    initTerminal(session);
   } else {
     // 复用已有终端时重新适配尺寸
     nextTick(() => {
-      fitAddon?.fit();
-      term?.focus();
+      session.fitAddon?.fit();
+      session.term?.focus();
     });
   }
 
@@ -145,30 +214,25 @@ function connect(config: AccountConfig) {
   activeConfig.value = config;
 
   // 构建 WebSocket URL
-  // 开发环境通过 Vite 代理转发（/py-api → http://localhost:18080），需要保留后端 /pyApi 前缀
-  // 生产环境直接请求同域 /pyApi 路径
-
   const wsBase = getApiBaseUrlPy();
-  // 开发环境：代理前缀 /py-api 会被剥离，需要额外拼接 /pyApi 使其最终发给后端路径为 /pyApi/terminal/ws
-  // 生产环境：VITE_APP_BASE_API_PY 本身就是 /pyApi，直接拼接即可
-
   const wsUrl = `${wsBase}/terminal/ws?configId=${encodeURIComponent(
     config.id
   )}`;
-  socket = new WebSocket(wsUrl);
-  socket.binaryType = "arraybuffer";
+  
+  session.socket = new WebSocket(wsUrl);
+  session.socket.binaryType = "arraybuffer";
 
   // 创建 ZMODEM 管理器（用于 rz/sz 文件传输）
-  if (zmManager) zmManager.destroy();
-  zmManager = createZmodemManager({
-    writeToTerminal: (data: Uint8Array) => term?.write(data),
+  if (session.zmManager) session.zmManager.destroy();
+  session.zmManager = createZmodemManager({
+    writeToTerminal: (data: Uint8Array) => session.term?.write(data),
     sendToSocket: (data: Uint8Array) => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(data);
+      if (session.socket && session.socket.readyState === WebSocket.OPEN) {
+        session.socket.send(data);
       }
     },
     getBufferedAmount: () => {
-      return socket?.bufferedAmount || 0;
+      return session.socket?.bufferedAmount || 0;
     },
     onProgress: (
       pct: number,
@@ -177,15 +241,13 @@ function connect(config: AccountConfig) {
       total: number,
       isUpload: boolean
     ) => {
-      zmProgress.visible = true;
-      zmProgress.fileName = name;
-      zmProgress.percentage = pct;
-      zmProgress.receivedText = `${formatBytes(received)} / ${formatBytes(
-        total
-      )}`;
-      zmProgress.isUpload = isUpload;
+      session.progress.visible = true;
+      session.progress.fileName = name;
+      session.progress.percentage = pct;
+      session.progress.receivedText = `${formatBytes(received)} / ${formatBytes(total)}`;
+      session.progress.isUpload = isUpload;
       if (pct >= 100) {
-        setTimeout(() => (zmProgress.visible = false), 2000);
+        setTimeout(() => (session.progress.visible = false), 2000);
       }
     },
     onTransferComplete: () => {
@@ -193,61 +255,102 @@ function connect(config: AccountConfig) {
     },
   });
 
-  socket.onopen = () => {
+  session.socket.onopen = () => {
     connecting.value = false;
-    if (term) {
-      term.clear();
+    if (session.term) {
+      session.term.clear();
       // 延迟聚焦和适配尺寸，等待 DOM 完全更新
       nextTick(() => {
-        fitAddon?.fit();
-        term?.focus();
+        session.fitAddon?.fit();
+        session.term?.focus();
         // 通知后端终端尺寸
-        sendResize();
+        sendResize(session);
       });
     }
     ElMessage.success("已连接到 " + config.configName);
   };
 
-  socket.onmessage = (event) => {
+  session.socket.onmessage = (event) => {
     // 通过 ZModem 管理器处理入站数据
     // 管理器自动检测 ZMODEM 协议并分流：普通数据→终端，文件数据→下载/上传
-    if (zmManager && event.data) {
-      zmManager.processIncoming(event.data);
+    if (session.zmManager && event.data) {
+      session.zmManager.processIncoming(event.data);
     }
   };
 
-  socket.onerror = () => {
+  session.socket.onerror = () => {
     connecting.value = false;
     ElMessage.error("连接失败");
   };
 
-  socket.onclose = () => {
+  session.socket.onclose = () => {
     connecting.value = false;
-    if (term) {
-      term.writeln("\r\n\x1b[33m会话已断开\x1b[0m");
+    if (session.term) {
+      session.term.writeln("\r\n\x1b[33m会话已断开\x1b[0m");
     }
   };
 }
 
-/** 断开连接 */
-function disconnect() {
-  if (socket) {
-    socket.close();
-    socket = null;
+/** 断开指定会话连接 */
+function disconnectSession(session: TerminalSession) {
+  if (session.socket) {
+    session.socket.close();
+    session.socket = null;
   }
-  if (zmManager) {
-    zmManager.destroy();
-    zmManager = null;
+  if (session.zmManager) {
+    session.zmManager.destroy();
+    session.zmManager = null;
   }
   connecting.value = false;
-  activeConfig.value = null;
+  if (activeConfig.value?.id === session.config.id) {
+    activeConfig.value = null;
+  }
+}
+
+/** 关闭会话 */
+function closeSession(sessionId: string) {
+  const index = sessions.value.findIndex(s => s.id === sessionId);
+  if (index === -1) return;
+
+  const session = sessions.value[index];
+  disposeSession(session);
+  sessions.value.splice(index, 1);
+
+  // 如果关闭的是当前会话，切换到其他会话
+  if (activeSessionId.value === sessionId) {
+    if (sessions.value.length > 0) {
+      activeSessionId.value = sessions.value[Math.max(0, index - 1)].id;
+    } else {
+      activeSessionId.value = null;
+      activeConfig.value = null;
+    }
+  }
+}
+
+/** 切换会话 */
+function switchSession(sessionId: string) {
+  activeSessionId.value = sessionId;
+  nextTick(() => {
+    const session = sessions.value.find(s => s.id === sessionId);
+    if (session) {
+      session.fitAddon?.fit();
+      session.term?.focus();
+    }
+  });
+}
+
+/** 断开当前会话连接 */
+function disconnect() {
+  if (currentSession.value) {
+    disconnectSession(currentSession.value);
+  }
 }
 
 /** 取消当前 ZMODEM 上传 */
 function cancelUpload() {
-  if (zmManager) {
-    zmManager.cancelUpload();
-    zmProgress.visible = false;
+  if (currentSession.value && currentSession.value.zmManager) {
+    currentSession.value.zmManager.cancelUpload();
+    currentSession.value.progress.visible = false;
   }
 }
 
@@ -299,7 +402,6 @@ function formatBytes(bytes: number): string {
 
 /** 组件挂载 */
 onMounted(() => {
-  initTerminal();
   loadServiceOptions();
   handleQuery();
 });
@@ -316,8 +418,10 @@ async function loadServiceOptions() {
 
 /** 组件卸载 */
 onUnmounted(() => {
-  disposeTerminal();
-  window.removeEventListener("resize", () => fitAddon?.fit());
+  // 销毁所有会话
+  sessions.value.forEach(session => disposeSession(session));
+  sessions.value = [];
+  window.removeEventListener("resize", () => {});
 });
 </script>
 
@@ -367,7 +471,7 @@ onUnmounted(() => {
             v-for="config in configList"
             :key="config.id"
             class="config-item"
-            :class="{ active: activeConfig?.id === config.id }"
+            :class="{ active: currentSession?.config.id === config.id }"
             @click="handleConnect(config)"
           >
             <div class="config-info">
@@ -389,43 +493,19 @@ onUnmounted(() => {
 
     <!-- 右侧终端区域 -->
     <div class="right-panel">
-      <div class="terminal-toolbar">
-        <div class="connection-info">
-          <template v-if="activeConfig">
-            <el-tag type="success" size="small">
-              {{ activeConfig.configName }}
-            </el-tag>
-            <span class="addr-text">
-              {{ activeConfig.username }}@{{ activeConfig.url }}:{{
-                activeConfig.port
-              }}
-            </span>
-          </template>
-          <span v-else class="no-connection">未连接</span>
-        </div>
-        <div class="terminal-actions">
-          <el-button
-            v-if="activeConfig"
-            type="danger"
-            size="small"
-            :loading="connecting"
-            @click="disconnect"
-          >
-            断开
-          </el-button>
-          <el-button
-            v-if="activeConfig"
-            size="small"
-            @click="connect(activeConfig)"
-            :loading="connecting"
-          >
-            重连
-          </el-button>
-          <el-tooltip content="清屏" placement="bottom">
-            <el-button text size="small" @click="term?.clear()">
-              <i-ep-delete />
-            </el-button>
-          </el-tooltip>
+      <!-- 会话标签页 -->
+      <div v-if="sessions.length > 0" class="session-tabs">
+        <div
+          v-for="session in sessions"
+          :key="session.id"
+          class="session-tab"
+          :class="{ active: activeSessionId === session.id }"
+          @click="switchSession(session.id)"
+        >
+          <span class="tab-name">{{ session.config.configName }}</span>
+          <span class="tab-close" @click.stop="closeSession(session.id)">
+            <i-ep-close />
+          </span>
         </div>
       </div>
 
@@ -456,10 +536,17 @@ onUnmounted(() => {
         <div class="zm-progress-detail">{{ zmProgress.receivedText }}</div>
       </div>
 
-      <div class="terminal-container" ref="terminalRef" />
+      <!-- 所有终端容器 -->
+      <div
+        v-for="session in sessions"
+        :key="session.id"
+        v-show="activeSessionId === session.id"
+        class="terminal-container"
+        :ref="(el: any) => { if (el) terminalRefs.set(session.id, el as HTMLDivElement) }"
+      />
 
       <!-- 未连接时的占位提示 -->
-      <div v-if="!activeConfig && !connecting" class="terminal-placeholder">
+      <div v-if="sessions.length === 0" class="terminal-placeholder">
         <div class="placeholder-content">
           <i-ep-monitor style="font-size: 48px; color: #909399" />
           <p>请在左侧选择一个 SSH 配置来建立连接</p>
@@ -589,6 +676,61 @@ onUnmounted(() => {
   flex: 1;
   flex-direction: column;
   min-width: 0;
+}
+
+/* 会话标签页 */
+.session-tabs {
+  display: flex;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.session-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-right: 1px solid var(--el-border-color-lighter);
+  transition: background 0.15s;
+  user-select: none;
+  min-width: 120px;
+  max-width: 200px;
+}
+
+.session-tab:hover {
+  background: var(--el-fill-color-light);
+}
+
+.session-tab.active {
+  background: var(--el-color-primary-light-9);
+  border-bottom: 2px solid var(--el-color-primary);
+}
+
+.tab-name {
+  flex: 1;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: all 0.15s;
+}
+
+.tab-close:hover {
+  opacity: 1;
+  background: var(--el-fill-color);
 }
 
 .terminal-toolbar {
