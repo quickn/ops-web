@@ -33,6 +33,7 @@ const detailLoading = ref(false);
 const detailContent = ref("");
 const searchKeyword = ref("");
 const originalTemplate = ref("");
+const lineCount = ref(0);
 
 // 时间范围筛选
 const timeRange = reactive({
@@ -287,6 +288,7 @@ async function executeDetailQuery() {
 
   detailLoading.value = true;
   detailContent.value = "";
+  lineCount.value = 0;
 
   try {
     const params: LogCmdForm = {
@@ -296,11 +298,18 @@ async function executeDetailQuery() {
     };
 
     const { data } = await fileLogDetail(params);
-    detailContent.value = data || "暂无详细日志信息";
+    const logData = data.data || "暂无详细日志信息";
+    detailContent.value = logData;
+    
+    // 统计行数
+    if (logData && logData !== "暂无详细日志信息") {
+      lineCount.value = logData.split('\n').filter(line => line.trim().length > 0).length;
+    }
   } catch (error) {
     ElMessage.error("获取日志详情失败");
     console.error("Detail error:", error);
     detailContent.value = "获取日志详情失败";
+    lineCount.value = 0;
   } finally {
     detailLoading.value = false;
   }
@@ -525,6 +534,13 @@ async function executeDetailQuery() {
           </el-input>
         </el-form-item>
       </el-form>
+      <!-- 行数统计 -->
+      <div v-if="lineCount > 0" class="line-count-info">
+        <el-tag type="success" size="small">
+          <i-ep-document style="margin-right: 4px" />
+          共 {{ lineCount }} 行日志
+        </el-tag>
+      </div>
     </el-card>
 
     <!-- 结果展示区域 -->
@@ -651,6 +667,12 @@ async function executeDetailQuery() {
 .search-card {
   margin-bottom: 0;
   border: none;
+}
+
+.line-count-info {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ebeef5;
 }
 
 .template-reference {
