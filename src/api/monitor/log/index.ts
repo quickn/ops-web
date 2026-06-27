@@ -39,6 +39,17 @@ export function fileLogAnalysis(
   });
 }
 
+export function fileLogDetail(
+  queryParams?: LogCmdForm
+): AxiosPromise<string> {
+  return request({
+    url: "/log/detail",
+    method: "get",
+    params: queryParams,
+    timeout: 120000
+  });
+}
+
 /**
  * 获取部门详情
  *

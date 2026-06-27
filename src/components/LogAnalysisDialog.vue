@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LogAnalysisResponse, LogAnalysisResult, LogCluster, LogCmdForm } from "@/api/monitor/log/types";
-import { fileLogAnalysis } from "@/api/monitor/log";
+import { fileLogAnalysis, fileLogDetail } from "@/api/monitor/log";
 
 interface Props {
   visible: boolean;
@@ -26,6 +26,13 @@ const dialogVisible = computed({
 
 const loading = ref(false);
 const analysisData = ref<LogAnalysisResult | null>(null);
+
+// 详情对话框
+const detailDialogVisible = ref(false);
+const detailLoading = ref(false);
+const detailContent = ref("");
+const searchKeyword = ref("");
+const originalTemplate = ref("");
 
 // 时间范围筛选
 const timeRange = reactive({
@@ -194,6 +201,110 @@ function getProgressColor(percentage: number): string {
   if (percentage >= 10) return "#409eff";
   return "#67c23a";
 }
+
+// 打开日志详情对话框
+function openDetailDialog(template: string) {
+  if (!props.queryParams) return;
+
+  // 保存原始模板用于显示
+  originalTemplate.value = template;
+
+  // 提取 <*> 中间的内容
+  const wildcardPattern = /<\*>/g;
+  const matches = template.match(wildcardPattern);
+  
+  let extractedKeyword = template; // 默认使用原始模板
+  
+  if (matches && matches.length > 0) {
+    // 按 <*> 分割模板
+    const parts = template.split('<*>');
+    
+    if (matches.length === 1) {
+      // 只有一个 <*>，保留右边的内容
+      // parts[0] 是左边，parts[1] 是右边
+      extractedKeyword = parts[1] ? parts[1].trim() : '';
+    } else if (matches.length >= 2) {
+      // 多个 <*>，只保留中间的内容（去掉最左和最右）
+      // parts[0] 是最左边（不要），parts[parts.length-1] 是最右边（不要）
+      // 保留 parts[1] 到 parts[parts.length-2]
+      const middleParts = parts.slice(1, -1);
+      const filteredParts = middleParts
+        .map(part => part.trim())
+        .filter(part => part.length > 0);
+      
+      if (filteredParts.length > 0) {
+        extractedKeyword = filteredParts.join(' ');
+      }
+    }
+  } else {
+    // 如果没有 <*> 标记，尝试提取类路径
+    const classPattern = /\]\s+(com\.[a-zA-Z0-9_.]+)\s+/;
+    const match = template.match(classPattern);
+    
+    if (match && match[1]) {
+      // 如果提取到类路径，将原始关键字和类路径组合
+      const originalKeyword = props.queryParams.keyword || '';
+      const classPath = match[1];
+      // 组合关键字：原始关键字 + 类路径（用空格分隔）
+      extractedKeyword = originalKeyword ? `${originalKeyword} ${classPath}` : classPath;
+    }
+  }
+
+  // 去除所有 [] 及其中的内容
+  extractedKeyword = extractedKeyword.replace(/\[[^\]]*\]/g, '').trim();
+  // 清理多余的空格（多个连续空格合并为一个）
+  extractedKeyword = extractedKeyword.replace(/\s+/g, ' ').trim();
+  
+  // 如果有关键字且包含空格，只保留第一个字符串
+  if (extractedKeyword && extractedKeyword.includes(' ')) {
+    extractedKeyword = extractedKeyword.split(' ')[0];
+  }
+
+  searchKeyword.value = extractedKeyword; // 设置提取后的关键字
+  detailContent.value = "";
+  detailDialogVisible.value = true;
+  
+  // 如果提取到有效关键字，自动执行查询
+  if (extractedKeyword && extractedKeyword.trim().length > 0) {
+    // 等待对话框渲染完成后执行查询
+    setTimeout(() => {
+      executeDetailQuery();
+    }, 300);
+  } else {
+    // 没有提取到内容，提示用户手动输入
+    ElMessage.info('未提取到有效关键字，请手动编辑后点击查询');
+  }
+}
+
+// 执行日志详情查询
+async function executeDetailQuery() {
+  if (!searchKeyword.value.trim()) {
+    ElMessage.warning("请输入搜索关键字");
+    return;
+  }
+
+  if (!props.queryParams) return;
+
+  detailLoading.value = true;
+  detailContent.value = "";
+
+  try {
+    const params: LogCmdForm = {
+      ...props.queryParams,
+      timeout: 120,
+      keyword: searchKeyword.value.trim()
+    };
+
+    const { data } = await fileLogDetail(params);
+    detailContent.value = data || "暂无详细日志信息";
+  } catch (error) {
+    ElMessage.error("获取日志详情失败");
+    console.error("Detail error:", error);
+    detailContent.value = "获取日志详情失败";
+  } finally {
+    detailLoading.value = false;
+  }
+}
 </script>
 
 <template>
@@ -315,7 +426,7 @@ function getProgressColor(percentage: number): string {
                   placement="top"
                   :show-after="500"
                 >
-                  <div class="template-content">
+                  <div class="template-content" @click="openDetailDialog(row.template)">
                     {{ formatTemplate(row.template) }}
                   </div>
                 </el-tooltip>
@@ -373,6 +484,59 @@ function getProgressColor(percentage: number): string {
       <el-button @click="dialogVisible = false">关闭</el-button>
     </template>
   </el-dialog>
+
+  <!-- 日志详情对话框 -->
+  <el-dialog
+    v-model="detailDialogVisible"
+    title="日志详情查询"
+    width="80%"
+    :close-on-click-modal="false"
+  >
+    <!-- 原始模板参考区域 -->
+    <el-alert
+      v-if="originalTemplate"
+      title="原始日志模板"
+      type="info"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 15px"
+    >
+      <div class="template-reference">
+        {{ formatTemplate(originalTemplate) }}
+      </div>
+    </el-alert>
+
+    <!-- 搜索区域 -->
+    <el-card class="search-card" shadow="never">
+      <el-form :inline="true">
+        <el-form-item label="搜索关键字" style="width: 100%; margin-bottom: 0">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="请输入搜索关键字"
+            clearable
+            style="flex: 1"
+          >
+            <template #append>
+              <el-button type="primary" @click="executeDetailQuery" :loading="detailLoading">
+                <i-ep-search />
+                查询
+              </el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 结果展示区域 -->
+    <div v-loading="detailLoading" class="log-detail-container">
+      <pre v-if="!detailLoading && detailContent" class="log-content">{{ detailContent }}</pre>
+      <el-empty v-else-if="!detailLoading" description="请输入关键字并点击查询" />
+    </div>
+
+    <template #footer>
+      <el-button @click="detailDialogVisible = false">关闭</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
@@ -424,9 +588,12 @@ function getProgressColor(percentage: number): string {
   padding: 8px;
   background-color: #f5f7fa;
   border-radius: 4px;
+  transition: all 0.3s;
 
   &:hover {
     background-color: #ecf5ff;
+    color: #409eff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -472,5 +639,43 @@ function getProgressColor(percentage: number): string {
 
 :deep(.el-progress__text) {
   font-size: 12px !important;
+}
+
+.log-detail-container {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+  margin-top: 15px;
+}
+
+.search-card {
+  margin-bottom: 0;
+  border: none;
+}
+
+.template-reference {
+  margin-top: 8px;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #606266;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.log-content {
+  margin: 0;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #303133;
 }
 </style>
