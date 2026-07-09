@@ -3,11 +3,10 @@ import hljs from "highlight.js";
 import "highlight.js/styles/default.css"; // 引入样式，可替换其他主题
 import { compareTableStructure } from "@/api/deploy/db";
 
-import { listAll } from "@/api/monitor/service";
-
 import { LogCmdForm } from "@/api/monitor/log/types";
 
-import { ServiceInfo } from "@/api/monitor/service/types";
+import { getSavedConfigs } from "@/api/accountConfig";
+import type { AccountConfig } from "@/api/accountConfig/types";
 
 const queryFormRef = ref(ElForm);
 
@@ -15,9 +14,14 @@ const loading = ref(false);
 
 const queryParams = reactive<LogCmdForm>({});
 
-const serviceInfoList = ref<ServiceInfo[]>();
-
 const textContent = ref<any>("");
+
+
+const targetConnections = ref<AccountConfig[]>([]);
+
+/** 源连接ID */
+const targetConfigId = ref<number>();
+
 
 const options = [
   { value: true, text: "场内" },
@@ -50,21 +54,25 @@ function resetQuery() {
   handleQuery();
 }
 
-onMounted(() => {
-  //默认选中第一个
-  queryParams.is_share = share_options[0].value;
-  queryParams.is_inside = options[0].value;
-  listAll().then(({ data }) => {
-    serviceInfoList.value = data;
-    queryParams.env = serviceInfoList.value[0].label;
-    if (queryParams.env != undefined) {
-      handleSelectChange(queryParams.env);
-    }
-  });
+onMounted(async () => {
+  try {
+    const res: any = await getSavedConfigs({ type: "mysql" });
+    const configs = res.data || [];
+    targetConnections.value = configs;
+
+    //默认选中第一个
+    queryParams.is_share = share_options[0].value;
+    queryParams.is_inside = options[0].value;
+
+  } catch {
+    targetConnections.value = [];
+  }
+
+
 });
 
 function handleSelectChange(label: string) {
-  queryParams.env = label;
+  queryParams.targetConfigId = label;
 }
 
 function copyCommand() {
@@ -89,18 +97,20 @@ function copyCommand() {
   <div class="app-container">
     <div class="search-container">
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
-        <el-form-item label="服务" prop="status">
+        <!-- 源库选择行 -->
+        <el-form-item label="源连接">
           <el-select
-            v-model="queryParams.env"
-            clearable
-            style="width: 100px"
+            v-model="targetConfigId"
+            placeholder="请选择源MySQL连接"
+            filterable
+            style="width: 200px"
             @change="handleSelectChange"
           >
             <el-option
-              v-for="item in serviceInfoList"
-              :key="item.label"
-              :label="item.name"
-              :value="item.label"
+              v-for="conn in targetConnections"
+              :key="conn.id"
+              :label="`${conn.configName ?? ''} (${conn.url ?? ''}:${conn.port ?? ''})`"
+              :value="conn.id!"
             />
           </el-select>
         </el-form-item>
