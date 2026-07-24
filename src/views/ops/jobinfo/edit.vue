@@ -236,29 +236,22 @@
 </template>
 
 <script setup lang="ts">
-import {
-  ArrowLeft,
-  InfoFilled,
-  Operation,
-  Setting,
-  Timer,
-} from "@element-plus/icons-vue";
+import { ArrowLeft, InfoFilled, Operation, Setting, Timer } from "@element-plus/icons-vue";
 import { addJob, getJobById, updateJob } from "@/api/ops/jobinfo";
 import { JobInfo } from "@/api/ops/jobinfo/types";
-import { getByType } from "@/api/accountConfig";
-import { AccountConfig } from "@/api/accountConfig/types";
 import { useRoute, useRouter } from "vue-router";
 
 
 defineOptions({
   name: "JobInfoEdit",
-  inheritAttrs: false,
+  inheritAttrs: false
 });
 
 const props = defineProps({
   editId: { type: Number, default: undefined },
   isDialog: { type: Boolean, default: false },
   editData: { type: Object, default: undefined },
+  configId: { type: Number, default: undefined }
 });
 
 const emit = defineEmits<{
@@ -274,7 +267,6 @@ const pageLoading = ref(false);
 const submitLoading = ref(false);
 const isEdit = ref(false);
 const showCronHelp = ref(false);
-const serviceList = ref<AccountConfig[]>([]);
 
 const formData = reactive<JobInfo>({
   configId: undefined,
@@ -292,18 +284,18 @@ const formData = reactive<JobInfo>({
   executorRouteStrategy: "FIRST",
   executorBlockStrategy: "SERIAL_EXECUTION",
   executorFailRetryCount: 0,
-  executorTimeout: 0,
+  executorTimeout: 0
 });
 
 const rules = reactive({
   jobGroup: [{ required: true, message: "请选择任务分组", trigger: "change" }],
   scheduleType: [
-    { required: true, message: "请选择调度类型", trigger: "change" },
+    { required: true, message: "请选择调度类型", trigger: "change" }
   ],
   glueType: [{ required: true, message: "请选择运行模式", trigger: "change" }],
   executorRouteStrategy: [
-    { required: true, message: "请选择路由策略", trigger: "change" },
-  ],
+    { required: true, message: "请选择路由策略", trigger: "change" }
+  ]
 });
 
 /** 获取GLUE源代码占位符 */
@@ -311,23 +303,15 @@ function getGlueSourcePlaceholder(): string {
   const placeholders: Record<string, string> = {
     GLUE_SHELL: "#!/bin/bash\necho 'Hello World'",
     GLUE_PYTHON: "#!/usr/bin/env python\nprint('Hello World')",
-    GLUE_POWERSHELL: "Write-Host 'Hello World'",
+    GLUE_POWERSHELL: "Write-Host 'Hello World'"
   };
   return placeholders[formData.glueType || ""] || "请输入脚本代码";
 }
 
-/** 获取服务列表 */
-function loadServiceList() {
-  getByType("xxlJob").then(({ data }) => {
-    serviceList.value = data;
-    if (!formData.configId && data.length > 0) {
-      formData.configId = data[0].id;
-    }
-  });
-}
 
 /** 加载任务详情（编辑模式） */
 function loadJobDetail(configId: number, id: number) {
+  formData.configId = configId;
   pageLoading.value = true;
   getJobById(configId, id)
     .then(({ data }) => {
@@ -376,10 +360,15 @@ function handleBack() {
 }
 
 onMounted(() => {
-  loadServiceList();
   // 优先级: editData(对话框传参) > editId(路由传参) > route.query(独立页面)
+  Object.assign(formData, props.editData as JobInfo);
+  // 确保使用父组件传入的 configId
+  let configId = 0;
+  if (props.configId) {
+    formData.configId = props.configId;
+    configId = Number(props.configId);
+  }
   if (props.editData) {
-    Object.assign(formData, props.editData as JobInfo);
     if (props.editData.id !== undefined) {
       isEdit.value = true;
     } else {
@@ -387,18 +376,10 @@ onMounted(() => {
     }
   } else if (props.editId) {
     // 需要从路由或 props 中获取 configId
-    const configId = route.query.configId
-      ? Number(route.query.configId)
-      : undefined;
-    if (configId) {
       loadJobDetail(configId, props.editId);
-    }
   } else if (!props.isDialog) {
     const id = route.query.id;
-    const configId = route.query.configId
-      ? Number(route.query.configId)
-      : undefined;
-    if (id && configId) {
+    if (id) {
       loadJobDetail(configId, Number(id));
     }
   }

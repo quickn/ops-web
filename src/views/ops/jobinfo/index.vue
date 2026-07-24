@@ -259,6 +259,7 @@
       <JobInfoEdit
         :edit-data="currentEditRow"
         :is-dialog="true"
+        :config-id="queryParams.configId"
         @success="onEditSuccess"
         @cancel="onEditCancel"
       />
@@ -521,7 +522,7 @@ function handleAdd() {
 
 /** 编辑任务 */
 function handleEdit(row: JobInfo) {
-  openDialog("编辑任务", row);
+  openDialog("编辑任务", { ...row, configId: queryParams.configId });
 }
 
 /** 复制任务 */
