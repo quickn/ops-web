@@ -12,7 +12,10 @@
           <div>{{ props.info.agentIp }}</div>
         </el-form-item>
         <el-form-item label="指令:">
-          <div>{{ props.info.cmd }}</div>
+          <div>{{ props.info.command }}</div>
+        </el-form-item>
+        <el-form-item label="脚本:">
+          <div>{{ props.info.script }}</div>
         </el-form-item>
         <el-form-item label="结果集:">
           <div>{{ props.info.result }}</div>

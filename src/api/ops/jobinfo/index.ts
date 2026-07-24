@@ -1,6 +1,7 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
-import { JobInfo, JobInfoGroup, JobLog } from "./types";
+import { JobConfig, JobInfo, JobInfoGroup, JobLog } from "./types";
+
 
 /**
  * 分页查询任务列表
@@ -60,6 +61,7 @@ export function updateJob(data: JobInfo) {
  * 删除任务
  */
 export function deleteJob(configId: number, id: number) {
+  deleteTaskConfig(id);
   return request({
     url: `/pyApi/jobinfo/jobinfoRemove/${id}`,
     method: "get",
@@ -123,6 +125,31 @@ export function getJobLogPage(
     url: "/pyApi/jobinfo/logPage",
     method: "get",
     params: queryParams
+  });
+}
+
+/** 获取任务配置 */
+export function getTaskConfig(jobId: number): AxiosPromise<JobConfig> {
+  return request({
+    url: `/jobConfig/get/${jobId}`,
+    method: "get"
+  });
+}
+
+/** 保存任务配置 */
+export function saveTaskConfig(data: JobConfig) {
+  return request({
+    url: "/jobConfig/save",
+    method: "post",
+    data
+  });
+}
+
+/** 删除任务配置 */
+export function deleteTaskConfig(jobId: number) {
+  return request({
+    url: `/jobConfig/delete/${jobId}`,
+    method: "delete"
   });
 }
 

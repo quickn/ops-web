@@ -106,17 +106,9 @@
         <el-table-column
           label="任务描述"
           prop="jobDesc"
-          width="180"
+          width="260"
           show-overflow-tooltip
         />
-        <el-table-column label="所属服务" prop="serviceName" width="120">
-          <template #default="scope">
-            <el-tag v-if="scope.row.serviceName" type="info">
-              {{ scope.row.serviceName }}
-            </el-tag>
-            <span v-else style="color: #999">未关联</span>
-          </template>
-        </el-table-column>
         <el-table-column
           label="负责人"
           prop="author"
@@ -153,7 +145,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column fixed="right" label="操作" width="320" align="center">
+        <el-table-column fixed="right" label="操作" width="380" align="center">
           <template #default="scope">
             <el-button
               type="primary"
@@ -165,6 +157,28 @@
                 <Edit />
               </el-icon>
               编辑
+            </el-button>
+            <el-button
+              type="success"
+              size="small"
+              link
+              @click="handleCopy(scope.row)"
+            >
+              <el-icon>
+                <CopyDocument />
+              </el-icon>
+              复制
+            </el-button>
+            <el-button
+              type="warning"
+              size="small"
+              link
+              @click="handleTaskConfig(scope.row)"
+            >
+              <el-icon>
+                <Setting />
+              </el-icon>
+              参数配置
             </el-button>
             <el-button
               type="info"
@@ -258,6 +272,60 @@
       :job-desc="currentLogJobDesc"
       :config-id="queryParams.configId!"
     />
+
+    <!-- 任务配置弹窗 -->
+    <el-dialog
+      v-model="taskConfigVisible"
+      title="任务参数配置"
+      width="600px"
+      destroy-on-close
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="taskConfigFormRef"
+        :model="taskConfigForm"
+        label-width="100px"
+        v-loading="taskConfigLoading"
+      >
+        <el-form-item label="任务名称">
+          <span>{{ currentTaskConfigRow?.jobDesc }}</span>
+        </el-form-item>
+        <el-form-item label="任务ID">
+          <span>{{ currentTaskConfigRow?.id }}</span>
+        </el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="taskConfigForm.type" style="width: 100%">
+            <el-option label="cmd" value="cmd" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="指令名称" prop="command">
+          <el-input v-model="taskConfigForm.command" placeholder="请输入指令" clearable />
+        </el-form-item>
+        <el-form-item label="脚本" prop="script">
+          <el-input
+            v-model="taskConfigForm.script"
+            type="textarea"
+            :rows="6"
+            placeholder="请输入脚本"
+          />
+        </el-form-item>
+        <el-form-item label="超时时间(秒)">
+          <el-input-number v-model="taskConfigForm.timeout" :min="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="间隔时间(秒)">
+          <el-input-number v-model="taskConfigForm.interval" :min="0" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="代理ID">
+          <el-input-number v-model="taskConfigForm.agentId" :min="0" style="width: 100%" placeholder="请输入代理ID" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="taskConfigVisible = false">取消</el-button>
+        <el-button type="primary" :loading="taskConfigSaving" @click="handleTaskConfigSave">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -265,24 +333,28 @@
 import {
   ArrowDown,
   CaretRight,
+  CopyDocument,
   Delete,
   Document,
   Edit,
   Plus,
   Refresh,
   Search,
+  Setting,
   VideoPause,
   VideoPlay,
 } from "@element-plus/icons-vue";
 import {
   deleteJob,
+  getTaskConfig,
   jobGroupPageList,
   listJobPage,
+  saveTaskConfig,
   startJob,
   stopJob,
   triggerJob,
-} from "@/api/monitor/jobinfo";
-import { JobInfo, JobInfoGroup } from "@/api/monitor/jobinfo/types";
+} from "@/api/ops/jobinfo";
+import { JobConfig, JobInfo, JobInfoGroup } from "@/api/ops/jobinfo/types";
 import { getByType } from "@/api/accountConfig";
 import { AccountConfig } from "@/api/accountConfig/types";
 import { useRouter } from "vue-router";
@@ -309,6 +381,21 @@ const logVisible = ref(false);
 const currentLogJobId = ref(0);
 const currentLogJobGroup = ref(0);
 const currentLogJobDesc = ref("");
+
+// 任务配置状态
+const taskConfigVisible = ref(false);
+const taskConfigLoading = ref(false);
+const taskConfigSaving = ref(false);
+const taskConfigFormRef = ref(ElForm);
+const currentTaskConfigRow = ref<JobInfo | null>(null);
+const taskConfigForm = reactive<JobConfig>({
+  command: "",
+  script: "",
+  type: "cmd",
+  timeout: 10,
+  interval: 0,
+  agentId: undefined,
+});
 
 const queryParams = reactive({
   pageSize: 15,
@@ -415,6 +502,15 @@ function handleEdit(row: JobInfo) {
   openDialog("编辑任务", row);
 }
 
+/** 复制任务 */
+function handleCopy(row: JobInfo) {
+  const copyData = { ...row };
+  delete copyData.id;
+  copyData.jobDesc = (copyData.jobDesc || "") + "(副本)";
+  copyData.triggerStatus = 0;
+  openDialog("新增任务", copyData);
+}
+
 /** 对话框操作成功 */
 function onEditSuccess() {
   dialogVisible.value = false;
@@ -453,6 +549,52 @@ function handleQueryLog(row: JobInfo) {
   currentLogJobGroup.value = row.jobGroup;
   currentLogJobDesc.value = row.jobDesc || "";
   logVisible.value = true;
+}
+
+/** 打开任务参数配置 */
+function handleTaskConfig(row: JobInfo) {
+  currentTaskConfigRow.value = row;
+  // 重置表单为默认值
+  Object.assign(taskConfigForm, {
+    command: "",
+    script: "",
+    type: "cmd",
+    timeout: 10,
+    interval: 0,
+    agentId: undefined,
+  });
+  taskConfigVisible.value = true;
+  taskConfigLoading.value = true;
+  getTaskConfig(row.id!)
+    .then(({ data }) => {
+      if (data) {
+        Object.assign(taskConfigForm, data);
+      }
+    })
+    .catch(() => {
+      // 无配置时使用默认值
+    })
+    .finally(() => {
+      taskConfigLoading.value = false;
+    });
+}
+
+/** 保存任务参数配置 */
+function handleTaskConfigSave() {
+  const row = currentTaskConfigRow.value;
+  if (!row) return;
+  taskConfigSaving.value = true;
+  saveTaskConfig({
+    ...taskConfigForm,
+    id: row.id,
+  })
+    .then(() => {
+      ElMessage.success("配置保存成功");
+      taskConfigVisible.value = false;
+    })
+    .finally(() => {
+      taskConfigSaving.value = false;
+    });
 }
 
 function handleStart(row: JobInfo) {

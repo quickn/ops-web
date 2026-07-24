@@ -103,8 +103,8 @@
 </template>
 
 <script setup lang="ts">
-import { getJobLogPage } from "@/api/monitor/jobinfo";
-import { JobLog } from "@/api/monitor/jobinfo/types";
+import { getJobLogPage } from "@/api/ops/jobinfo";
+import { JobLog } from "@/api/ops/jobinfo/types";
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

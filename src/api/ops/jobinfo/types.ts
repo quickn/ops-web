@@ -85,6 +85,26 @@ export interface MisfireStrategyOption {
 }
 
 
+/** 任务配置 */
+export interface JobConfig {
+  /** 任务ID */
+  id?: number;
+  /** 服务ID */
+  serviceId?: number;
+  /** 指令 */
+  command?: string;
+  /** 脚本 */
+  script?: string;
+  /** 类型 */
+  type?: string;
+  /** 超时时间(秒) */
+  timeout?: number;
+  /** 间隔时间(秒) */
+  interval?: number;
+  /** 代理ID */
+  agentId?: number;
+}
+
 /**
  * 调度日志记录
  */

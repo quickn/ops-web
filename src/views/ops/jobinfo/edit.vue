@@ -27,21 +27,6 @@
           基本信息
         </el-divider>
 
-        <el-form-item label="所属服务" prop="configId">
-          <el-select
-            v-model="formData.configId"
-            placeholder="请选择所属服务"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in serviceList"
-              :key="item.id"
-              :label="item.configName || item.url"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-
         <el-form-item label="任务描述" prop="jobDesc">
           <el-input
             v-model="formData.jobDesc"
@@ -258,11 +243,12 @@ import {
   Setting,
   Timer,
 } from "@element-plus/icons-vue";
-import { addJob, getJobById, updateJob } from "@/api/monitor/jobinfo";
-import { JobInfo } from "@/api/monitor/jobinfo/types";
+import { addJob, getJobById, updateJob } from "@/api/ops/jobinfo";
+import { JobInfo } from "@/api/ops/jobinfo/types";
 import { getByType } from "@/api/accountConfig";
 import { AccountConfig } from "@/api/accountConfig/types";
 import { useRoute, useRouter } from "vue-router";
+
 
 defineOptions({
   name: "JobInfoEdit",
@@ -310,7 +296,6 @@ const formData = reactive<JobInfo>({
 });
 
 const rules = reactive({
-  configId: [{ required: true, message: "请选择所属服务", trigger: "change" }],
   jobGroup: [{ required: true, message: "请选择任务分组", trigger: "change" }],
   scheduleType: [
     { required: true, message: "请选择调度类型", trigger: "change" },
@@ -335,6 +320,9 @@ function getGlueSourcePlaceholder(): string {
 function loadServiceList() {
   getByType("xxlJob").then(({ data }) => {
     serviceList.value = data;
+    if (!formData.configId && data.length > 0) {
+      formData.configId = data[0].id;
+    }
   });
 }
 
@@ -363,15 +351,9 @@ function handleSubmit() {
     submitLoading.value = true;
 
     const apiCall = isEdit.value ? updateJob(formData) : addJob(formData);
-
     apiCall
       .then((obj) => {
-        if (obj.data.code === 200) {
-          ElMessage.success(isEdit.value ? "更新成功" : "新增成功");
-        } else {
-          ElMessage.error(obj.data.msg || "操作失败");
-          return;
-        }
+        ElMessage.success(isEdit.value ? "更新成功" : "新增成功");
         if (props.isDialog) {
           emit("success");
         } else {

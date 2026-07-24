@@ -33,7 +33,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     const { code, msg } = response.data;
-    if (code === "00000") {
+    if (code === "00000" || code === 200) {
       return response.data;
     }
     if (msg !== undefined && msg !== "一切ok") {

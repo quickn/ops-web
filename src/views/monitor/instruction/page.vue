@@ -19,7 +19,15 @@
         </el-form-item>
         <el-form-item label="IP" style="width: 220px">
           <el-input
-            v-model="queryParams.agentId"
+            v-model="queryParams.agentIP"
+            placeholder="请输入"
+            clearable
+            @keyup.enter="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="指令" style="width: 220px">
+          <el-input
+            v-model="queryParams.command"
             placeholder="请输入"
             clearable
             @keyup.enter="handleQuery"
@@ -58,7 +66,8 @@
         <!--        <el-table-column type="selection" width="55" align="center" />-->
         <el-table-column label="服务名" prop="serviceName" width="180" />
         <el-table-column label="IP" prop="agentIp" width="180" />
-        <el-table-column label="指令" prop="cmd" width="180" />
+        <el-table-column label="指令" prop="command" width="180" />
+        <el-table-column label="脚本" prop="script" width="180" />
         <el-table-column label="结果集" prop="result" />
         <el-table-column label="创建时间" prop="createTime" width="180" />
         <el-table-column label="操作" fixed="right" width="120">
