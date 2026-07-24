@@ -7,10 +7,10 @@
         :inline="true"
         style="display: flex; flex-wrap: wrap; align-items: center"
       >
-        <el-form-item prop="configId" label="选择服务" style="width: 200px">
+        <el-form-item prop="configId" label="选择JOB" style="width: 200px">
           <el-select
             v-model="queryParams.configId"
-            placeholder="选择服务"
+            placeholder="选择JOB"
             clearable
             @change="handleServerChange"
           >
@@ -293,6 +293,21 @@
         <el-form-item label="任务ID">
           <span>{{ currentTaskConfigRow?.id }}</span>
         </el-form-item>
+        <el-form-item label="选择服务">
+          <el-select
+            v-model="taskConfigForm.serviceId"
+            placeholder="请选择服务"
+            clearable
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in serviceInfoList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="taskConfigForm.type" style="width: 100%">
             <el-option label="cmd" value="cmd" />
@@ -360,6 +375,8 @@ import { AccountConfig } from "@/api/accountConfig/types";
 import { useRouter } from "vue-router";
 import JobInfoEdit from "./edit.vue";
 import JobLog from "./joblog.vue";
+import { listAll } from "@/api/monitor/service";
+import { ServiceInfo } from "@/api/monitor/service/types";
 
 defineOptions({
   name: "JobInfoIndex",
@@ -389,6 +406,7 @@ const taskConfigSaving = ref(false);
 const taskConfigFormRef = ref(ElForm);
 const currentTaskConfigRow = ref<JobInfo | null>(null);
 const taskConfigForm = reactive<JobConfig>({
+  serviceId: undefined,
   command: "",
   script: "",
   type: "cmd",
@@ -409,6 +427,8 @@ const queryParams = reactive({
 
 const dataList = ref<JobInfo[]>([]);
 const serviceList = ref<AccountConfig[]>([]);
+const serviceInfoList = ref<ServiceInfo[]>();
+
 const jobGroupList = ref<JobInfoGroup[]>([]);
 
 /** 查询 */
@@ -420,6 +440,8 @@ function handleQuery() {
     loading.value = false;
   });
 }
+
+
 
 /** 获取服务列表 */
 function loadServiceList() {
@@ -553,9 +575,15 @@ function handleQueryLog(row: JobInfo) {
 
 /** 打开任务参数配置 */
 function handleTaskConfig(row: JobInfo) {
+
+  listAll().then(({ data }) => {
+    serviceInfoList.value = data;
+  });
+
   currentTaskConfigRow.value = row;
   // 重置表单为默认值
   Object.assign(taskConfigForm, {
+    serviceId: undefined,
     command: "",
     script: "",
     type: "cmd",
