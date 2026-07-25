@@ -6,34 +6,10 @@
         <el-button type="primary" @click="goBack">返回</el-button>
       </div>
     </div>
-    <el-card shadow="never">
-      <el-form ref="deptFormRef" label-width="120px">
-        <el-form-item label="IP:">
-          <div>{{ props.info.agentIp }}</div>
-        </el-form-item>
-        <el-form-item label="指令:">
-          <div>{{ props.info.command }}</div>
-        </el-form-item>
-        <el-form-item label="脚本:">
-          <div>{{ props.info.script }}</div>
-        </el-form-item>
-        <el-form-item label="结果集:">
-          <div>{{ props.info.result }}</div>
-        </el-form-item>
-        <el-form-item label="创建时间:">
-          <div>{{ props.info.createTime }}</div>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <pre class="result-output">{{ props.info.result }}</pre>
   </div>
 </template>
 <script setup lang="ts">
-import { LogInfo } from "@/api/monitor/log/types";
-import { ServiceInfo } from "@/api/monitor/service/types";
-import { listPage } from "@/api/monitor/agent";
-import { listAll } from "@/api/monitor/service";
-import { de, el } from "element-plus/es/locale";
-import { ElLoading } from "element-plus";
 const props = defineProps({
   info: {
     type: Object,
@@ -53,8 +29,24 @@ onActivated(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   font-size: 18px;
   font-weight: bold;
+}
+
+.result-output {
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 12px;
+  margin: 0;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #303133;
+  background-color: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  max-height: 100%;
+  overflow-y: auto;
 }
 </style>

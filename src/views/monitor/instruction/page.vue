@@ -46,9 +46,15 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery"
-            ><i-ep-search />搜索</el-button
           >
-          <el-button @click="resetQuery"><i-ep-refresh />重置</el-button>
+            <i-ep-search />
+            搜索
+          </el-button
+          >
+          <el-button @click="resetQuery">
+            <i-ep-refresh />
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -60,20 +66,33 @@
         :data="dataList"
         highlight-current-row
         border
-        @selection-change="handleSelectionChange"
-        show-overflow-tooltip
       >
         <!--        <el-table-column type="selection" width="55" align="center" />-->
-        <el-table-column label="服务名" prop="serviceName" width="180" />
-        <el-table-column label="IP" prop="agentIp" width="180" />
-        <el-table-column label="指令" prop="command" width="180" />
-        <el-table-column label="脚本" prop="script" width="180" />
-        <el-table-column label="结果集" prop="result" />
+        <el-table-column label="服务名" prop="serviceName" width="180" show-overflow-tooltip />
+        <el-table-column label="IP" prop="agentIp" width="180" show-overflow-tooltip />
+        <el-table-column label="指令" prop="command" width="180" show-overflow-tooltip />
+        <el-table-column label="脚本" prop="script" width="180" show-overflow-tooltip />
+        <el-table-column label="结果集" prop="result" min-width="300">
+          <template #default="scope">
+            <el-popover
+              placement="top"
+              width="1000"
+              trigger="hover"
+              :content="scope.row.result"
+            >
+              <template #reference>
+                <pre class="result-cell">{{ scope.row.result }}</pre>
+              </template>
+              <pre class="result-output">{{ scope.row.result }}</pre>
+            </el-popover>
+          </template>
+        </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180" />
         <el-table-column label="操作" fixed="right" width="120">
           <template #default="scope">
             <el-button type="text" @click="handleEdit(scope.row)"
-              >查看详情</el-button
+            >查看详情
+            </el-button
             >
           </template>
         </el-table-column>
@@ -90,10 +109,11 @@
   </div>
 </template>
 <script setup lang="ts">
-import { listData, deleteByIds } from "@/api/monitor/instruction";
+import { listData } from "@/api/monitor/instruction";
 import { listAll } from "@/api/monitor/service";
 import { LogInfo } from "@/api/monitor/log/types";
 import { ServiceInfo } from "@/api/monitor/service/types";
+
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
@@ -103,6 +123,7 @@ const queryParams = reactive<LogInfo>({ pageSize: 15, pageNum: 1 });
 const dataList = ref<LogInfo[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 const dateRange = ref<[string, string] | null>(null);
+
 /** 查询 */
 function handleQuery() {
   loading.value = true;
@@ -121,6 +142,7 @@ function handleQuery() {
     serviceInfoList.value = data;
   });
 }
+
 /** 重置查询 */
 function resetQuery() {
   queryFormRef.value.resetFields();
@@ -129,15 +151,39 @@ function resetQuery() {
   handleQuery();
 }
 
-/** 行checkbox 选中事件 */
-function handleSelectionChange(selection: any) {
-  ids.value = selection.map((item: any) => item.id);
-}
 function handleEdit(row: LogInfo) {
   emit("setData", row);
   emit("changePage", "detail");
 }
+
 onMounted(() => {
   handleQuery();
 });
 </script>
+
+<style scoped>
+.result-cell {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #303133;
+  max-height: 20px;
+  overflow: hidden;
+}
+
+.result-output {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  font-family: "Courier New", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #303133;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+</style>
