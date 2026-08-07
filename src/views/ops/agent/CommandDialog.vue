@@ -125,7 +125,7 @@ function handleExecute() {
   sendCmd(currentAgentId, cmdText.value.trim())
     .then(({ data }) => {
       outputText.value =
-        typeof data === "string" ? data : JSON.stringify(data, null, 2);
+        typeof data === "string" ? data : JSON.stringify(data.data, null, 2);
     })
     .catch((error) => {
       outputText.value = `执行失败: ${error.message || error}`;

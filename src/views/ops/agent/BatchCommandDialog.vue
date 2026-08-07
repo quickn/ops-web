@@ -155,10 +155,10 @@ function handleExecute() {
             50
           )}\n`;
           outputText.value +=
-            typeof item === "string" ? item : JSON.stringify(item, null, 2);
+            typeof item === "string" ? item : JSON.stringify(item.data, null, 2);
         });
       } else {
-        outputText.value += JSON.stringify(data, null, 2);
+        outputText.value += JSON.stringify(data.data, null, 2);
       }
       outputText.value += `\n\n>>> 批量命令执行完成`;
     })
