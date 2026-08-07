@@ -1,5 +1,11 @@
 <template>
-  <el-dialog v-model="visible" :title="title" fullscreen @closed="handleClosed">
+  <el-dialog
+    v-model="visible"
+    :title="title"
+    :width="dialogWidth + 'px'"
+    :before-close="handleClose"
+    @closed="handleClosed"
+  >
     <div class="command-container">
       <div class="command-input-area">
         <el-input
@@ -42,6 +48,20 @@
       </div>
     </div>
 
+    <!-- 拖拽调整大小手柄 -->
+    <div
+      class="resize-handle resize-right"
+      @mousedown="startResize($event, 'right')"
+    />
+    <div
+      class="resize-handle resize-bottom"
+      @mousedown="startResize($event, 'bottom')"
+    />
+    <div
+      class="resize-handle resize-bottom-right"
+      @mousedown="startResize($event, 'bottom-right')"
+    />
+
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="handleClose"> 关 闭</el-button>
@@ -64,6 +84,12 @@ const executing = ref(false);
 const cmdText = ref("");
 const outputText = ref("");
 
+/** 弹窗尺寸 */
+const dialogWidth = ref(1000);
+const dialogHeight = ref(600);
+const minWidth = 400;
+const minHeight = 300;
+
 let currentAgentId: number | null = null;
 let currentHostname = "";
 
@@ -77,6 +103,8 @@ function open(agentData: { id: number; hostname: string }) {
   title.value = `发送指令 - ${currentHostname}`;
   cmdText.value = "";
   outputText.value = "";
+  dialogWidth.value = 1000;
+  dialogHeight.value = 600;
 }
 
 /**
@@ -123,10 +151,51 @@ function handleCopy() {
 }
 
 /**
+ * 拖拽调整弹窗大小
+ */
+let resizeDir = "";
+let startX = 0;
+let startY = 0;
+let startWidth = 0;
+let startHeight = 0;
+
+function startResize(e: MouseEvent, dir: string) {
+  e.preventDefault();
+  e.stopPropagation();
+  resizeDir = dir;
+  startX = e.clientX;
+  startY = e.clientY;
+  startWidth = dialogWidth.value;
+  startHeight = dialogHeight.value;
+  document.addEventListener("mousemove", onResizeMove);
+  document.addEventListener("mouseup", onResizeEnd);
+}
+
+function onResizeMove(e: MouseEvent) {
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+
+  if (resizeDir.includes("right")) {
+    dialogWidth.value = Math.max(minWidth, startWidth + dx);
+  }
+  if (resizeDir.includes("bottom")) {
+    dialogHeight.value = Math.max(minHeight, startHeight + dy);
+  }
+}
+
+function onResizeEnd() {
+  resizeDir = "";
+  document.removeEventListener("mousemove", onResizeMove);
+  document.removeEventListener("mouseup", onResizeEnd);
+}
+
+/**
  * 关闭弹窗
  */
-function handleClose() {
+function handleClose(done?: () => void) {
+  executing.value = false;
   visible.value = false;
+  if (done) done();
 }
 
 /**
@@ -137,6 +206,7 @@ function handleClosed() {
   outputText.value = "";
   currentAgentId = null;
   currentHostname = "";
+  onResizeEnd();
 }
 
 defineExpose({
@@ -149,7 +219,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 16px;
-  height: 100%;
+  height: v-bind(dialogHeight + "px");
 }
 
 .command-input-area {
@@ -179,6 +249,7 @@ defineExpose({
     overflow-y: auto;
     background: #1e1e1e;
     border-radius: 4px;
+    min-height: 500px;
   }
 
   .output-text {
@@ -204,5 +275,34 @@ defineExpose({
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+
+.resize-handle {
+  position: absolute;
+  z-index: 10;
+
+  &.resize-right {
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: ew-resize;
+  }
+
+  &.resize-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px;
+    cursor: ns-resize;
+  }
+
+  &.resize-bottom-right {
+    right: 0;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+  }
 }
 </style>

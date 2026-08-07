@@ -1,0 +1,113 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-08-07T01:30:59.239Z
+provider: 
+---
+
+# Cloud-OPS 运维管理平台项目开发规范
+
+当前项目是 **Cloud-OPS（运维监控管理平台）**，基于 **Vue 3.3 + TypeScript + Element Plus + Vite 4** 的后台管理系统。
+
+## 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| 框架 | Vue 3.3 + Composition API (`<script setup lang="ts">`) |
+| 语言 | TypeScript |
+| 构建 | Vite 4 |
+| UI | Element Plus 2 + UnoCSS + SCSS |
+| 状态管理 | Pinia (setup function 语法) |
+| 路由 | Vue Router 4 (动态路由) |
+| HTTP | Axios (双后端代理) |
+| 图表 | ECharts |
+| 终端 | xterm 6 |
+
+## 兄弟项目关系
+
+| 项目 | 角色 |
+|------|------|
+| `monitor-collector` | 采集端（处理 agent 采集的消息），在同级目录 |
+| `monitor-server` | 用户端（用户指令的来源），在同级目录 |
+
+## 项目架构
+
+### 双后端代理
+
+- **Java 后端** (`/dev-api`) → `localhost:8989` — 主要业务接口
+- **Python 后端** (`/py-api`) → `localhost:18080` — 运维/WebSocket 接口
+
+Axios 实例检查 URL 前缀：以 `/pyApi/` 开头用 Python 后端，否则用 Java 后端。
+
+### 自动导入（unplugin）
+
+以下内容**不需要手动 import**：Vue API（ref, reactive, computed, watch, onMounted 等）、`@vueuse/core` 函数、Element Plus 组件和图标。
+
+### 权限系统
+
+- 动态路由从后端 `/api/v1/menus/routes` 获取，`ROOT` 角色拥有全部权限
+- 按钮权限：`v-hasPerm="['sys:user:add']"`
+- 角色权限：`v-hasRole="['ADMIN']"`
+- 路由守卫在 `src/permission.ts`
+
+## 组件编写规范
+
+- `<script setup lang="ts">` 在最前 → `<template>` → `<style lang="scss" scoped>`
+- 用 `defineOptions({ name: "..." })` 命名组件
+- Element Plus 组件用 kebab-case：`<el-button>`, `<el-table>`
+- 用 UnoCSS 原子类：`class="flex items-center"`
+- 通用组件：`<Pagination>`, `<Breadcrumb>`, `<SvgIcon>`, `<Upload>`, `<MultiUpload>`
+
+## API 请求规范
+
+```typescript
+// GET 分页列表
+request({ url: BASE + "/page", method: "get", params: query });
+
+// POST 新增
+request({ url: BASE, method: "post", data: formData });
+
+// PUT 更新
+request({ url: BASE, method: "put", data: formData });
+
+// DELETE 删除
+request({ url: BASE + "/" + ids, method: "delete" });
+```
+
+响应格式：`{ code: "00000", data: ..., msg: "..." }`，`code === "00000"` 成功。
+
+## Pinia Store 规范
+
+```typescript
+export const useXxxStore = defineStore("xxx", () => {
+  const state = ref<XxxType>(initialValue);
+  function doSomething() { ... }
+  return { state, doSomething };
+});
+```
+
+## 全局类型
+
+- `PageQuery` — `{ pageNum: number, pageSize: number }`
+- `PageResult<T>` — `{ list: T, total: number }`
+- `DialogOption` — `{ title: string, visible: boolean }`
+- `OptionType` — `{ value: string|number, label: string, children?: OptionType[] }`
+
+## 开发注意事项
+
+- **不要手动 import Vue API**（自动导入）
+- **不要手动注册 Element Plus 组件**（自动处理）
+- **Python 后端接口** 以 `/pyApi/` 为前缀
+- **Hash 路由**：`createWebHashHistory`
+- **生产构建** base path：`/m-web`
+- **权限指令** `v-hasPerm` 无权限时 remove DOM 元素
+
+## 开发流程
+
+1. 参考已有类似页面（`src/views/`）
+2. 创建/复用 API 层（`src/api/`）
+3. 创建页面组件（`src/views/`）
+4. 确认路由和权限
+5. `pnpm run dev` 验证
+6. lint 检查

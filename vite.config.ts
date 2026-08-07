@@ -27,6 +27,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       alias: {
         "@": pathSrc,
       },
+      dedupe: ["@codemirror/state", "@codemirror/view"],
     },
     css: {
       // CSS 预处理器
@@ -183,6 +184,9 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
         "@wangeditor/editor",
         "@wangeditor/editor-for-vue",
         "vue-i18n",
+        "codemirror",
+        "@codemirror/lang-javascript",
+        "@codemirror/theme-one-dark",
       ],
     },
     // 构建
