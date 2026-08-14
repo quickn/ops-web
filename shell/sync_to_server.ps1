@@ -2,7 +2,7 @@
 # 同步项目到远程服务器并重启Docker容器
 
 $SERVER = "park@192.168.10.11"
-# SERVER = "park@101.37.104.12"
+#$SERVER = "park@101.37.104.12"
 $REMOTE_DIR = "/home/park/web/m-web"
 # 获取当前脚本所在目录的父目录（项目根目录）
 $PROJECT_ROOT = Split-Path -Parent $PSScriptRoot

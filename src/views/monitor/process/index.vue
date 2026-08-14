@@ -96,24 +96,24 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="默认网卡发送(KB)" prop="sentRate" width="160">
+        <el-table-column label="默认网卡发送(Mbps)" prop="sentRate" width="100">
           <template #default="{ row }">
             {{ formatTraffic(row.sentRate) }}
           </template>
         </el-table-column>
-        <el-table-column label="默认网卡接收(KB)" prop="recvRate" width="160">
+        <el-table-column label="默认网卡接收(Mbps)" prop="recvRate" width="100">
           <template #default="{ row }">
             {{ formatTraffic(row.recvRate) }}
           </template>
         </el-table-column>
-        <el-table-column label="非lo网卡发送(KB)" prop="totalSentRate" width="170">
+        <el-table-column label="TCP连接总数" prop="connTotal" width="100">
           <template #default="{ row }">
-            {{ formatTraffic(row.totalSentRate) }}
+            {{ formatTraffic(row.connTotal) }}
           </template>
         </el-table-column>
-        <el-table-column label="非lo网卡接收(KB)" prop="totalRecvRate" width="170">
+        <el-table-column label="ES连接数" prop="connEstablished" width="100">
           <template #default="{ row }">
-            {{ formatTraffic(row.totalRecvRate) }}
+            {{ formatTraffic(row.connEstablished) }}
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180" />

@@ -86,6 +86,21 @@
           prop="cpuWarnValDocker"
           width="100"
         />
+        <el-table-column
+          label="进程流量阈值(Mbps)"
+          prop="netThresholdMbps"
+          width="120"
+        />
+        <el-table-column
+          label="网卡流量阈值(Mbps)"
+          prop="ifStatThresholdMbps"
+          width="120"
+        />
+        <el-table-column
+          label="进程网络连接数阈值"
+          prop="netConnThreshold"
+          width="120"
+        />
         <el-table-column label="是否在线" prop="state">
           <template #default="{ row }">
             <el-tag :type="row.online == 1 ? 'success' : 'danger'"
@@ -274,6 +289,27 @@
             placeholder="docker服务Cpu阈值"
           />
         </el-form-item>
+
+        <el-form-item label="进程流量阈值(Mbps)" prop="netThresholdMbps">
+          <el-input
+            v-model="formData.netThresholdMbps"
+            placeholder="进程流量阈值(Mbps)"
+          />
+        </el-form-item>
+
+        <el-form-item label="网卡流量阈值(Mbps)" prop="ifStatThresholdMbps">
+          <el-input
+            v-model="formData.ifStatThresholdMbps"
+            placeholder="网卡流量阈值(Mbps)"
+          />
+        </el-form-item>
+
+        <el-form-item label="进程网络连接数阈值" prop="netConnThreshold">
+          <el-input
+            v-model="formData.netConnThreshold"
+            placeholder="进程网络连接数阈值"
+          />
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -339,6 +375,9 @@ const formData = reactive<AgentForm>({
   memWarnVal: 0,
   diskWarnVal: 0,
   cpuWarnValDocker: 0,
+  netThresholdMbps: 0,
+  ifStatThresholdMbps: 0,
+  netConnThreshold: 0,
   isJumpServer: false,
   isOriginServer: false,
   remoteIp: null,

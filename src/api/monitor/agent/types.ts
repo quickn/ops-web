@@ -14,6 +14,9 @@ export interface Agent extends PageQuery {
   memWarnVal?: number;
   diskWarnVal?: number;
   cpuWarnValDocker?: number;
+  netThresholdMbps?: number;
+  ifStatThresholdMbps?: number;
+  netConnThreshold?: number;
   updateTime?: string;
 }
 
@@ -30,6 +33,9 @@ export interface AgentForm {
   memWarnVal?: number;
   diskWarnVal?: number;
   cpuWarnValDocker?: number;
+  netThresholdMbps?: number;
+  ifStatThresholdMbps?: number;
+  netConnThreshold?: number;
 }
 
 /**
