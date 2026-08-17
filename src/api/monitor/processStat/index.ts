@@ -21,11 +21,13 @@ export function listPage(
 export function listByPid(
   pid: number,
   limit?: number,
-  date?: string
+  date?: string,
+  startTime?: string,
+  endTime?: string
 ): AxiosPromise<ProcessStat[]> {
   return request({
     url: "/processStat/listByPid",
     method: "get",
-    params: { pid, limit: limit || 20, date },
+    params: { pid, limit: limit || 20, date, startTime, endTime },
   });
 }

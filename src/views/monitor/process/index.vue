@@ -41,14 +41,17 @@
             style="width: 200px"
           />
         </el-form-item>
-        <el-form-item label="日期" prop="date">
+        <el-form-item label="时间范围" prop="timeRange">
           <el-date-picker
-            v-model="queryParams.date"
-            type="date"
-            placeholder="选择日期"
+            v-model="timeRange"
+            type="datetimerange"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            range-separator="至"
             clearable
-            value-format="YYYY-MM-DD"
-            style="width: 200px"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DD HH:mm"
+            style="width: 360px"
           />
         </el-form-item>
         <el-form-item>
@@ -131,7 +134,7 @@
     <!-- PID 进程指标趋势图弹窗 -->
     <el-dialog
       v-model="chartDialog.visible"
-      width="1200px"
+      width="1500px"
       top="5vh"
       @opened="initCharts"
       @closed="destroyCharts"
@@ -140,12 +143,15 @@
         <div style="display: flex; align-items: center; gap: 12px">
           <span>PID: {{ chartDialog.pid }} 最近指标趋势</span>
           <el-date-picker
-            v-model="chartDate"
-            type="date"
-            placeholder="选择日期"
+            v-model="chartTimeRange"
+            type="datetimerange"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            range-separator="至"
             clearable
-            value-format="YYYY-MM-DD"
-            style="width: 160px"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DD HH:mm"
+            style="width: 360px"
             @change="onChartDateChange"
           />
           <el-select
@@ -197,10 +203,13 @@ const queryParams = reactive<ProcessStat>({ pageSize: 15, pageNum: 1 });
 const dataList = ref<ProcessStat[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 
+// 查询时间范围 [startTime, endTime]
+const timeRange = ref<string[]>([]);
+
 // PID 图表弹窗
 const chartLoading = ref(false);
 const chartLimit = ref(20);
-const chartDate = ref("");
+const chartTimeRange = ref<string[]>([]);
 const limitOptions = [20, 30, 40, 50, 60, 70, 80, 90, 100];
 const chartDialog = reactive({
   visible: false,
@@ -214,14 +223,16 @@ const chartIds = [
   "chartPcpu",
   "chartSentRate",
   "chartRecvRate",
-  "chartTotalSentRate",
-  "chartTotalRecvRate",
+  "chartConnTotal",
+  "chartConnEstablished",
 ];
 const chartInstances = ref<any[]>([]);
 
 /** 查询 */
 function handleQuery() {
   loading.value = true;
+  queryParams.startTime = timeRange.value?.[0] || undefined;
+  queryParams.endTime = timeRange.value?.[1] || undefined;
   listPage(queryParams).then(({ data }) => {
     dataList.value = data.records;
     total.value = data.total;
@@ -238,7 +249,9 @@ function resetQuery() {
   queryParams.hostname = "";
   queryParams.processName = "";
   queryParams.containerName = "";
-  queryParams.date = "";
+  queryParams.startTime = undefined;
+  queryParams.endTime = undefined;
+  timeRange.value = [];
   queryParams.pageNum = 1;
   handleQuery();
 }
@@ -253,7 +266,7 @@ function formatTraffic(value: number | undefined | null): string {
 async function showPidChart(row: ProcessStat) {
   chartDialog.pid = row.pid!;
   chartLimit.value = 20; // 默认20条
-  chartDate.value = queryParams.date || "";
+  chartTimeRange.value = timeRange.value?.length === 2 ? [...timeRange.value] : [];
   chartDialog.visible = true;
   await fetchPidData(row.pid!, chartLimit.value);
 }
@@ -265,8 +278,8 @@ async function onChartLimitChange(limit: number) {
   setTimeout(() => initCharts(), 100);
 }
 
-/** 切换日期 */
-async function onChartDateChange(date: string) {
+/** 切换日期时间范围 */
+async function onChartDateChange() {
   await fetchPidData(chartDialog.pid!, chartLimit.value);
   destroyCharts();
   setTimeout(() => initCharts(), 100);
@@ -277,7 +290,13 @@ async function fetchPidData(pid: number, limit: number) {
   chartLoading.value = true;
   pidDataList.value = [];
   try {
-    const { data } = await listByPid(pid, limit, chartDate.value || undefined);
+    const { data } = await listByPid(
+      pid,
+      limit,
+      undefined,
+      chartTimeRange.value?.[0] || undefined,
+      chartTimeRange.value?.[1] || undefined
+    );
     pidDataList.value = (data as unknown as ProcessStat[]).reverse();
   } finally {
     chartLoading.value = false;
@@ -298,10 +317,10 @@ function initCharts() {
     const chartConfigs = [
       { id: "chartRsz", name: "物理内存(KB)", dataKey: "rsz" as const, color: "#5470C6" },
       { id: "chartPcpu", name: "CPU占用(%)", dataKey: "pcpu" as const, color: "#91CC75" },
-      { id: "chartSentRate", name: "默认网卡发送(KB)", dataKey: "sentRate" as const, color: "#EE6666" },
-      { id: "chartRecvRate", name: "默认网卡接收(KB)", dataKey: "recvRate" as const, color: "#FAC858" },
-      { id: "chartTotalSentRate", name: "非lo网卡发送(KB)", dataKey: "totalSentRate" as const, color: "#73C0DE" },
-      { id: "chartTotalRecvRate", name: "非lo网卡接收(KB)", dataKey: "totalRecvRate" as const, color: "#FC8452" },
+      { id: "chartConnTotal", name: "TCP连接总数", dataKey: "connTotal" as const, color: "#73C0DE" },
+      { id: "chartConnEstablished", name: "ES连接数", dataKey: "connEstablished" as const, color: "#FC8452" },
+      { id: "chartSentRate", name: "默认网卡发送(Mbps)", dataKey: "sentRate" as const, color: "#EE6666" },
+      { id: "chartRecvRate", name: "默认网卡接收(Mbps)", dataKey: "recvRate" as const, color: "#FAC858" },
     ];
 
     chartConfigs.forEach((cfg) => {
@@ -314,7 +333,7 @@ function initCharts() {
 
       chart.setOption({
         tooltip: { trigger: "axis" },
-        grid: { left: "3%", right: "4%", bottom: "3%", top: "40px", containLabel: true },
+        grid: { left: "8%", right: "4%", bottom: "3%", top: "40px", containLabel: true },
         title: {
           text: cfg.name,
           left: "center",
