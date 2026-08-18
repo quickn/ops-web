@@ -152,6 +152,26 @@ function handleSelectChange(serviceId: number) {
           />
         </el-form-item>
 
+        <el-form-item label="开始时分" style="width: 160px">
+          <el-time-picker
+            v-model="queryParams.startHourMinute"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="开始时分"
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="结束时分" style="width: 160px">
+          <el-time-picker
+            v-model="queryParams.endHourMinute"
+            format="HH:mm"
+            value-format="HH:mm"
+            placeholder="结束时分"
+            clearable
+          />
+        </el-form-item>
+
         <el-form-item label="日志级别" style="width: 150px">
           <el-select
             v-model="queryParams.logLevel"

@@ -31,9 +31,9 @@ export interface ProcessStat extends PageQuery {
   totalRecvRate?: number;
   /** 查询日期(yyyy-MM-dd)，为空查询全部 */
   date?: string;
-  /** 查询开始时间(yyyy-MM-dd HH:mm) */
+  /** 查询开始时间(HH:mm)，需配合 date 使用 */
   startTime?: string;
-  /** 查询结束时间(yyyy-MM-dd HH:mm) */
+  /** 查询结束时间(HH:mm)，需配合 date 使用 */
   endTime?: string;
   /** 创建时间 */
   createTime?: string;

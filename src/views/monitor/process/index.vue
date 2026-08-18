@@ -25,14 +25,7 @@
             style="width: 200px"
           />
         </el-form-item>
-        <el-form-item label="进程名" prop="processName">
-          <el-input
-            v-model="queryParams.processName"
-            placeholder="请输入进程名"
-            clearable
-            style="width: 200px"
-          />
-        </el-form-item>
+
         <el-form-item label="容器名" prop="containerName">
           <el-input
             v-model="queryParams.containerName"
@@ -41,17 +34,36 @@
             style="width: 200px"
           />
         </el-form-item>
-        <el-form-item label="时间范围" prop="timeRange">
+        <el-form-item label="日期" prop="dateStr">
           <el-date-picker
+            v-model="dateStr"
+            type="date"
+            placeholder="选择日期"
+            clearable
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 160px"
+          />
+        </el-form-item>
+        <el-form-item label="时间区间" prop="timeRange">
+          <el-time-picker
             v-model="timeRange"
-            type="datetimerange"
+            is-range
+            range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
-            range-separator="至"
             clearable
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm"
-            style="width: 360px"
+            format="HH:mm"
+            value-format="HH:mm"
+            style="width: 220px"
+          />
+        </el-form-item>
+        <el-form-item label="进程名" prop="processName">
+          <el-input
+            v-model="queryParams.processName"
+            placeholder="请输入进程名"
+            clearable
+            style="width: 200px"
           />
         </el-form-item>
         <el-form-item>
@@ -143,15 +155,25 @@
         <div style="display: flex; align-items: center; gap: 12px">
           <span>PID: {{ chartDialog.pid }} 最近指标趋势</span>
           <el-date-picker
+            v-model="chartDateStr"
+            type="date"
+            placeholder="选择日期"
+            clearable
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 160px"
+            @change="onChartDateChange"
+          />
+          <el-time-picker
             v-model="chartTimeRange"
-            type="datetimerange"
+            is-range
+            range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
-            range-separator="至"
             clearable
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm"
-            style="width: 360px"
+            format="HH:mm"
+            value-format="HH:mm"
+            style="width: 220px"
             @change="onChartDateChange"
           />
           <el-select
@@ -203,12 +225,17 @@ const queryParams = reactive<ProcessStat>({ pageSize: 15, pageNum: 1 });
 const dataList = ref<ProcessStat[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 
-// 查询时间范围 [startTime, endTime]
+// 查询日期 (yyyy-MM-dd)
+const dateStr = ref("");
+// 查询时分区间 ["HH:mm", "HH:mm"]
 const timeRange = ref<string[]>([]);
 
 // PID 图表弹窗
 const chartLoading = ref(false);
 const chartLimit = ref(20);
+// 图表弹窗查询日期 (yyyy-MM-dd)
+const chartDateStr = ref("");
+// 图表弹窗查询时分区间 ["HH:mm", "HH:mm"]
 const chartTimeRange = ref<string[]>([]);
 const limitOptions = [20, 30, 40, 50, 60, 70, 80, 90, 100];
 const chartDialog = reactive({
@@ -231,6 +258,7 @@ const chartInstances = ref<any[]>([]);
 /** 查询 */
 function handleQuery() {
   loading.value = true;
+  queryParams.date = dateStr.value || undefined;
   queryParams.startTime = timeRange.value?.[0] || undefined;
   queryParams.endTime = timeRange.value?.[1] || undefined;
   listPage(queryParams).then(({ data }) => {
@@ -249,8 +277,10 @@ function resetQuery() {
   queryParams.hostname = "";
   queryParams.processName = "";
   queryParams.containerName = "";
+  queryParams.date = undefined;
   queryParams.startTime = undefined;
   queryParams.endTime = undefined;
+  dateStr.value = "";
   timeRange.value = [];
   queryParams.pageNum = 1;
   handleQuery();
@@ -266,6 +296,7 @@ function formatTraffic(value: number | undefined | null): string {
 async function showPidChart(row: ProcessStat) {
   chartDialog.pid = row.pid!;
   chartLimit.value = 20; // 默认20条
+  chartDateStr.value = dateStr.value;
   chartTimeRange.value = timeRange.value?.length === 2 ? [...timeRange.value] : [];
   chartDialog.visible = true;
   await fetchPidData(row.pid!, chartLimit.value);
@@ -293,7 +324,7 @@ async function fetchPidData(pid: number, limit: number) {
     const { data } = await listByPid(
       pid,
       limit,
-      undefined,
+      chartDateStr.value || undefined,
       chartTimeRange.value?.[0] || undefined,
       chartTimeRange.value?.[1] || undefined
     );

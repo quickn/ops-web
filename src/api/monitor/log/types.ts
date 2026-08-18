@@ -19,6 +19,8 @@ export interface LogCmdForm {
   keyword1?: string | undefined;
   startTime?: string | undefined;
   endTime?: string | undefined;
+  startHourMinute?: string | undefined;
+  endHourMinute?: string | undefined;
   createDate?: string;
   logLevel?: string;
   timeout?: number;
