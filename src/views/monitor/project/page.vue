@@ -87,8 +87,8 @@
           </template>
         </el-table-column>
         <el-table-column
-          label="创建时间"
-          prop="createTime"
+          label="修改时间"
+          prop="updateTime"
           width="180"
           align="center"
         />

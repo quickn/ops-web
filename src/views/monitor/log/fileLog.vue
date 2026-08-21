@@ -152,7 +152,7 @@ function handleSelectChange(serviceId: number) {
           />
         </el-form-item>
 
-        <el-form-item label="开始时分" style="width: 160px">
+        <el-form-item label="开始时分" style="width: 180px">
           <el-time-picker
             v-model="queryParams.startHourMinute"
             format="HH:mm"
@@ -162,7 +162,7 @@ function handleSelectChange(serviceId: number) {
           />
         </el-form-item>
 
-        <el-form-item label="结束时分" style="width: 160px">
+        <el-form-item label="结束时分" style="width: 180px">
           <el-time-picker
             v-model="queryParams.endHourMinute"
             format="HH:mm"

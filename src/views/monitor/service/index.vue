@@ -152,7 +152,7 @@ onMounted(() => {
       >
         <!--        <el-table-column type="selection" width="55" align="center" />-->
         <el-table-column label="ID" prop="id" width="90" />
-        <el-table-column label="服务名" prop="name" width="90" />
+        <el-table-column label="服务名" prop="name" width="120" />
         <el-table-column
           label="工作路径"
           prop="workPath"

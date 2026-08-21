@@ -168,7 +168,7 @@ onMounted(() => {
         <!--        <el-table-column type="selection" width="55" align="center" />-->
         <el-table-column label="服务名" prop="serviceName" width="90" />
         <el-table-column label="容器名称" prop="names" width="200" />
-        <el-table-column label="IP" prop="hostname" width="120" />
+        <el-table-column label="IP" prop="hostname" width="130" />
         <el-table-column label="状态" prop="status" width="150" />
         <el-table-column label="是否开启监控" align="center" width="120">
           <template #default="scope">

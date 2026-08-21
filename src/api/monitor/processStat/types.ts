@@ -17,6 +17,7 @@ export interface ProcessStat extends PageQuery {
   rsz?: number;
   /** CPU占用百分比 */
   pcpu?: number;
+  pmem?: number;
   /** 用户 */
   user?: string;
   /** 主机IP */

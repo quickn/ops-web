@@ -88,16 +88,10 @@
         border
         show-overflow-tooltip
       >
-        <el-table-column label="服务名称" prop="serviceName" width="150" />
-        <el-table-column label="主机IP" prop="hostname" width="150" />
+        <el-table-column label="服务名称" prop="serviceName" width="120" />
+        <el-table-column label="主机IP" prop="hostname" width="120" />
         <el-table-column label="进程名" prop="processName" width="150" />
-        <el-table-column label="PID" prop="pid" width="80">
-          <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="showPidChart(row)">
-              {{ row.pid }}
-            </el-button>
-          </template>
-        </el-table-column>
+
         <el-table-column label="用户" prop="user" width="100" />
         <el-table-column label="容器名称" prop="containerName" width="160" />
         <el-table-column label="物理内存(KB)" prop="rsz" width="120">
@@ -108,6 +102,12 @@
         <el-table-column label="CPU占用(%)" prop="pcpu" width="120">
           <template #default="{ row }">
             <span v-if="row.pcpu != null">{{ row.pcpu }}%</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="内存占用(%)" prop="pmem" width="120">
+          <template #default="{ row }">
+            <span v-if="row.pmem != null">{{ row.pmem }}%</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
@@ -123,12 +123,19 @@
         </el-table-column>
         <el-table-column label="TCP连接总数" prop="connTotal" width="100">
           <template #default="{ row }">
-            {{ formatTraffic(row.connTotal) }}
+            {{ row.connTotal }}
           </template>
         </el-table-column>
         <el-table-column label="ES连接数" prop="connEstablished" width="100">
           <template #default="{ row }">
-            {{ formatTraffic(row.connEstablished) }}
+            {{ row.connEstablished }}
+          </template>
+        </el-table-column>
+        <el-table-column label="PID" prop="pid" width="80">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="showPidChart(row)">
+              {{ row.pid }}
+            </el-button>
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180" />
@@ -154,6 +161,12 @@
       <template #header>
         <div style="display: flex; align-items: center; gap: 12px">
           <span>PID: {{ chartDialog.pid }} 最近指标趋势</span>
+          <span style="color: #909399; font-size: 13px">
+            主机IP: {{ chartDialog.hostname || "-" }}
+          </span>
+          <span style="color: #909399; font-size: 13px">
+            容器名称: {{ chartDialog.containerName || "-" }}
+          </span>
           <el-date-picker
             v-model="chartDateStr"
             type="date"
@@ -232,15 +245,17 @@ const timeRange = ref<string[]>([]);
 
 // PID 图表弹窗
 const chartLoading = ref(false);
-const chartLimit = ref(20);
+const chartLimit = ref(60);
 // 图表弹窗查询日期 (yyyy-MM-dd)
 const chartDateStr = ref("");
 // 图表弹窗查询时分区间 ["HH:mm", "HH:mm"]
 const chartTimeRange = ref<string[]>([]);
-const limitOptions = [20, 30, 40, 50, 60, 70, 80, 90, 100];
+const limitOptions = [60, 120, 180, 240, 300, 360, 420, 480, 540, 600];
 const chartDialog = reactive({
   visible: false,
   pid: null as number | null,
+  hostname: "",
+  containerName: "",
 });
 const pidDataList = ref<ProcessStat[]>([]);
 
@@ -295,7 +310,9 @@ function formatTraffic(value: number | undefined | null): string {
 /** 点击PID，打开图表弹窗 */
 async function showPidChart(row: ProcessStat) {
   chartDialog.pid = row.pid!;
-  chartLimit.value = 20; // 默认20条
+  chartDialog.hostname = row.hostname || "";
+  chartDialog.containerName = row.containerName || "";
+  chartLimit.value = 60; // 默认60条
   chartDateStr.value = dateStr.value;
   chartTimeRange.value = timeRange.value?.length === 2 ? [...timeRange.value] : [];
   chartDialog.visible = true;
