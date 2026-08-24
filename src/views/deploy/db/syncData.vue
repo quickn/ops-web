@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import { syncDataMenu } from "@/api/deploy/db";
 
-import { listAll } from "@/api/monitor/service";
+import { getSavedConfigs } from "@/api/accountConfig";
 
-import { ServiceInfo } from "@/api/monitor/service/types";
+import type { AccountConfig } from "@/api/accountConfig/types";
 
 const queryFormRef = ref(ElForm);
 
 const loading = ref(false);
 
-const queryParams = reactive<ServiceInfo>({});
+const queryParams = reactive<{ configId?: number }>({});
 
-const serviceInfoList = ref<ServiceInfo[]>();
+const targetConnections = ref<AccountConfig[]>();
 
 /** 查询 */
 function handleQuery() {
   loading.value = true;
-  syncDataMenu(queryParams).then(({ data }) => {
+  syncDataMenu(queryParams as any).then(({ data }) => {
+    debugger
     let container = document.getElementById("sql_code");
     const formattedData = data.replace(/;/g, ";\n");
     container!.innerHTML = formattedData;
@@ -26,17 +27,17 @@ function handleQuery() {
 
 onMounted(() => {
   //默认选中第一个
-  listAll().then(({ data }) => {
-    serviceInfoList.value = data;
-    queryParams.env = serviceInfoList.value[0].label;
-    if (queryParams.env != undefined) {
-      handleSelectChange(queryParams.env);
+  getSavedConfigs({ type: "mysql" }).then(({ data }) => {
+    targetConnections.value = data;
+    queryParams.configId = targetConnections.value[0].id;
+    if (queryParams.configId != undefined) {
+      handleSelectChange(queryParams.configId);
     }
   });
 });
 
-function handleSelectChange(label: string) {
-  queryParams.env = label;
+function handleSelectChange(configId: number) {
+  queryParams.configId = configId;
 }
 </script>
 
@@ -46,16 +47,16 @@ function handleSelectChange(label: string) {
       <el-form ref="queryFormRef" :model="queryParams" :inline="true">
         <el-form-item label="服务" prop="status">
           <el-select
-            v-model="queryParams.env"
+            v-model="queryParams.configId"
             clearable
-            style="width: 100px"
+            style="width: 160px"
             @change="handleSelectChange"
           >
             <el-option
-              v-for="item in serviceInfoList"
-              :key="item.label"
-              :label="item.name"
-              :value="item.label"
+              v-for="item in targetConnections"
+              :key="item.id"
+              :label="item.configName"
+              :value="item.id"
             />
           </el-select>
         </el-form-item>
