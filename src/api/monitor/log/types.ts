@@ -9,6 +9,8 @@ export interface LogInfo extends PageQuery {
   sendEmail?: number;
   createTime?: string;
   sort?: number;
+  sortField?: string;
+  sortOrder?: string;
 }
 export interface LogCmdForm {
   serviceId?: number | undefined;

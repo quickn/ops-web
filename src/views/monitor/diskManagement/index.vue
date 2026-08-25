@@ -44,14 +44,31 @@
         highlight-current-row
         border
         @selection-change="handleSelectionChange"
+        @sort-change="handleSortChange"
         show-overflow-tooltip
       >
         <el-table-column label="服务器地址" prop="hostname" width="180" />
         <el-table-column label="盘符类型" prop="fileSystem" />
-        <el-table-column label="分区大小" prop="size" />
-        <el-table-column label="已使用" prop="used" />
-        <el-table-column label="可用" prop="avail" />
-        <el-table-column label="已使用百分比" prop="usePer" />
+        <el-table-column
+          label="分区大小"
+          prop="size"
+          sortable="custom"
+        />
+        <el-table-column
+          label="已使用"
+          prop="used"
+          sortable="custom"
+        />
+        <el-table-column
+          label="可用"
+          prop="avail"
+          sortable="custom"
+        />
+        <el-table-column
+          label="已使用百分比"
+          prop="usePer"
+          sortable="custom"
+        />
         <el-table-column label="创建时间" prop="createTime" width="180" />
       </el-table>
 
@@ -91,11 +108,28 @@ function handleQuery() {
     serviceInfoList.value = data;
   });
 }
+/** 排序变化 */
+function handleSortChange({ prop, order }: { prop: string; order: string | null }) {
+  if (order === "ascending") {
+    queryParams.sortField = prop;
+    queryParams.sortOrder = "asc";
+  } else if (order === "descending") {
+    queryParams.sortField = prop;
+    queryParams.sortOrder = "desc";
+  } else {
+    queryParams.sortField = undefined;
+    queryParams.sortOrder = undefined;
+  }
+  handleQuery();
+}
+
 /** 重置查询 */
 function resetQuery() {
   queryParams.serviceId = "";
   queryParams.hostname = "";
   queryParams.pageNum = 1;
+  queryParams.sortField = undefined;
+  queryParams.sortOrder = undefined;
   handleQuery();
 }
 

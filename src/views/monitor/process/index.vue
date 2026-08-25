@@ -87,6 +87,7 @@
         highlight-current-row
         border
         show-overflow-tooltip
+        @sort-change="handleSortChange"
       >
         <el-table-column label="服务名称" prop="serviceName" width="120" />
         <el-table-column label="主机IP" prop="hostname" width="120" />
@@ -94,44 +95,84 @@
 
         <el-table-column label="用户" prop="user" width="100" />
         <el-table-column label="容器名称" prop="containerName" width="160" />
-        <el-table-column label="物理内存(KB)" prop="rsz" width="120">
+        <el-table-column
+          label="物理内存(KB)"
+          prop="rsz"
+          width="120"
+          sortable="custom"
+        >
           <template #default="{ row }">
             {{ row.rsz ? row.rsz.toLocaleString() : "-" }}
           </template>
         </el-table-column>
-        <el-table-column label="CPU占用(%)" prop="pcpu" width="120">
+        <el-table-column
+          label="CPU占用(%)"
+          prop="pcpu"
+          width="120"
+          sortable="custom"
+        >
           <template #default="{ row }">
             <span v-if="row.pcpu != null">{{ row.pcpu }}%</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="内存占用(%)" prop="pmem" width="120">
+        <el-table-column
+          label="内存占用(%)"
+          prop="pmem"
+          width="120"
+          sortable="custom"
+        >
           <template #default="{ row }">
             <span v-if="row.pmem != null">{{ row.pmem }}%</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="默认网卡发送(Mbps)" prop="sentRate" width="100">
+        <el-table-column
+          label="默认网卡发送(Mbps)"
+          prop="sentRate"
+          width="100"
+          sortable="custom"
+        >
           <template #default="{ row }">
             {{ formatTraffic(row.sentRate) }}
           </template>
         </el-table-column>
-        <el-table-column label="默认网卡接收(Mbps)" prop="recvRate" width="100">
+        <el-table-column
+          label="默认网卡接收(Mbps)"
+          prop="recvRate"
+          width="100"
+          sortable="custom"
+        >
           <template #default="{ row }">
             {{ formatTraffic(row.recvRate) }}
           </template>
         </el-table-column>
-        <el-table-column label="TCP连接总数" prop="connTotal" width="100">
+        <el-table-column
+          label="TCP连接总数"
+          prop="connTotal"
+          width="100"
+          sortable="custom"
+        >
           <template #default="{ row }">
             {{ row.connTotal }}
           </template>
         </el-table-column>
-        <el-table-column label="ES连接数" prop="connEstablished" width="100">
+        <el-table-column
+          label="ES连接数"
+          prop="connEstablished"
+          width="100"
+          sortable="custom"
+        >
           <template #default="{ row }">
             {{ row.connEstablished }}
           </template>
         </el-table-column>
-        <el-table-column label="PID" prop="pid" width="80">
+        <el-table-column
+          label="PID"
+          prop="pid"
+          width="80"
+          sortable="custom"
+        >
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="showPidChart(row)">
               {{ row.pid }}
@@ -286,6 +327,21 @@ function handleQuery() {
   });
 }
 
+/** 排序变化 */
+function handleSortChange({ prop, order }: { prop: string; order: string | null }) {
+  if (order === "ascending") {
+    queryParams.sortField = prop;
+    queryParams.sortOrder = "asc";
+  } else if (order === "descending") {
+    queryParams.sortField = prop;
+    queryParams.sortOrder = "desc";
+  } else {
+    queryParams.sortField = undefined;
+    queryParams.sortOrder = undefined;
+  }
+  handleQuery();
+}
+
 /** 重置查询 */
 function resetQuery() {
   queryParams.serviceId = undefined;
@@ -295,6 +351,8 @@ function resetQuery() {
   queryParams.date = undefined;
   queryParams.startTime = undefined;
   queryParams.endTime = undefined;
+  queryParams.sortField = undefined;
+  queryParams.sortOrder = undefined;
   dateStr.value = "";
   timeRange.value = [];
   queryParams.pageNum = 1;

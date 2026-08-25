@@ -36,6 +36,10 @@ export interface ProcessStat extends PageQuery {
   startTime?: string;
   /** 查询结束时间(HH:mm)，需配合 date 使用 */
   endTime?: string;
+  /** 排序字段 */
+  sortField?: string;
+  /** 排序方向：asc/desc */
+  sortOrder?: string;
   /** 创建时间 */
   createTime?: string;
   /** 更新时间 */

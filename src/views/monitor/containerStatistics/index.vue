@@ -58,13 +58,22 @@
         highlight-current-row
         border
         @selection-change="handleSelectionChange"
+        @sort-change="handleSortChange"
         show-overflow-tooltip
       >
         <el-table-column label="名称" prop="names" width="180" />
         <el-table-column label="服务器名称" prop="serviceName" width="180" />
         <el-table-column label="服务器地址" prop="hostname" width="180" />
-        <el-table-column label="cpu使用率" prop="cpu" />
-        <el-table-column label="内存使用率" prop="mem" />
+        <el-table-column
+          label="cpu使用率"
+          prop="cpu"
+          sortable="custom"
+        />
+        <el-table-column
+          label="内存使用率"
+          prop="mem"
+          sortable="custom"
+        />
         <el-table-column label="内存使用及限制" prop="memUsage" />
         <el-table-column label="磁盘进出量" prop="blockIo" />
         <el-table-column label="网络进出量" prop="netIo" />
@@ -116,12 +125,29 @@ function handleQuery() {
     serviceInfoList.value = data;
   });
 }
+/** 排序变化 */
+function handleSortChange({ prop, order }: { prop: string; order: string | null }) {
+  if (order === "ascending") {
+    queryParams.sortField = prop;
+    queryParams.sortOrder = "asc";
+  } else if (order === "descending") {
+    queryParams.sortField = prop;
+    queryParams.sortOrder = "desc";
+  } else {
+    queryParams.sortField = undefined;
+    queryParams.sortOrder = undefined;
+  }
+  handleQuery();
+}
+
 /** 重置查询 */
 function resetQuery() {
   queryParams.names = "";
   queryParams.time = null;
   queryParams.serviceId = "";
   queryParams.pageNum = 1;
+  queryParams.sortField = undefined;
+  queryParams.sortOrder = undefined;
   handleQuery();
 }
 
