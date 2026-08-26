@@ -49,6 +49,14 @@
           <i-ep-connection />
           批量命令下发
         </el-button>
+        <el-button
+          type="danger"
+          :disabled="ids.length === 0"
+          @click="batchRestartAgents"
+        >
+          <i-ep-refresh />
+          批量重启
+        </el-button>
       </div>
       <el-table
         ref="dataTableRef"
@@ -68,7 +76,7 @@
             <el-tag v-else type="info">否</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="remoteIp" prop="remoteIp" width="130" />
+        <el-table-column label="远程地址" prop="remoteIp" width="130" />
         <el-table-column label="是否为源服务" prop="isOriginServer" width="80">
           <template #default="scope">
             <el-tag v-if="scope.row.isOriginServer" type="success">是</el-tag>
@@ -227,9 +235,8 @@
           />
         </el-form-item>
         <el-form-item
-          label="remoteIp"
+          label="远程地址"
           prop="remoteIp"
-          v-if="formData.isJumpServer"
         >
           <el-input v-model="formData.remoteIp" placeholder="remoteIp" />
         </el-form-item>
@@ -499,6 +506,26 @@ function batchCommand() {
   batchCommandDialogRef.value?.open(agentList);
 }
 
+function batchRestartAgents() {
+  if (ids.value.length === 0) {
+    ElMessage.warning("请先选择要重启的客户端");
+    return;
+  }
+  ElMessageBox.confirm(`确定要批量重启 ${ids.value.length} 个客户端?`, "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(() => {
+    loading.value = true;
+    batchHandleAgent(ids.value, "restart")
+      .then(() => {
+        ElMessage.success("批量重启成功");
+        handleQuery();
+      })
+      .finally(() => (loading.value = false));
+  });
+}
+
 function batchUpgradeClients() {
   if (ids.value.length === 0) {
     ElMessage.warning("请先选择要升级的客户端");
@@ -561,8 +588,13 @@ const rules = reactive({
   ],
   remoteIp: [
     {
-      required: true,
-      message: "remoteIp不能为空",
+      validator: (_rule: any, value: any, callback: any) => {
+        if (formData.isJumpServer && !value) {
+          callback(new Error("remoteIp不能为空"));
+        } else {
+          callback();
+        }
+      },
       trigger: "blur",
     },
   ],
