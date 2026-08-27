@@ -5,6 +5,7 @@ export interface LogInfo extends PageQuery {
   infoContent?: string;
   serviceId?: number;
   serviceName?: string;
+  isSuccess?: boolean | string | number;
   state?: string;
   sendEmail?: number;
   createTime?: string;

@@ -68,8 +68,8 @@
         border
       >
         <!--        <el-table-column type="selection" width="55" align="center" />-->
-        <el-table-column label="服务名" prop="serviceName" width="180" show-overflow-tooltip />
-        <el-table-column label="IP" prop="agentIp" width="180" show-overflow-tooltip />
+        <el-table-column label="服务名" prop="serviceName" width="120" show-overflow-tooltip />
+        <el-table-column label="IP" prop="agentIp" width="120" show-overflow-tooltip />
         <el-table-column label="指令" prop="command" width="180" show-overflow-tooltip />
         <el-table-column label="任务Id" prop="jobId" width="120" show-overflow-tooltip />
         <el-table-column label="脚本" prop="script" width="180" show-overflow-tooltip />
@@ -86,6 +86,16 @@
               </template>
               <pre class="result-output">{{ scope.row.result }}</pre>
             </el-popover>
+          </template>
+        </el-table-column>
+        <el-table-column label="是否成功" prop="isSuccess" width="100" align="center">
+          <template #default="scope">
+            <el-tag
+              :type="isSuccess(scope.row.isSuccess) ? 'success' : 'danger'"
+              size="small"
+            >
+              {{ isSuccess(scope.row.isSuccess) ? "成功" : "失败" }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="创建时间" prop="createTime" width="180" />
@@ -124,6 +134,11 @@ const queryParams = reactive<LogInfo>({ pageSize: 15, pageNum: 1 });
 const dataList = ref<LogInfo[]>();
 const serviceInfoList = ref<ServiceInfo[]>();
 const dateRange = ref<[string, string] | null>(null);
+
+/** 判断是否成功（兼容布尔值、字符串、数字） */
+function isSuccess(value: unknown): boolean {
+  return value === true || value === "true" || value === 1 || value === "1";
+}
 
 /** 查询 */
 function handleQuery() {
