@@ -8,8 +8,6 @@ export interface CmdLib {
   cmd?: string;
   /** 类型：shell / python */
   type?: string;
-  /** 创建时间 */
-  createTime?: string;
   /** 更新时间 */
   updateTime?: string;
 }

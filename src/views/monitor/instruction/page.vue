@@ -71,6 +71,7 @@
         <el-table-column label="服务名" prop="serviceName" width="180" show-overflow-tooltip />
         <el-table-column label="IP" prop="agentIp" width="180" show-overflow-tooltip />
         <el-table-column label="指令" prop="command" width="180" show-overflow-tooltip />
+        <el-table-column label="任务Id" prop="jobId" width="120" show-overflow-tooltip />
         <el-table-column label="脚本" prop="script" width="180" show-overflow-tooltip />
         <el-table-column label="结果集" prop="result" min-width="300">
           <template #default="scope">

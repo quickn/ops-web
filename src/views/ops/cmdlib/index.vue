@@ -269,7 +269,12 @@ function handleAdd() {
 function handleEdit(row: CmdLib) {
   isEdit.value = true;
   dialogTitle.value = "编辑指令";
-  Object.assign(formData, row);
+  Object.assign(formData, {
+    id: row.id,
+    cmdName: row.cmdName,
+    cmd: row.cmd,
+    type: row.type
+  });
   dialogVisible.value = true;
 }
 
@@ -279,7 +284,13 @@ function handleSubmit() {
   formRef.value.validate((valid: boolean) => {
     if (!valid) return;
     submitLoading.value = true;
-    const apiCall = isEdit.value ? updateCmdLib(formData) : addCmdLib(formData);
+    const submitData: CmdLib = {
+      id: formData.id,
+      cmdName: formData.cmdName,
+      cmd: formData.cmd,
+      type: formData.type
+    };
+    const apiCall = isEdit.value ? updateCmdLib(submitData) : addCmdLib(submitData);
     apiCall
       .then(() => {
         ElMessage.success(isEdit.value ? "编辑成功" : "新增成功");
