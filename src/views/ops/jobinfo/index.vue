@@ -275,73 +275,13 @@
     />
 
     <!-- 任务配置弹窗 -->
-    <el-dialog
+    <TaskConfig
       v-model="taskConfigVisible"
-      title="任务参数配置"
-      width="600px"
-      destroy-on-close
-      :close-on-click-modal="false"
-    >
-      <el-form
-        ref="taskConfigFormRef"
-        :model="taskConfigForm"
-        label-width="100px"
-        v-loading="taskConfigLoading"
-      >
-        <el-form-item label="任务名称">
-          <span>{{ currentTaskConfigRow?.jobDesc }}</span>
-        </el-form-item>
-        <el-form-item label="任务ID">
-          <span>{{ currentTaskConfigRow?.id }}</span>
-        </el-form-item>
-        <el-form-item label="选择服务">
-          <el-select
-            v-model="taskConfigForm.serviceId"
-            placeholder="请选择服务"
-            clearable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in serviceInfoList"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="taskConfigForm.type" style="width: 100%">
-            <el-option label="cmd" value="cmd" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="指令名称" prop="command">
-          <el-input v-model="taskConfigForm.command" placeholder="请输入指令" clearable />
-        </el-form-item>
-        <el-form-item label="脚本" prop="script">
-          <el-input
-            v-model="taskConfigForm.script"
-            type="textarea"
-            :rows="6"
-            placeholder="请输入脚本"
-          />
-        </el-form-item>
-        <el-form-item label="超时时间(秒)">
-          <el-input-number v-model="taskConfigForm.timeout" :min="0" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="间隔时间(秒)">
-          <el-input-number v-model="taskConfigForm.interval" :min="0" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="代理ID">
-          <el-input-number v-model="taskConfigForm.agentId" :min="0" style="width: 100%" placeholder="请输入代理ID" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="taskConfigVisible = false">取消</el-button>
-        <el-button type="primary" :loading="taskConfigSaving" @click="handleTaskConfigSave">
-          保存
-        </el-button>
-      </template>
-    </el-dialog>
+      :job-id="currentTaskConfigJobId"
+      :job-desc="currentTaskConfigJobDesc"
+      :executor-handler="currentTaskConfigExecutorHandler"
+      @success="handleQuery"
+    />
   </div>
 </template>
 
@@ -362,29 +302,24 @@ import {
 } from "@element-plus/icons-vue";
 import {
   deleteJob,
-  getTaskConfig,
   jobGroupPageList,
   listJobPage,
-  saveTaskConfig,
   startJob,
   stopJob,
   triggerJob,
 } from "@/api/ops/jobinfo";
-import { JobConfig, JobInfo, JobInfoGroup } from "@/api/ops/jobinfo/types";
+import { JobInfo, JobInfoGroup } from "@/api/ops/jobinfo/types";
 import { getByType } from "@/api/accountConfig";
 import { AccountConfig } from "@/api/accountConfig/types";
-import { useRouter } from "vue-router";
 import JobInfoEdit from "./edit.vue";
 import JobLog from "./joblog.vue";
-import { listAll } from "@/api/monitor/service";
-import { ServiceInfo } from "@/api/monitor/service/types";
+import TaskConfig from "./taskConfig.vue";
 
 defineOptions({
   name: "JobInfoIndex",
   inheritAttrs: false,
 });
 
-const router = useRouter();
 const queryFormRef = ref(ElForm);
 const loading = ref(false);
 const total = ref(0);
@@ -402,19 +337,9 @@ const currentLogJobDesc = ref("");
 
 // 任务配置状态
 const taskConfigVisible = ref(false);
-const taskConfigLoading = ref(false);
-const taskConfigSaving = ref(false);
-const taskConfigFormRef = ref(ElForm);
-const currentTaskConfigRow = ref<JobInfo | null>(null);
-const taskConfigForm = reactive<JobConfig>({
-  serviceId: undefined,
-  command: "",
-  script: "",
-  type: "cmd",
-  timeout: 10,
-  interval: 0,
-  agentId: undefined,
-});
+const currentTaskConfigJobId = ref(0);
+const currentTaskConfigJobDesc = ref("");
+const currentTaskConfigExecutorHandler = ref("");
 
 const queryParams = reactive({
   pageSize: 15,
@@ -428,7 +353,6 @@ const queryParams = reactive({
 
 const dataList = ref<JobInfo[]>([]);
 const serviceList = ref<AccountConfig[]>([]);
-const serviceInfoList = ref<ServiceInfo[]>();
 
 const jobGroupList = ref<JobInfoGroup[]>([]);
 
@@ -576,54 +500,10 @@ function handleQueryLog(row: JobInfo) {
 
 /** 打开任务参数配置 */
 function handleTaskConfig(row: JobInfo) {
-
-  listAll().then(({ data }) => {
-    serviceInfoList.value = data;
-  });
-
-  currentTaskConfigRow.value = row;
-  // 重置表单为默认值
-  Object.assign(taskConfigForm, {
-    serviceId: undefined,
-    command: "",
-    script: "",
-    type: "cmd",
-    timeout: 10,
-    interval: 0,
-    agentId: undefined,
-  });
+  currentTaskConfigJobId.value = row.id!;
+  currentTaskConfigJobDesc.value = row.jobDesc || "";
+  currentTaskConfigExecutorHandler.value = row.executorHandler || "";
   taskConfigVisible.value = true;
-  taskConfigLoading.value = true;
-  getTaskConfig(row.id!)
-    .then(({ data }) => {
-      if (data) {
-        Object.assign(taskConfigForm, data);
-      }
-    })
-    .catch(() => {
-      // 无配置时使用默认值
-    })
-    .finally(() => {
-      taskConfigLoading.value = false;
-    });
-}
-
-/** 保存任务参数配置 */
-function handleTaskConfigSave() {
-  const row = currentTaskConfigRow.value;
-  if (!row) return;
-  taskConfigSaving.value = true;
-  saveTaskConfig({
-    ...taskConfigForm,
-    id: row.id,
-  })
-    .then(() => {
-      ElMessage.success("配置保存成功");
-      taskConfigVisible.value = false;
-    })
-    .finally(() => {
-      taskConfigSaving.value = false;
-    });
 }
 
 function handleStart(row: JobInfo) {
