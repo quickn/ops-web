@@ -20,7 +20,7 @@ const state = reactive({
 });
 
 const setDataInfo = (info) => {
-  state.info = info;
+  Object.assign(state.info, info);
 };
 
 const changePage = (val: string) => {

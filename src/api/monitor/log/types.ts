@@ -5,10 +5,24 @@ export interface LogInfo extends PageQuery {
   infoContent?: string;
   serviceId?: number;
   serviceName?: string;
+  /** Agent IP */
+  agentIp?: string;
+  agentIP?: string;
+  /** 指令 */
+  command?: string;
+  /** 脚本 */
+  script?: string;
+  /** 任务ID */
+  jobId?: number | string;
+  /** 结果集 */
+  result?: string;
+  /** 是否成功 */
   isSuccess?: boolean | string | number;
   state?: string;
   sendEmail?: number;
   createTime?: string;
+  startTime?: string;
+  endTime?: string;
   sort?: number;
   sortField?: string;
   sortOrder?: string;
