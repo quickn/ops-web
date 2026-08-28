@@ -45,7 +45,32 @@
             </el-select>
           </el-form-item>
           <template v-if="isImageMode">
-            <el-form-item label="代理ID">
+            <el-form-item v-if="isDeployHandler" label="部署方式">
+              <el-select
+                v-model="taskConfigForm.deployType"
+                style="width: 100%"
+              >
+                <el-option label="重新构建" :value="1" />
+                <el-option label="直接替换源文件" :value="2" />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-if="isSyncJarHandler" label="源文件服务">
+              <el-select
+                v-model="taskConfigForm.agentId"
+                filterable
+                clearable
+                style="width: 100%"
+                placeholder="请选择源文件服务"
+              >
+                <el-option
+                  v-for="(item, index) in sourceServiceList"
+                  :key="index"
+                  :label="item.label"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item v-else label="代理ID">
               <el-input
                 v-model="taskConfigForm.agentId"
                 :min="0"
@@ -113,7 +138,7 @@
         />
       </el-form-item>
       <el-form-item v-if="!isImageMode" label="代理ID">
-        <el-input-number
+        <el-input
           v-model="taskConfigForm.agentId"
           :min="0"
           style="width: 100%"
@@ -143,6 +168,7 @@ import { JobConfig } from "@/api/ops/jobinfo/types";
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { getListByServiceId } from "@/api/docker";
+import { originServerList } from "@/api/monitor/agent";
 import { default as Sortable, SortableEvent } from "sortablejs";
 
 defineOptions({
@@ -173,6 +199,7 @@ const taskConfigSaving = ref(false);
 const serviceInfoList = ref<ServiceInfo[]>([]);
 const imageNameList = ref<string[]>([]);
 const selectedImageNames = ref<string[]>([]);
+const sourceServiceList = ref<any[]>([]);
 const imageGroupRef = ref<any>();
 let sortableInstance: Sortable | null = null;
 
@@ -184,6 +211,7 @@ const taskConfigForm = reactive<JobConfig>({
   timeout: 10,
   interval: 0,
   agentId: undefined,
+  deployType: 2,
 });
 
 /** 是否为镜像勾选模式（运行模式为 syncJarJobHandler / deployJobHandler） */
@@ -191,6 +219,16 @@ const isImageMode = computed(
   () =>
     props.executorHandler === "syncJarJobHandler" ||
     props.executorHandler === "deployJobHandler"
+);
+
+/** 是否为部署模式（运行模式为 deployJobHandler） */
+const isDeployHandler = computed(
+  () => props.executorHandler === "deployJobHandler"
+);
+
+/** 是否为同步Jar模式（运行模式为 syncJarJobHandler） */
+const isSyncJarHandler = computed(
+  () => props.executorHandler === "syncJarJobHandler"
 );
 
 /** 重置表单为默认值 */
@@ -203,6 +241,7 @@ function resetForm() {
     timeout: 10,
     interval: 0,
     agentId: undefined,
+    deployType: 2,
   });
   imageNameList.value = [];
   selectedImageNames.value = [];
@@ -250,6 +289,25 @@ function destroySortable() {
   }
 }
 
+/** 加载源文件服务列表 */
+function loadSourceServiceList() {
+  originServerList({
+    pageNum: 1,
+    pageSize: 15000,
+    isOriginServer: true,
+  } as any)
+    .then(({ data }) => {
+      const list = Array.isArray(data) ? data : (data?.records || []);
+      sourceServiceList.value = list.map((item: any) => ({
+        ...item,
+        label: `${item.hostname} (${item.serviceName})`,
+      }));
+    })
+    .catch(() => {
+      ElMessage.error("获取源文件服务失败");
+    });
+}
+
 /** 加载镜像名称列表（可传入已有 script 用于回显勾选状态） */
 function loadImageNameList(serviceId: number, script?: string) {
   imageNameList.value = [];
@@ -269,7 +327,7 @@ function loadImageNameList(serviceId: number, script?: string) {
     });
 }
 
-/** 从 script 中解析已选镜像名称 */
+/** 从 script 中解析已选镜像名称及部署方式 */
 function parseSelectedImageNames(script?: string) {
   if (!script) {
     selectedImageNames.value = [];
@@ -281,6 +339,10 @@ function parseSelectedImageNames(script?: string) {
     selectedImageNames.value = names
       ? names.split(",").filter((n: string) => n.trim() !== "")
       : [];
+    // 回显部署方式
+    if (obj?.deployType !== undefined && obj?.deployType !== null) {
+      taskConfigForm.deployType = obj.deployType;
+    }
   } catch {
     selectedImageNames.value = [];
   }
@@ -310,9 +372,16 @@ function loadTaskConfig() {
 /** 保存任务参数配置 */
 function handleTaskConfigSave() {
   // 镜像模式下，将选中的镜像名称回写为 script
-  const script = isImageMode.value
-    ? JSON.stringify({ projectNames: selectedImageNames.value.join(",") })
-    : taskConfigForm.script;
+  let script = taskConfigForm.script;
+  if (isImageMode.value) {
+    const scriptObj: Record<string, any> = {
+      projectNames: selectedImageNames.value.join(","),
+    };
+    if (isDeployHandler.value) {
+      scriptObj.deployType = taskConfigForm.deployType;
+    }
+    script = JSON.stringify(scriptObj);
+  }
 
   taskConfigSaving.value = true;
   saveTaskConfig({
@@ -356,6 +425,9 @@ watch(
     if (val) {
       resetForm();
       loadTaskConfig();
+      if (isSyncJarHandler.value) {
+        loadSourceServiceList();
+      }
     } else {
       destroySortable();
     }
@@ -370,6 +442,9 @@ onMounted(() => {
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
   });
+  if (isSyncJarHandler.value) {
+    loadSourceServiceList();
+  }
 });
 </script>
 

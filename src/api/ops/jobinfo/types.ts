@@ -103,6 +103,8 @@ export interface JobConfig {
   interval?: number;
   /** 代理ID */
   agentId?: number;
+  /** 部署方式：1-重新构建, 2-直接替换源文件 */
+  deployType?: number;
 }
 
 /**
