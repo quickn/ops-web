@@ -175,6 +175,16 @@
               命令
             </el-button>
             <el-button
+              v-if="scope.row.isJumpServer"
+              type="info"
+              size="small"
+              link
+              @click.stop="openIntranetSync(scope.row)"
+            >
+              <i-ep-connection />
+              内网同步
+            </el-button>
+            <el-button
               type="primary"
               size="small"
               link
@@ -355,6 +365,8 @@ import { Agent, AgentForm } from "@/api/monitor/agent/types";
 import ProxyConfigDialog from "./AgentConfigDialog.vue";
 import CommandDialog from "./CommandDialog.vue";
 import BatchCommandDialog from "./BatchCommandDialog.vue";
+import { useRouter } from "vue-router";
+const router = useRouter();
 
 const queryFormRef = ref(ElForm);
 
@@ -456,6 +468,18 @@ function openCommandDialog(row: Agent) {
   commandDialogRef.value?.open({
     id: row.id!,
     hostname: row.hostname || "",
+  });
+}
+
+/** 打开内网同步页面 */
+function openIntranetSync(row: Agent) {
+  router.push({
+    path: "/ops/file",
+    query: {
+      agentId: row.id,
+      syncType: 3,
+      filePath: '/home/park',
+    },
   });
 }
 

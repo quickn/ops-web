@@ -17,6 +17,9 @@ const selectedAgentId = ref<number>();
 const selectedFilePath = ref<string>("/usr/local/nginx");
 const loading = ref(false);
 
+/** 同步类型（3 = 仅从跳板机内网同步） */
+const syncType = ref<number>();
+
 /** 当前选中 agent 的 serviceId */
 const currentServiceId = computed(() => {
   return agentList.value.find((a) => a.id === selectedAgentId.value)?.serviceId;
@@ -61,9 +64,10 @@ function handleAgentChange(agentId: number) {
 onMounted(() => {
   loadAgentList();
 
-  // 从路由参数中获取 agentId 和 filePath
+  // 从路由参数中获取 agentId、filePath 和 syncType
   const agentId = route.query.agentId ? Number(route.query.agentId) : undefined;
   const filePath = route.query.filePath as string;
+  const syncTypeParam = route.query.syncType;
 
   if (agentId) {
     selectedAgentId.value = agentId;
@@ -71,6 +75,10 @@ onMounted(() => {
 
   if (filePath) {
     selectedFilePath.value = filePath;
+  }
+
+  if (syncTypeParam !== undefined && syncTypeParam !== null) {
+    syncType.value = Number(syncTypeParam);
   }
 });
 </script>
@@ -86,6 +94,7 @@ onMounted(() => {
       :service-id="currentServiceId"
       :service-name="currentServiceName"
       :hostname="currentHostname"
+      :sync-type="syncType"
     />
 
     <el-empty v-else description="请先选择Agent" />

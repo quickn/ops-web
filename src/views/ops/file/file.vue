@@ -29,6 +29,7 @@ interface Props {
   serviceId?: number;
   serviceName?: string;
   hostname?: string;
+  syncType?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -37,6 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
   serviceId: undefined,
   serviceName: undefined,
   hostname: undefined,
+  syncType: 1,
 });
 
 const queryFormRef = ref(ElForm);
@@ -58,8 +60,11 @@ const syncDialog = reactive({
   loading: false,
   targetServiceIds: [] as number[],
   serviceList: [] as ServiceInfo[],
-  syncType: 1,
+  syncType: props.syncType ?? 1,
 });
+
+/** 是否为跳板机内网同步模式（syncType = 3） */
+const isJumpServer = computed(() => props.syncType === 3);
 
 /** 日志分析对话框状态 */
 const analysisDialogVisible = ref(false);
@@ -247,6 +252,13 @@ function openSyncDialog() {
     ElMessage.warning("请先选择要同步的文件");
     return;
   }
+  // 跳板机内网同步模式（syncType=3）：无需选择目标环境
+  if (isJumpServer.value) {
+    syncDialog.targetServiceIds = [];
+    syncDialog.syncType = 3;
+    syncDialog.visible = true;
+    return;
+  }
   // 加载服务列表
   listAll().then(({ data }) => {
     if (data) {
@@ -255,6 +267,7 @@ function openSyncDialog() {
       );
     }
     syncDialog.targetServiceIds = [];
+    syncDialog.syncType = 1;
     syncDialog.visible = true;
   });
 }
@@ -290,6 +303,35 @@ function closeAnalysisDialog() {
   analysisQueryParams.value = null;
 }
 async function handleSyncSubmit() {
+  // 跳板机内网同步模式（syncType=3）：仅从跳板机同步，无需目标环境
+  if (isJumpServer.value) {
+    syncDialog.loading = true;
+    const syncPromises = ids.value.map((fileName) => {
+      const sourcePath = `${queryParams.filePath}/${fileName}`;
+      const params: SyncFileParam = {
+        sourceAgentId: queryParams.agentId,
+        jumpAgentId: queryParams.agentId,
+        sourcePath: sourcePath,
+        targetPath: sourcePath,
+        syncType: 3,
+      };
+      return syncFileByJumpServer(params);
+    });
+
+    Promise.all(syncPromises)
+      .then(() => {
+        ElMessage.success("同步完成");
+        closeSyncDialog();
+      })
+      .catch(() => {
+        ElMessage.error("同步失败，请检查日志");
+      })
+      .finally(() => {
+        syncDialog.loading = false;
+      });
+    return;
+  }
+
   if (syncDialog.targetServiceIds.length === 0) {
     ElMessage.warning("请选择目标环境");
     return;
@@ -693,7 +735,7 @@ onMounted(() => {
         <el-form-item label="源路径">
           <span style="color: #606266">{{ queryParams.filePath }}</span>
         </el-form-item>
-        <el-form-item label="目标环境">
+        <el-form-item v-if="!isJumpServer" label="目标环境">
           <el-select
             v-model="syncDialog.targetServiceIds"
             multiple
@@ -708,7 +750,10 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="selectedWorkPaths.length > 0" label="目标路径">
+        <el-form-item
+          v-if="!isJumpServer && selectedWorkPaths.length > 0"
+          label="目标路径"
+        >
           <div style="width: 100%">
             <div
               v-for="(path, index) in selectedWorkPaths"
@@ -737,7 +782,12 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="同步方式">
           <el-radio-group v-model="syncDialog.syncType" disabled>
-            <el-radio :value="1"> 从源服务器 rsync 到跳板机并分发 </el-radio>
+            <el-radio v-if="isJumpServer" :value="3">
+              仅从跳板机同步
+            </el-radio>
+            <el-radio v-else :value="1">
+              从源服务器 rsync 到跳板机并分发
+            </el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
