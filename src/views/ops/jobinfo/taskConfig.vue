@@ -54,6 +54,15 @@
                 <el-option label="直接替换源文件" :value="2" />
               </el-select>
             </el-form-item>
+            <el-form-item v-if="isDeployHandler" label="是否同步部署">
+              <el-switch
+                v-model="taskConfigForm.sync"
+                :active-value="true"
+                :inactive-value="false"
+                active-text="同步部署"
+                inactive-text="不同步"
+              />
+            </el-form-item>
             <el-form-item v-if="isSyncJarHandler" label="源文件服务">
               <el-select
                 v-model="taskConfigForm.agentId"
@@ -247,6 +256,7 @@ const taskConfigForm = reactive<JobConfig>({
   interval: 0,
   agentId: undefined,
   deployType: 2,
+  sync: true,
 });
 
 /** 是否为镜像勾选模式（运行模式为 syncJarJobHandler / deployJobHandler） */
@@ -316,6 +326,7 @@ function resetForm() {
     interval: 0,
     agentId: undefined,
     deployType: 2,
+    sync: true,
   });
   imageNameList.value = [];
   selectedImageNames.value = [];
@@ -418,6 +429,10 @@ function parseSelectedImageNames(script?: string) {
     if (obj?.deployType !== undefined && obj?.deployType !== null) {
       taskConfigForm.deployType = obj.deployType;
     }
+    // 回显是否同步部署
+    if (obj?.sync !== undefined && obj?.sync !== null) {
+      taskConfigForm.sync = obj.sync;
+    }
   } catch {
     selectedImageNames.value = [];
   }
@@ -454,6 +469,7 @@ function handleTaskConfigSave() {
     };
     if (isDeployHandler.value) {
       scriptObj.deployType = taskConfigForm.deployType;
+      scriptObj.sync = taskConfigForm.sync;
     }
     script = JSON.stringify(scriptObj);
   }
@@ -461,6 +477,7 @@ function handleTaskConfigSave() {
   taskConfigSaving.value = true;
   saveTaskConfig({
     ...taskConfigForm,
+    command: props.jobDesc,
     script,
     id: props.jobId,
   })

@@ -26,6 +26,8 @@ export interface LogInfo extends PageQuery {
   sort?: number;
   sortField?: string;
   sortOrder?: string;
+  /** 是否同步部署 */
+  sync?: boolean;
 }
 export interface LogCmdForm {
   serviceId?: number | undefined;

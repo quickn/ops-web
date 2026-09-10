@@ -124,6 +124,16 @@
             </el-button>
           </el-form-item>
 
+          <el-form-item label="逐个同步部署:">
+            <el-switch
+              v-model="formData.sync"
+              :active-value="true"
+              :inactive-value="false"
+              active-text="同步部署"
+              inactive-text="不同步"
+            />
+          </el-form-item>
+
           <el-form-item label="选择部署服务器:">
             <el-table
               ref="dataTableRef"
@@ -264,6 +274,7 @@ const formData = reactive<LogInfo>({
   fileType: 1,
   serviceId: "",
   sourceAgentId: "",
+  sync: true,
 });
 const emit = defineEmits(["setData", "changePage"]);
 const step = ref(0);
@@ -609,6 +620,7 @@ function deployBtn() {
     projectId: props.info.id,
     agentIds: agentIds,
     deployType: parseInt(formData.deployType),
+    sync: formData.sync,
   })
     .then(({ data }) => {
       deployLoading.close();

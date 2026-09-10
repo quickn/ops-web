@@ -105,6 +105,8 @@ export interface JobConfig {
   agentId?: number;
   /** 部署方式：1-重新构建, 2-直接替换源文件 */
   deployType?: number;
+  /** 是否同步部署 */
+  sync?: boolean;
 }
 
 /**
