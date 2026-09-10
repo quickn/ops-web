@@ -18,10 +18,10 @@
       <el-table-column label="调度结果" width="100" align="center">
         <template #default="{ row }">
           <el-tag
-            :type="row.triggerCode === 0 ? 'success' : 'danger'"
+            :type="row.triggerCode === 200 ? 'success' : 'danger'"
             size="small"
           >
-            {{ row.triggerCode === 0 ? "成功" : "失败" }}
+            {{ row.triggerCode === 200 ? "成功" : "失败" }}
           </el-tag>
         </template>
       </el-table-column>
@@ -69,10 +69,10 @@
         }}</el-descriptions-item>
         <el-descriptions-item label="调度结果">
           <el-tag
-            :type="detailData.triggerCode === 0 ? 'success' : 'danger'"
+            :type="detailData.triggerCode === 200 ? 'success' : 'danger'"
             size="small"
           >
-            {{ detailData.triggerCode === 0 ? "成功" : "失败" }}
+            {{ detailData.triggerCode === 200 ? "成功" : "失败" }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="调度备注" :span="2">{{
@@ -88,10 +88,10 @@
         </el-descriptions-item>
         <el-descriptions-item label="执行结果" :span="2">
           <el-tag
-            :type="detailData.handleCode === 0 ? 'success' : 'danger'"
+            :type="detailData.handleCode === 200 ? 'success' : 'danger'"
             size="small"
           >
-            {{ detailData.handleCode === 0 ? "成功" : "失败" }}
+            {{ detailData.handleCode === 200 ? "成功" : "失败" }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="执行日志" :span="2">

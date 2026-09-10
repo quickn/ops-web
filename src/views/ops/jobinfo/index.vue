@@ -106,7 +106,7 @@
         <el-table-column
           label="任务描述"
           prop="jobDesc"
-          width="260"
+          width="300"
           show-overflow-tooltip
         />
         <el-table-column
@@ -115,7 +115,7 @@
           width="100"
           align="center"
         />
-        <el-table-column label="调度类型" width="150" align="center">
+        <el-table-column label="调度类型" width="180" align="center">
           <template #default="scope">
             <el-tag
               :type="scope.row.scheduleType === 'NONE' ? 'info' : 'success'"
