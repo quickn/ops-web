@@ -88,6 +88,12 @@
             </el-popover>
           </template>
         </el-table-column>
+        <el-table-column
+          label="备注"
+          prop="remark"
+          min-width="150"
+          show-overflow-tooltip
+        />
         <el-table-column label="是否成功" prop="isSuccess" width="100" align="center">
           <template #default="scope">
             <el-tag

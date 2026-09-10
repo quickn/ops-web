@@ -16,6 +16,8 @@ export interface LogInfo extends PageQuery {
   jobId?: number | string;
   /** 结果集 */
   result?: string;
+  /** 备注 */
+  remark?: string;
   /** 是否成功 */
   isSuccess?: boolean | string | number;
   state?: string;
