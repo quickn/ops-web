@@ -2,7 +2,7 @@
   <el-dialog
     v-model="visible"
     title="任务参数配置"
-    width="1000px"
+    width="1200px"
     top="0"
     class="task-config-dialog"
     destroy-on-close
@@ -15,19 +15,19 @@
       v-loading="taskConfigLoading"
     >
       <el-row :gutter="16">
-        <el-col :span="12">
+        <el-col :span="5">
           <el-form-item label="任务名称">
             <span>{{ jobDesc }}</span>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col :span="19">
           <el-form-item label="任务ID">
             <span>{{ jobId }}</span>
           </el-form-item>
         </el-col>
       </el-row>
       <el-row :gutter="16">
-        <el-col :span="isImageMode ? 8 : 24">
+        <el-col :span="isImageMode ? 6: 24" :class="{ 'left-col': isImageMode }">
           <el-form-item label="选择服务">
             <el-select
               v-model="taskConfigForm.serviceId"
@@ -94,30 +94,65 @@
             </el-form-item>
           </template>
         </el-col>
-        <el-col v-if="isImageMode" :span="16">
+        <el-col v-if="isImageMode" :span="18" >
           <el-form-item label="选择镜像" class="image-form-item">
             <div v-if="imageNameList.length === 0" class="image-empty">
               暂无镜像
             </div>
-            <el-checkbox-group
-              v-else
-              ref="imageGroupRef"
-              v-model="selectedImageNames"
-              class="image-group"
-            >
-              <el-checkbox
-                v-for="name in imageNameList"
-                :key="name"
-                :label="name"
-                class="image-checkbox"
-                :title="name"
-              >
-                <span class="image-drag-handle">
-                  <el-icon><Rank /></el-icon>
-                </span>
-                <span class="image-label">{{ name }}</span>
-              </el-checkbox>
-            </el-checkbox-group>
+            <el-row v-else :gutter="16" class="image-panel">
+              <!-- 左列：未选中的镜像 -->
+              <el-col :span="12">
+                <div class="image-panel-header">
+                  <span class="image-panel-title">未选中</span>
+                  <el-checkbox
+                    v-model="isAllSelected"
+                    :indeterminate="isIndeterminate"
+                    @change="handleSelectAll"
+                  >
+                    全选
+                  </el-checkbox>
+                </div>
+                <el-checkbox-group
+                  v-model="selectedImageNames"
+                  class="image-group"
+                >
+                  <el-checkbox
+                    v-for="name in unselectedImageList"
+                    :key="name"
+                    :label="name"
+                    class="image-checkbox"
+                    :title="name"
+                  >
+                    <span class="image-label">{{ name }}</span>
+                  </el-checkbox>
+                </el-checkbox-group>
+              </el-col>
+              <!-- 右列：已选中的镜像（可拖拽排序） -->
+              <el-col :span="12">
+                <div class="image-panel-title">已选中</div>
+                <el-checkbox-group
+                  ref="imageGroupRef"
+                  v-model="selectedImageNames"
+                  class="image-group"
+                >
+                  <el-checkbox
+                    v-for="name in selectedImageList"
+                    :key="name"
+                    :label="name"
+                    class="image-checkbox"
+                    :title="name"
+                  >
+                    <span class="image-drag-handle">
+                      <el-icon><Rank /></el-icon>
+                    </span>
+                    <span class="image-label">{{ name }}</span>
+                  </el-checkbox>
+                </el-checkbox-group>
+                <div v-if="selectedImageList.length === 0" class="image-empty">
+                  请从左侧勾选镜像
+                </div>
+              </el-col>
+            </el-row>
           </el-form-item>
         </el-col>
       </el-row>
@@ -231,6 +266,45 @@ const isSyncJarHandler = computed(
   () => props.executorHandler === "syncJarJobHandler"
 );
 
+/** 未选中的镜像列表 */
+const unselectedImageList = computed(() =>
+  imageNameList.value.filter((n) => !selectedImageNames.value.includes(n))
+);
+
+/** 已选中的镜像列表（按选中顺序） */
+const selectedImageList = computed(() =>
+  selectedImageNames.value.filter((n) => imageNameList.value.includes(n))
+);
+
+/** 是否全部选中 */
+const isAllSelected = computed(
+  () =>
+    imageNameList.value.length > 0 &&
+    selectedImageNames.value.length === imageNameList.value.length
+);
+
+/** 是否部分选中（用于全选复选框的 indeterminate 状态） */
+const isIndeterminate = computed(
+  () =>
+    selectedImageNames.value.length > 0 &&
+    selectedImageNames.value.length < imageNameList.value.length
+);
+
+/** 全选/取消全选 */
+function handleSelectAll(val: boolean) {
+  if (val) {
+    // 全选：保留原有顺序，追加未选中的
+    const selectedSet = new Set(selectedImageNames.value);
+    selectedImageNames.value = [
+      ...selectedImageNames.value,
+      ...imageNameList.value.filter((n) => !selectedSet.has(n)),
+    ];
+  } else {
+    // 取消全选
+    selectedImageNames.value = [];
+  }
+}
+
 /** 重置表单为默认值 */
 function resetForm() {
   Object.assign(taskConfigForm, {
@@ -247,21 +321,11 @@ function resetForm() {
   selectedImageNames.value = [];
 }
 
-/** 将选中的镜像置顶（保持各自相对顺序） */
-function applySelectedFirst() {
-  const selectedSet = new Set(selectedImageNames.value);
-  const selected = imageNameList.value.filter((n) => selectedSet.has(n));
-  const unselected = imageNameList.value.filter((n) => !selectedSet.has(n));
-  imageNameList.value = [...selected, ...unselected];
-  // 同步已选顺序，保证最终 projectNames 顺序与置顶后一致
-  selectedImageNames.value = selected;
-}
-
 /** 初始化拖拽排序 */
 function initSortable() {
   destroySortable();
   const el = imageGroupRef.value?.$el as HTMLElement | undefined;
-  if (!el || imageNameList.value.length === 0) return;
+  if (!el || selectedImageList.value.length === 0) return;
   sortableInstance = Sortable.create(el, {
     animation: 150,
     handle: ".image-drag-handle",
@@ -274,9 +338,9 @@ function initSortable() {
       ) {
         return;
       }
-      const moved = imageNameList.value.splice(oldIndex, 1)[0];
-      imageNameList.value.splice(newIndex, 0, moved);
-      applySelectedFirst();
+      const list = selectedImageNames.value;
+      const moved = list.splice(oldIndex, 1)[0];
+      list.splice(newIndex, 0, moved);
     },
   });
 }
@@ -308,17 +372,28 @@ function loadSourceServiceList() {
     });
 }
 
-/** 加载镜像名称列表（可传入已有 script 用于回显勾选状态） */
-function loadImageNameList(serviceId: number, script?: string) {
+/** 加载镜像名称列表（可传入已有 script 用于回显勾选状态，keepSelected 表示保留已选中的镜像） */
+function loadImageNameList(
+  serviceId: number,
+  script?: string,
+  keepSelected = false
+) {
   imageNameList.value = [];
-  selectedImageNames.value = [];
+  // 只有回显（传入 script）时才清空选中项，切换服务时保留
+  if (!keepSelected) {
+    selectedImageNames.value = [];
+  }
   getListByServiceId(serviceId)
     .then(({ data }) => {
       imageNameList.value = data || [];
       // 回显已有勾选状态
       if (script) {
         parseSelectedImageNames(script);
-        applySelectedFirst();
+      } else if (keepSelected) {
+        // 切换服务时，过滤掉新列表中不存在的已选项
+        selectedImageNames.value = selectedImageNames.value.filter((n) =>
+          imageNameList.value.includes(n)
+        );
       }
       nextTick(initSortable);
     })
@@ -403,19 +478,20 @@ function handleTaskConfigSave() {
 function handleServiceChange(serviceId?: number) {
   if (!isImageMode.value) return;
   if (serviceId) {
-    loadImageNameList(serviceId);
+    // 切换服务时保留已选中的镜像
+    loadImageNameList(serviceId, undefined, true);
   } else {
     imageNameList.value = [];
     selectedImageNames.value = [];
   }
 }
 
-// 勾选集合发生变化（增/删项）时，将选中的镜像置顶
+// 勾选集合发生变化（增/删项）时，重新初始化拖拽排序
 watch(
   () => [...selectedImageNames.value].sort().join(","),
   (val, oldVal) => {
     if (val === oldVal) return;
-    applySelectedFirst();
+    nextTick(initSortable);
   }
 );
 
@@ -463,19 +539,59 @@ onMounted(() => {
   overflow-y: auto;
 }
 
+.left-col :deep(.el-form-item__label) {
+  float: none;
+  display: block;
+  width: auto;
+  text-align: left;
+  padding-bottom: 4px;
+}
+
+.left-col :deep(.el-form-item__content) {
+  margin-left: 0 !important;
+  width: 100%;
+}
+
+.image-form-item :deep(.el-form-item__label) {
+  float: none;
+  display: block;
+  width: auto;
+  text-align: left;
+  padding-bottom: 4px;
+}
+
+.image-form-item :deep(.el-form-item__content) {
+  margin-left: 0 !important;
+  width: 100%;
+}
+
+.image-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.image-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+}
+
 .image-group {
   display: grid;
   grid-template-columns: repeat(1, 1fr);
   gap: 4px;
-  width: 100%;
-  max-height: calc(100vh - 180px);
-  overflow-y: auto;
+  width: 200px;
   padding: 4px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  min-height: 60px;
 }
 
 .image-checkbox {
   margin-right: 0;
-  width: 100%;
+  width: 200px;
 }
 
 .image-checkbox :deep(.el-checkbox__label) {
@@ -496,6 +612,7 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  width: calc(100% + 50px);
 }
 
 .image-empty {
