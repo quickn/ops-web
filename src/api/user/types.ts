@@ -66,6 +66,10 @@ export interface UserPageVO {
    * 用户名
    */
   username?: string;
+  /**
+   * 登录掩码(IP白名单，多个以逗号分隔，为空表示不限制)
+   */
+  loginMask?: string;
 }
 
 /**
@@ -109,4 +113,8 @@ export interface UserForm {
    * 用户名
    */
   username?: string;
+  /**
+   * 登录掩码(IP白名单，多个以逗号分隔，为空表示不限制)
+   */
+  loginMask?: string;
 }

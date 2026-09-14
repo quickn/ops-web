@@ -217,6 +217,7 @@ function resetForm() {
 
   formData.id = undefined;
   formData.status = 1;
+  formData.loginMask = undefined;
 }
 
 /** 表单提交 */
@@ -510,6 +511,18 @@ onMounted(() => {
               width="120"
             />
 
+            <el-table-column
+              label="登录掩码"
+              align="center"
+              prop="loginMask"
+              width="180"
+              show-overflow-tooltip
+            >
+              <template #default="scope">
+                {{ scope.row.loginMask || "不限制" }}
+              </template>
+            </el-table-column>
+
             <el-table-column label="状态" align="center" prop="status">
               <template #default="scope">
                 <el-switch
@@ -633,6 +646,19 @@ onMounted(() => {
             placeholder="请输入邮箱"
             maxlength="50"
           />
+        </el-form-item>
+
+        <el-form-item label="登录掩码" prop="loginMask">
+          <el-input
+            v-model="formData.loginMask"
+            type="textarea"
+            :rows="3"
+            maxlength="500"
+            placeholder="限制该用户登录的IP，留空表示不限制"
+          />
+          <div class="el-upload__tip">
+            支持单个IP、通配符、网段、IP区间，多个以逗号分隔，例如：192.168.1.100,192.168.1.*,10.0.0.0/24,10.0.0.10-10.0.0.200
+          </div>
         </el-form-item>
 
         <el-form-item label="状态" prop="status">
