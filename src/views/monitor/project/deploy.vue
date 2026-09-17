@@ -129,9 +129,27 @@
               v-model="formData.sync"
               :active-value="true"
               :inactive-value="false"
-              active-text="同步部署"
+              active-text="同步部署 "
               inactive-text="不同步"
             />
+            <div class="el-upload__tip">
+              多台服务器部署时，会等待一台服务器部署成功后再执行另一台
+            </div>
+          </el-form-item>
+
+          <el-form-item label="时间间隔:">
+            <el-input-number
+              v-model="formData.interval"
+              :min="0"
+              :max="3600"
+              :step="10"
+              size="default"
+              style="width: 200px"
+            />
+            <span class="interval-unit">秒 </span>
+            <div class="el-upload__tip">
+              多台服务器部署时，等待一台服务部署完成的的时间，0 表示不等待
+            </div>
           </el-form-item>
 
           <el-form-item label="选择部署服务器:">
@@ -187,7 +205,7 @@
     </el-card>
     <el-dialog v-model="deployEdit.visible" title="日志" width="1400px">
       <el-table
-        ref="dataTableRef"
+        ref="logTableRef"
         :data="deployArr"
         highlight-current-row
         border
@@ -275,6 +293,7 @@ const formData = reactive<LogInfo>({
   serviceId: "",
   sourceAgentId: "",
   sync: true,
+  interval: 60,
 });
 const emit = defineEmits(["setData", "changePage"]);
 const step = ref(0);
@@ -433,6 +452,23 @@ function loadAgentList() {
     dataList.value = data;
   });
 }
+
+/** 默认勾选容器名不为空的服务器 */
+function setDefaultSelection() {
+  const table = dataTableRef.value;
+  if (!table || typeof table.toggleRowSelection !== "function") {
+    return;
+  }
+  table.clearSelection();
+  dataList.value.forEach((row) => {
+    if (row.dockerName) {
+      table.toggleRowSelection(row, true);
+    }
+  });
+}
+
+// 服务器列表刷新后，自动勾选容器名不为空的行
+watch(dataList, () => nextTick(setDefaultSelection), { flush: "post" });
 
 /** 同步 CodeMirror 编辑器内容到 formData */
 function syncEditorsToFormData() {
@@ -621,6 +657,7 @@ function deployBtn() {
     agentIds: agentIds,
     deployType: parseInt(formData.deployType),
     sync: formData.sync,
+    interval: formData.interval ?? 0,
   })
     .then(({ data }) => {
       deployLoading.close();
@@ -729,6 +766,11 @@ onUnmounted(() => {
   margin-bottom: 15px;
   font-size: 18px;
   font-weight: bold;
+}
+
+.interval-unit {
+  margin-left: 8px;
+  color: #909399;
 }
 
 .codemirror-container {

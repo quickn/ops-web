@@ -546,9 +546,13 @@ function openDeployDialog(row) {
   });
 }
 
-// 只在组件首次创建时加载数据，keep-alive 缓存后再次进入不会刷新
+// 首次创建时加载主机列表
 onMounted(() => {
   fetchHostList();
+});
+
+// keep-alive 缓存下，每次进入（含首次激活）都刷新列表
+onActivated(() => {
   handleQuery();
 });
 </script>

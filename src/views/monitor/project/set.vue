@@ -205,6 +205,8 @@ function deployBtn() {
     dockerComposeContent: formData.dockerComposeContent,
   }).then(() => {
     ElMessage.success("配置保存成功");
+    // 保存成功后返回列表页
+    emit("changePage", "page");
   });
 }
 

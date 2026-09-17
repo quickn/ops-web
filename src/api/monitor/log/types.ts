@@ -30,6 +30,8 @@ export interface LogInfo extends PageQuery {
   sortOrder?: string;
   /** 是否同步部署 */
   sync?: boolean;
+  /** 部署时间间隔(秒) */
+  interval?: number;
 }
 export interface LogCmdForm {
   serviceId?: number | undefined;
