@@ -315,7 +315,7 @@ defineOptions({
   name: "ProjectPage",
   inheritAttrs: false,
 });
-import { listAll } from "@/api/monitor/agent";
+import { listAll } from "@/api/monitor/service/index";
 const emit = defineEmits(["setData", "changePage"]);
 const queryFormRef = ref(ElForm);
 const loading = ref(false);

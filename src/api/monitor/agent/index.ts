@@ -22,13 +22,6 @@ export function originServerList(
   });
 }
 
-export function listAll(): AxiosPromise<ServiceInfo[]> {
-  return request({
-    url: "/serviceInfo/listAll",
-    method: "get"
-  });
-}
-
 /**
  * 获取部门详情
  *

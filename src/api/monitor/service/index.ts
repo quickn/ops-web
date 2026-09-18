@@ -1,22 +1,18 @@
 import request from "@/utils/request";
 import { AxiosPromise } from "axios";
 import { ServiceInfo } from "./types";
-import { SystemInfo } from "@/api/monitor/systemInformation/types";
 
 export function listAll(): AxiosPromise<ServiceInfo[]> {
   return request({
-    url: "/serviceInfo/listAll",
-    method: "get",
+    url: "/serviceInfo/listByUserId",
+    method: "get"
   });
 }
 
-export function agentList(
-  queryParams?: AgentConfig
-): AxiosPromise<PageRecords<AgentConfig[]>> {
+export function listByUserId(): AxiosPromise<ServiceInfo[]> {
   return request({
-    url: "/agent/list",
-    method: "get",
-    params: queryParams
+    url: "/serviceInfo/listAll",
+    method: "get"
   });
 }
 
@@ -26,7 +22,7 @@ export function listPage(
   return request({
     url: "/serviceInfo/listPage",
     method: "get",
-    params: queryParams,
+    params: queryParams
   });
 }
 
@@ -39,49 +35,34 @@ export function addData(data?: ServiceInfo) {
   return request({
     url: "/serviceInfo/save",
     method: "post",
-    data: data,
+    data: data
   });
 }
 
 /**
- * 删除部门
+ * 获取指定用户已分配的服务列表
  *
- * @param ids
+ * @param userId 目标用户ID
  */
-export function deleteData(ids: number) {
+export function listUserServices(userId: number): AxiosPromise<ServiceInfo[]> {
   return request({
-    url: "/serviceInfo/delete/" + ids,
-    method: "delete",
+    url: "/serviceInfo/listUserServices/" + userId,
+    method: "get"
   });
 }
 
-export function upgradeClientByServiceId(id: number) {
+/**
+ * 给用户分配服务（只能分配当前登录用户名下的服务）
+ *
+ * @param data userId: 目标用户ID, serviceIds: 勾选的服务ID集合
+ */
+export function assignUserServices(data: {
+  userId: number;
+  serviceIds: number[];
+}) {
   return request({
-    url: "/serviceInfo/upgradeClientByServiceId/" + id,
-    method: "get",
-  });
-}
-
-// 日志列表
-export function listFiles(agentId: number, path: string) {
-  return request({
-    url: "/fileLog/listFiles",
-    method: "get",
-    params: {
-      agentId,
-      path,
-    },
-  });
-}
-
-// 分析日志
-export function analyzerLog(agentId: number, logFilePath: string) {
-  return request({
-    url: "/fileLog/analyzerLog",
-    method: "get",
-    params: {
-      agentId,
-      logFilePath,
-    },
+    url: "/serviceInfo/assignServices",
+    method: "post",
+    data: data
   });
 }

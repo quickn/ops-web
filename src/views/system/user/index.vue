@@ -20,6 +20,8 @@ import { listRoleOptions } from "@/api/role";
 
 import { UserForm, UserQuery, UserPageVO } from "@/api/user/types";
 
+import ServiceDialog from "./service-dialog.vue";
+
 defineOptions({
   name: "User",
   inheritAttrs: false,
@@ -33,6 +35,15 @@ const loading = ref(false);
 const ids = ref([]);
 const total = ref(0);
 const dialog = reactive<DialogOption>({
+  visible: false,
+});
+
+/** 分配服务弹框 */
+const serviceDialog = reactive<{
+  visible: boolean;
+  userId?: number;
+  username?: string;
+}>({
   visible: false,
 });
 
@@ -265,6 +276,15 @@ function handleDelete(id?: number) {
       resetQuery();
     });
   });
+}
+
+/**
+ * 打开分配服务弹框（分配当前登录用户名下的服务）
+ */
+function assignService(row: { [key: string]: any }) {
+  serviceDialog.userId = row.id;
+  serviceDialog.username = row.username;
+  serviceDialog.visible = true;
 }
 
 /**
@@ -539,7 +559,7 @@ onMounted(() => {
               prop="createTime"
               width="180"
             />
-            <el-table-column label="操作" fixed="right" width="220">
+            <el-table-column label="操作" fixed="right" width="300">
               <template #default="scope">
                 <el-button
                   v-hasPerm="['sys:user:reset_pwd']"
@@ -548,6 +568,14 @@ onMounted(() => {
                   link
                   @click="resetPassword(scope.row)"
                   ><i-ep-refresh-left />重置密码</el-button
+                >
+                <el-button
+                  v-hasPerm="['sys:user:edit']"
+                  type="primary"
+                  size="small"
+                  link
+                  @click="assignService(scope.row)"
+                  ><i-ep-share />分配服务</el-button
                 >
                 <el-button
                   v-hasPerm="['sys:user:edit']"
@@ -726,5 +754,12 @@ onMounted(() => {
         </div>
       </template>
     </el-dialog>
+
+    <!-- 分配服务弹框 -->
+    <service-dialog
+      v-model:visible="serviceDialog.visible"
+      :user-id="serviceDialog.userId"
+      :username="serviceDialog.username"
+    />
   </div>
 </template>
