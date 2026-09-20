@@ -27,6 +27,13 @@ const options = [
   { value: "error", text: "ERROR" },
 ];
 
+const limitOptions = [
+  { value: -1, text: "不限制" },
+  { value: 200, text: "200" },
+  { value: 500, text: "500" },
+  { value: 1000, text: "1000" },
+];
+
 const dockerList = ref<string[]>();
 
 const analysisDialogVisible = ref(false);
@@ -67,6 +74,8 @@ function resetQuery() {
 onMounted(() => {
   //默认选中第一个
   queryParams.logLevel = options[0].value;
+  //默认限制日志条数为 500
+  queryParams.limit = 500;
   listAll().then(({ data }) => {
     serviceInfoList.value = data;
     queryParams.serviceId = serviceInfoList.value[0].id;
@@ -170,6 +179,17 @@ function handleSelectChange(serviceId: number) {
             placeholder="结束时分"
             clearable
           />
+        </el-form-item>
+
+        <el-form-item prop="limit" label="日志条数" style="width: 160px">
+          <el-select v-model="queryParams.limit" clearable style="width: 100px">
+            <el-option
+              v-for="item in limitOptions"
+              :key="item.value"
+              :label="item.text"
+              :value="item.value"
+            />
+          </el-select>
         </el-form-item>
 
         <el-form-item label="日志级别" style="width: 150px">

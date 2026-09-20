@@ -50,6 +50,8 @@ export interface LogCmdForm {
   cmd?: string;
   grepPara?: string;
   action?: string;
+  /** 限制日志条数，-1 代表不限制，默认 500 条 */
+  limit?: number;
 }
 
 export interface LogCluster {
