@@ -15,7 +15,6 @@ import {
   exportUser,
   importUser,
 } from "@/api/user";
-import { listDeptOptions } from "@/api/dept";
 import { listRoleOptions } from "@/api/role";
 
 import { UserForm, UserQuery, UserPageVO } from "@/api/user/types";
@@ -27,7 +26,6 @@ defineOptions({
   inheritAttrs: false,
 });
 
-const deptTreeRef = ref(ElTree); // 部门树
 const queryFormRef = ref(ElForm); // 查询表单
 const userFormRef = ref(ElForm); // 用户表单
 
@@ -60,7 +58,6 @@ const formData = reactive<UserForm>({
 const rules = reactive({
   username: [{ required: true, message: "用户名不能为空", trigger: "blur" }],
   nickname: [{ required: true, message: "用户昵称不能为空", trigger: "blur" }],
-  deptId: [{ required: true, message: "所属部门不能为空", trigger: "blur" }],
   roleIds: [{ required: true, message: "用户角色不能为空", trigger: "blur" }],
   email: [
     {
@@ -78,47 +75,14 @@ const rules = reactive({
   ],
 });
 
-const searchDeptName = ref();
-const deptList = ref<OptionType[]>();
 const roleList = ref<OptionType[]>();
 const importDialog = reactive<DialogOption>({
   title: "用户导入",
   visible: false,
 });
 
-/**
- * 导入选择的部门ID
- */
-const importDeptId = ref<number>();
 const excelFile = ref<File>();
 const excelFilelist = ref<File[]>([]);
-
-watchEffect(
-  () => {
-    deptTreeRef.value.filter(searchDeptName.value);
-  },
-  {
-    flush: "post", // watchEffect会在DOM挂载或者更新之前就会触发，此属性控制在DOM元素更新后运行
-  }
-);
-
-/**
- * 部门筛选
- */
-function handleDeptFilter(value: string, data: any) {
-  if (!value) {
-    return true;
-  }
-  return data.label.indexOf(value) !== -1;
-}
-
-/**
- * 部门树节点
- */
-function handleDeptNodeClick(data: { [key: string]: any }) {
-  queryParams.deptId = data.value;
-  handleQuery();
-}
 
 /**
  * 获取角色下拉列表
@@ -169,7 +133,6 @@ function handleQuery() {
 function resetQuery() {
   queryFormRef.value.resetFields();
   queryParams.pageNum = 1;
-  queryParams.deptId = undefined;
   handleQuery();
 }
 
@@ -202,7 +165,6 @@ function resetPassword(row: { [key: string]: any }) {
 
 /** 打开表单弹窗 */
 async function openDialog(userId?: number) {
-  await getDeptOptions();
   await getRoleOptions();
   dialog.visible = true;
   if (userId) {
@@ -287,15 +249,6 @@ function assignService(row: { [key: string]: any }) {
   serviceDialog.visible = true;
 }
 
-/**
- * 获取部门下拉项
- */
-async function getDeptOptions() {
-  listDeptOptions().then((response) => {
-    deptList.value = response.data;
-  });
-}
-
 /** 下载导入模板 */
 function downloadTemplate() {
   downloadTemplateApi().then((response: any) => {
@@ -331,9 +284,7 @@ function handleExcelChange(file: UploadFile) {
 }
 
 /** 打开导入弹窗 */
-async function openImportDialog() {
-  await getDeptOptions();
-  importDeptId.value = undefined;
+function openImportDialog() {
   importDialog.visible = true;
 }
 
@@ -346,17 +297,15 @@ function closeImportDialog() {
 
 /** 导入用户提交 */
 function handleImport() {
-  if (importDeptId.value) {
-    if (!excelFile.value) {
-      ElMessage.warning("上传Excel文件不能为空");
-      return false;
-    }
-    importUser(importDeptId.value, excelFile.value).then((response) => {
-      ElMessage.success(response.data);
-      closeImportDialog();
-      resetQuery();
-    });
+  if (!excelFile.value) {
+    ElMessage.warning("上传Excel文件不能为空");
+    return false;
   }
+  importUser(excelFile.value).then((response) => {
+    ElMessage.success(response.data);
+    closeImportDialog();
+    resetQuery();
+  });
 }
 
 /** 导出用户 */
@@ -379,7 +328,6 @@ function handleExport() {
 }
 
 onMounted(() => {
-  getDeptOptions(); // 初始化部门
   handleQuery(); // 初始化用户列表数据
 });
 </script>
@@ -387,29 +335,7 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <el-row :gutter="20">
-      <!-- 部门树 -->
-      <el-col :lg="4" :xs="24" class="mb-[12px]">
-        <el-card shadow="never">
-          <el-input v-model="searchDeptName" placeholder="部门名称" clearable>
-            <template #prefix>
-              <i-ep-search />
-            </template>
-          </el-input>
-
-          <el-tree
-            ref="deptTreeRef"
-            class="mt-2"
-            :data="deptList"
-            :props="{ children: 'children', label: 'label', disabled: '' }"
-            :expand-on-click-node="false"
-            :filter-node-method="handleDeptFilter"
-            default-expand-all
-            @node-click="handleDeptNodeClick"
-          />
-        </el-card>
-      </el-col>
-
-      <el-col :lg="20" :xs="24">
+      <el-col :lg="24" :xs="24">
         <div class="search-container">
           <el-form ref="queryFormRef" :model="queryParams" :inline="true">
             <el-form-item label="关键字" prop="keywords">
@@ -511,19 +437,6 @@ onMounted(() => {
               prop="nickname"
             />
 
-            <el-table-column
-              label="性别"
-              width="100"
-              align="center"
-              prop="genderLabel"
-            />
-
-            <el-table-column
-              label="部门"
-              width="120"
-              align="center"
-              prop="deptName"
-            />
             <el-table-column
               label="手机号码"
               align="center"
@@ -634,21 +547,6 @@ onMounted(() => {
           <el-input v-model="formData.nickname" placeholder="请输入用户昵称" />
         </el-form-item>
 
-        <el-form-item label="所属部门" prop="deptId">
-          <el-tree-select
-            v-model="formData.deptId"
-            placeholder="请选择所属部门"
-            :data="deptList"
-            filterable
-            check-strictly
-            :render-after-expand="false"
-          />
-        </el-form-item>
-
-        <el-form-item label="性别" prop="gender">
-          <dictionary v-model="formData.gender" type-code="gender" />
-        </el-form-item>
-
         <el-form-item label="角色" prop="roleIds">
           <el-select v-model="formData.roleIds" multiple placeholder="请选择">
             <el-option
@@ -713,16 +611,6 @@ onMounted(() => {
       @close="closeImportDialog"
     >
       <el-form label-width="80px">
-        <el-form-item label="部门">
-          <el-tree-select
-            v-model="importDeptId"
-            placeholder="请选择部门"
-            :data="deptList"
-            filterable
-            check-strictly
-          />
-        </el-form-item>
-
         <el-form-item label="Excel">
           <el-upload
             class="upload-demo"

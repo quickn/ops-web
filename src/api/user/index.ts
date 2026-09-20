@@ -139,13 +139,12 @@ export function exportUser(queryParams: UserQuery) {
  *
  * @param file
  */
-export function importUser(deptId: number, file: File) {
+export function importUser(file: File) {
   const formData = new FormData();
   formData.append("file", file);
   return request({
     url: "/api/v1/users/_import",
     method: "post",
-    params: { deptId: deptId },
     data: formData,
     headers: {
       "Content-Type": "multipart/form-data",
