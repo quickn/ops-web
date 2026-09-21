@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import {
-  listByUserId,
-  listUserServices,
-  assignUserServices,
+  listOwnedServices,
+  listDeptServices,
+  assignDeptServices,
 } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 
 defineOptions({
-  name: "UserServiceDialog",
+  name: "DeptServiceDialog",
   inheritAttrs: false,
 });
 
 interface Props {
   visible: boolean;
-  /** 目标用户ID */
-  userId?: number;
-  /** 目标用户名 */
-  username?: string;
+  /** 目标部门ID */
+  deptId?: number;
+  /** 目标部门名 */
+  deptName?: string;
 }
 
 interface Emits {
@@ -25,8 +25,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  userId: undefined,
-  username: "",
+  deptId: undefined,
+  deptName: "",
 });
 
 const emit = defineEmits<Emits>();
@@ -54,10 +54,10 @@ watch(
   }
 );
 
-/** 打开弹框时加载数据并回显目标用户已分配的服务 */
+/** 打开弹框时加载数据并回显目标部门已分配的服务 */
 async function handleOpen() {
-  const targetUserId = props.userId;
-  if (!targetUserId) {
+  const targetDeptId = props.deptId;
+  if (!targetDeptId) {
     return;
   }
   loading.value = true;
@@ -65,13 +65,13 @@ async function handleOpen() {
   serviceList.value = [];
   try {
     const [allRes, assignedRes] = await Promise.all([
-      listByUserId(),
-      listUserServices(targetUserId),
+      listOwnedServices(),
+      listDeptServices(targetDeptId),
     ]);
     serviceList.value = allRes.data || [];
     const assignedIds = (assignedRes.data || []).map((item) => item.id);
     checkedIds.value = assignedIds as number[];
-    // 回显目标用户已分配的服务
+    // 回显目标部门已分配的服务
     nextTick(() => {
       tableRef.value?.clearSelection();
       serviceList.value.forEach((row) => {
@@ -92,12 +92,12 @@ function handleSelectionChange(selection: ServiceInfo[]) {
 
 /** 保存分配 */
 function handleSave() {
-  const targetUserId = props.userId;
-  if (!targetUserId) {
+  const targetDeptId = props.deptId;
+  if (!targetDeptId) {
     return;
   }
   saveLoading.value = true;
-  assignUserServices({ userId: targetUserId, serviceIds: checkedIds.value })
+  assignDeptServices({ deptId: targetDeptId, serviceIds: checkedIds.value })
     .then(() => {
       ElMessage.success("分配成功");
       dialogVisible.value = false;
@@ -122,7 +122,7 @@ function handleClosed() {
 <template>
   <el-dialog
     v-model="dialogVisible"
-    :title="`给用户「${username}」分配服务`"
+    :title="`给部门「${deptName}」分配服务`"
     width="800px"
     append-to-body
     :close-on-click-modal="false"

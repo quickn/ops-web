@@ -2,14 +2,20 @@ import request from "@/utils/request";
 import { AxiosPromise } from "axios";
 import { ServiceInfo } from "./types";
 
+/**
+ * 获取服务下拉列表（当前登录用户所在部门关联的服务）
+ */
 export function listAll(): AxiosPromise<ServiceInfo[]> {
   return request({
-    url: "/serviceInfo/listByUserId",
+    url: "/serviceInfo/listByDeptId",
     method: "get"
   });
 }
 
-export function listByUserId(): AxiosPromise<ServiceInfo[]> {
+/**
+ * 获取当前登录用户名下的服务列表（用于服务分配池）
+ */
+export function listOwnedServices(): AxiosPromise<ServiceInfo[]> {
   return request({
     url: "/serviceInfo/listAll",
     method: "get"
@@ -40,24 +46,24 @@ export function addData(data?: ServiceInfo) {
 }
 
 /**
- * 获取指定用户已分配的服务列表
+ * 获取指定部门已分配的服务列表
  *
- * @param userId 目标用户ID
+ * @param deptId 目标部门ID
  */
-export function listUserServices(userId: number): AxiosPromise<ServiceInfo[]> {
+export function listDeptServices(deptId: number): AxiosPromise<ServiceInfo[]> {
   return request({
-    url: "/serviceInfo/listUserServices/" + userId,
+    url: "/serviceInfo/listDeptServices/" + deptId,
     method: "get"
   });
 }
 
 /**
- * 给用户分配服务（只能分配当前登录用户名下的服务）
+ * 给部门分配服务（只能分配当前登录用户名下的服务）
  *
- * @param data userId: 目标用户ID, serviceIds: 勾选的服务ID集合
+ * @param data deptId: 目标部门ID, serviceIds: 勾选的服务ID集合
  */
-export function assignUserServices(data: {
-  userId: number;
+export function assignDeptServices(data: {
+  deptId: number;
   serviceIds: number[];
 }) {
   return request({

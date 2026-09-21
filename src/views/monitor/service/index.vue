@@ -130,7 +130,6 @@ onMounted(() => {
         </el-form-item>
         <el-form-item style="margin-left: auto">
           <el-button
-            v-hasPerm="['sys:dict_type:add']"
             type="success"
             @click="openDialog()"
           >

@@ -10,6 +10,8 @@ import {
 
 import { DeptVO, DeptForm, DeptQuery } from "@/api/dept/types";
 
+import DeptServiceDialog from "./service-dialog.vue";
+
 defineOptions({
   name: "Dept",
   inheritAttrs: false,
@@ -21,6 +23,15 @@ const deptFormRef = ref(ElForm);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const dialog = reactive<DialogOption>({
+  visible: false,
+});
+
+/** 分配服务弹框 */
+const serviceDialog = reactive<{
+  visible: boolean;
+  deptId?: number;
+  deptName?: string;
+}>({
   visible: false,
 });
 
@@ -142,6 +153,15 @@ function handleDelete(deptId?: number) {
   });
 }
 
+/**
+ * 打开分配服务弹框（分配当前登录用户名下的服务）
+ */
+function assignService(row: { [key: string]: any }) {
+  serviceDialog.deptId = row.id;
+  serviceDialog.deptName = row.name;
+  serviceDialog.visible = true;
+}
+
 /** 关闭弹窗 */
 function closeDialog() {
   dialog.visible = false;
@@ -231,7 +251,7 @@ onMounted(() => {
 
         <el-table-column prop="sort" label="排序" width="100" />
 
-        <el-table-column label="操作" fixed="right" align="left" width="200">
+        <el-table-column label="操作" fixed="right" align="left" width="280">
           <template #default="scope">
             <el-button
               v-hasPerm="['sys:dept:add']"
@@ -240,6 +260,14 @@ onMounted(() => {
               size="small"
               @click.stop="openDialog(scope.row.id, undefined)"
               ><i-ep-plus />新增
+            </el-button>
+            <el-button
+              v-hasPerm="['sys:dept:edit']"
+              type="primary"
+              link
+              size="small"
+              @click.stop="assignService(scope.row)"
+              ><i-ep-share />分配服务
             </el-button>
             <el-button
               v-hasPerm="['sys:dept:edit']"
@@ -311,5 +339,12 @@ onMounted(() => {
         </div>
       </template>
     </el-dialog>
+
+    <!-- 分配服务弹框 -->
+    <dept-service-dialog
+      v-model:visible="serviceDialog.visible"
+      :dept-id="serviceDialog.deptId"
+      :dept-name="serviceDialog.deptName"
+    />
   </div>
 </template>

@@ -15,17 +15,17 @@ import {
   exportUser,
   importUser,
 } from "@/api/user";
+import { listDeptOptions } from "@/api/dept";
 import { listRoleOptions } from "@/api/role";
 
 import { UserForm, UserQuery, UserPageVO } from "@/api/user/types";
-
-import ServiceDialog from "./service-dialog.vue";
 
 defineOptions({
   name: "User",
   inheritAttrs: false,
 });
 
+const deptTreeRef = ref(ElTree); // 部门树
 const queryFormRef = ref(ElForm); // 查询表单
 const userFormRef = ref(ElForm); // 用户表单
 
@@ -33,15 +33,6 @@ const loading = ref(false);
 const ids = ref([]);
 const total = ref(0);
 const dialog = reactive<DialogOption>({
-  visible: false,
-});
-
-/** 分配服务弹框 */
-const serviceDialog = reactive<{
-  visible: boolean;
-  userId?: number;
-  username?: string;
-}>({
   visible: false,
 });
 
@@ -55,9 +46,24 @@ const formData = reactive<UserForm>({
   status: 1,
 });
 
-const rules = reactive({
+/** 超级管理员角色ID(与后端 SystemConstants.ROOT_ROLE_ID 一致) */
+const ROOT_ROLE_ID = 1;
+
+/** 是否ROOT用户(勾选了超级管理员角色)，ROOT用户无需归属部门 */
+const isRootUser = computed(() =>
+  (formData.roleIds ?? []).includes(ROOT_ROLE_ID)
+);
+
+const rules = computed(() => ({
   username: [{ required: true, message: "用户名不能为空", trigger: "blur" }],
   nickname: [{ required: true, message: "用户昵称不能为空", trigger: "blur" }],
+  deptId: [
+    {
+      required: !isRootUser.value,
+      message: "所属部门不能为空",
+      trigger: ["blur", "change"],
+    },
+  ],
   roleIds: [{ required: true, message: "用户角色不能为空", trigger: "blur" }],
   email: [
     {
@@ -73,16 +79,54 @@ const rules = reactive({
       trigger: "blur",
     },
   ],
+}));
+
+// 角色切换为ROOT时，清除所属部门的必填校验提示
+watch(isRootUser, () => {
+  userFormRef.value?.clearValidate("deptId");
 });
 
+const searchDeptName = ref();
+const deptList = ref<OptionType[]>();
 const roleList = ref<OptionType[]>();
 const importDialog = reactive<DialogOption>({
   title: "用户导入",
   visible: false,
 });
 
+/**
+ * 导入选择的部门ID
+ */
+const importDeptId = ref<number>();
 const excelFile = ref<File>();
 const excelFilelist = ref<File[]>([]);
+
+watchEffect(
+  () => {
+    deptTreeRef.value.filter(searchDeptName.value);
+  },
+  {
+    flush: "post", // watchEffect会在DOM挂载或者更新之前就会触发，此属性控制在DOM元素更新后运行
+  }
+);
+
+/**
+ * 部门筛选
+ */
+function handleDeptFilter(value: string, data: any) {
+  if (!value) {
+    return true;
+  }
+  return data.label.indexOf(value) !== -1;
+}
+
+/**
+ * 部门树节点
+ */
+function handleDeptNodeClick(data: { [key: string]: any }) {
+  queryParams.deptId = data.value;
+  handleQuery();
+}
 
 /**
  * 获取角色下拉列表
@@ -133,6 +177,7 @@ function handleQuery() {
 function resetQuery() {
   queryFormRef.value.resetFields();
   queryParams.pageNum = 1;
+  queryParams.deptId = undefined;
   handleQuery();
 }
 
@@ -165,6 +210,7 @@ function resetPassword(row: { [key: string]: any }) {
 
 /** 打开表单弹窗 */
 async function openDialog(userId?: number) {
+  await getDeptOptions();
   await getRoleOptions();
   dialog.visible = true;
   if (userId) {
@@ -241,12 +287,12 @@ function handleDelete(id?: number) {
 }
 
 /**
- * 打开分配服务弹框（分配当前登录用户名下的服务）
+ * 获取部门下拉项
  */
-function assignService(row: { [key: string]: any }) {
-  serviceDialog.userId = row.id;
-  serviceDialog.username = row.username;
-  serviceDialog.visible = true;
+async function getDeptOptions() {
+  listDeptOptions().then((response) => {
+    deptList.value = response.data;
+  });
 }
 
 /** 下载导入模板 */
@@ -284,7 +330,9 @@ function handleExcelChange(file: UploadFile) {
 }
 
 /** 打开导入弹窗 */
-function openImportDialog() {
+async function openImportDialog() {
+  await getDeptOptions();
+  importDeptId.value = undefined;
   importDialog.visible = true;
 }
 
@@ -297,15 +345,17 @@ function closeImportDialog() {
 
 /** 导入用户提交 */
 function handleImport() {
-  if (!excelFile.value) {
-    ElMessage.warning("上传Excel文件不能为空");
-    return false;
+  if (importDeptId.value) {
+    if (!excelFile.value) {
+      ElMessage.warning("上传Excel文件不能为空");
+      return false;
+    }
+    importUser(importDeptId.value, excelFile.value).then((response) => {
+      ElMessage.success(response.data);
+      closeImportDialog();
+      resetQuery();
+    });
   }
-  importUser(excelFile.value).then((response) => {
-    ElMessage.success(response.data);
-    closeImportDialog();
-    resetQuery();
-  });
 }
 
 /** 导出用户 */
@@ -328,6 +378,7 @@ function handleExport() {
 }
 
 onMounted(() => {
+  getDeptOptions(); // 初始化部门
   handleQuery(); // 初始化用户列表数据
 });
 </script>
@@ -335,7 +386,29 @@ onMounted(() => {
 <template>
   <div class="app-container">
     <el-row :gutter="20">
-      <el-col :lg="24" :xs="24">
+      <!-- 部门树 -->
+      <el-col :lg="4" :xs="24" class="mb-[12px]">
+        <el-card shadow="never">
+          <el-input v-model="searchDeptName" placeholder="部门名称" clearable>
+            <template #prefix>
+              <i-ep-search />
+            </template>
+          </el-input>
+
+          <el-tree
+            ref="deptTreeRef"
+            class="mt-2"
+            :data="deptList"
+            :props="{ children: 'children', label: 'label', disabled: '' }"
+            :expand-on-click-node="false"
+            :filter-node-method="handleDeptFilter"
+            default-expand-all
+            @node-click="handleDeptNodeClick"
+          />
+        </el-card>
+      </el-col>
+
+      <el-col :lg="20" :xs="24">
         <div class="search-container">
           <el-form ref="queryFormRef" :model="queryParams" :inline="true">
             <el-form-item label="关键字" prop="keywords">
@@ -438,6 +511,13 @@ onMounted(() => {
             />
 
             <el-table-column
+              label="部门"
+              width="120"
+              align="center"
+              prop="deptName"
+            />
+
+            <el-table-column
               label="手机号码"
               align="center"
               prop="mobile"
@@ -481,14 +561,6 @@ onMounted(() => {
                   link
                   @click="resetPassword(scope.row)"
                   ><i-ep-refresh-left />重置密码</el-button
-                >
-                <el-button
-                  v-hasPerm="['sys:user:edit']"
-                  type="primary"
-                  size="small"
-                  link
-                  @click="assignService(scope.row)"
-                  ><i-ep-share />分配服务</el-button
                 >
                 <el-button
                   v-hasPerm="['sys:user:edit']"
@@ -545,6 +617,17 @@ onMounted(() => {
 
         <el-form-item label="用户昵称" prop="nickname">
           <el-input v-model="formData.nickname" placeholder="请输入用户昵称" />
+        </el-form-item>
+
+        <el-form-item label="所属部门" prop="deptId">
+          <el-tree-select
+            v-model="formData.deptId"
+            placeholder="请选择所属部门"
+            :data="deptList"
+            filterable
+            check-strictly
+            :render-after-expand="false"
+          />
         </el-form-item>
 
         <el-form-item label="角色" prop="roleIds">
@@ -611,6 +694,16 @@ onMounted(() => {
       @close="closeImportDialog"
     >
       <el-form label-width="80px">
+        <el-form-item label="部门">
+          <el-tree-select
+            v-model="importDeptId"
+            placeholder="请选择部门"
+            :data="deptList"
+            filterable
+            check-strictly
+          />
+        </el-form-item>
+
         <el-form-item label="Excel">
           <el-upload
             class="upload-demo"
@@ -642,12 +735,5 @@ onMounted(() => {
         </div>
       </template>
     </el-dialog>
-
-    <!-- 分配服务弹框 -->
-    <service-dialog
-      v-model:visible="serviceDialog.visible"
-      :user-id="serviceDialog.userId"
-      :username="serviceDialog.username"
-    />
   </div>
 </template>
