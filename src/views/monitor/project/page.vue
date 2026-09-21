@@ -219,7 +219,7 @@
           <el-input
             v-model="formData.name"
             :disabled="!addStatus"
-            placeholder="接口名"
+            placeholder="应用名称"
           />
         </el-form-item>
         <el-form-item label="源文件目录" prop="sourceDir">

@@ -1,20 +1,11 @@
 <script setup lang="ts">
-import {
-  getDeptForm,
-  deleteDept,
-  updateDept,
-  addDept,
-  listDeptOptions,
-  listDepts,
-} from "@/api/dept";
+import { addDept, deleteDept, getDeptForm, listDeptOptions, listDepts, updateDept } from "@/api/dept";
 
-import { DeptVO, DeptForm, DeptQuery } from "@/api/dept/types";
-
-import DeptServiceDialog from "./service-dialog.vue";
+import { DeptForm, DeptQuery, DeptVO } from "@/api/dept/types";
 
 defineOptions({
   name: "Dept",
-  inheritAttrs: false,
+  inheritAttrs: false
 });
 
 const queryFormRef = ref(ElForm);
@@ -23,7 +14,7 @@ const deptFormRef = ref(ElForm);
 const loading = ref(false);
 const ids = ref<number[]>([]);
 const dialog = reactive<DialogOption>({
-  visible: false,
+  visible: false
 });
 
 /** 分配服务弹框 */
@@ -32,7 +23,7 @@ const serviceDialog = reactive<{
   deptId?: number;
   deptName?: string;
 }>({
-  visible: false,
+  visible: false
 });
 
 const queryParams = reactive<DeptQuery>({});
@@ -43,13 +34,13 @@ const deptOptions = ref<OptionType[]>();
 const formData = reactive<DeptForm>({
   status: 1,
   parentId: 0,
-  sort: 1,
+  sort: 1
 });
 
 const rules = reactive({
   parentId: [{ required: true, message: "上级部门不能为空", trigger: "blur" }],
   name: [{ required: true, message: "部门名称不能为空", trigger: "blur" }],
-  sort: [{ required: true, message: "显示排序不能为空", trigger: "blur" }],
+  sort: [{ required: true, message: "显示排序不能为空", trigger: "blur" }]
 });
 
 /** 查询 */
@@ -79,8 +70,8 @@ async function getDeptOptions() {
       {
         value: 0,
         label: "顶级部门",
-        children: response.data,
-      },
+        children: response.data
+      }
     ];
   });
 }
@@ -144,7 +135,7 @@ function handleDelete(deptId?: number) {
   ElMessageBox.confirm(`确认删除已选中的数据项?`, "警告", {
     confirmButtonText: "确定",
     cancelButtonText: "取消",
-    type: "warning",
+    type: "warning"
   }).then(() => {
     deleteDept(deptIds).then(() => {
       ElMessage.success("删除成功");
@@ -210,21 +201,29 @@ onMounted(() => {
             <i-ep-search />
             搜索
           </el-button>
-          <el-button @click="resetQuery"> <i-ep-refresh />重置 </el-button>
+          <el-button @click="resetQuery">
+            <i-ep-refresh />
+            重置
+          </el-button>
         </el-form-item>
         <el-form-item style="margin-left: auto">
           <el-button
             v-hasPerm="['sys:dept:add']"
             type="success"
             @click="openDialog(0, undefined)"
-            ><i-ep-plus />新增</el-button
+          >
+            <i-ep-plus />
+            新增
+          </el-button
           >
           <el-button
             v-hasPerm="['sys:dept:delete']"
             type="danger"
             :disabled="ids.length === 0"
             @click="handleDelete()"
-            ><i-ep-delete />删除
+          >
+            <i-ep-delete />
+            删除
           </el-button>
         </el-form-item>
       </el-form>
@@ -259,15 +258,9 @@ onMounted(() => {
               link
               size="small"
               @click.stop="openDialog(scope.row.id, undefined)"
-              ><i-ep-plus />新增
-            </el-button>
-            <el-button
-              v-hasPerm="['sys:dept:edit']"
-              type="primary"
-              link
-              size="small"
-              @click.stop="assignService(scope.row)"
-              ><i-ep-share />分配服务
+            >
+              <i-ep-plus />
+              新增
             </el-button>
             <el-button
               v-hasPerm="['sys:dept:edit']"
@@ -275,7 +268,9 @@ onMounted(() => {
               link
               size="small"
               @click.stop="openDialog(scope.row.parentId, scope.row.id)"
-              ><i-ep-edit />编辑
+            >
+              <i-ep-edit />
+              编辑
             </el-button>
             <el-button
               v-hasPerm="['sys:dept:delete']"
@@ -284,7 +279,8 @@ onMounted(() => {
               size="small"
               @click.stop="handleDelete(scope.row.id)"
             >
-              <i-ep-delete />删除
+              <i-ep-delete />
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -334,8 +330,8 @@ onMounted(() => {
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="handleSubmit"> 确 定 </el-button>
-          <el-button @click="closeDialog"> 取 消 </el-button>
+          <el-button type="primary" @click="handleSubmit"> 确 定</el-button>
+          <el-button @click="closeDialog"> 取 消</el-button>
         </div>
       </template>
     </el-dialog>

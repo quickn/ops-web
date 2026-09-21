@@ -16,6 +16,9 @@
   <!-- 用户头像 -->
   <el-dropdown trigger="click">
     <div class="avatar-container">
+      <span v-if="userStore.nickname" class="nickname">
+        {{ userStore.nickname }}
+      </span>
       <img :src="userStore.avatar + '?imageView2/1/w/80/h/80'" />
       <i-ep-caret-bottom class="w-3 h-3" />
     </div>
@@ -110,6 +113,12 @@ function logout() {
   justify-items: center;
   margin: 0 5px;
   cursor: pointer;
+
+  .nickname {
+    margin-right: 8px;
+    font-size: 14px;
+    color: var(--el-text-color-regular);
+  }
 
   img {
     width: 40px;
