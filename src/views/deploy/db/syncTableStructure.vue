@@ -24,6 +24,8 @@ const sourceDatabase = ref("");
 const targetConfigId = ref<number>();
 /** 目标数据库 */
 const targetDatabase = ref("");
+/** 是否删除目标库多余的表/字段 */
+const isDrop = ref(false);
 
 /** 源库列表 */
 const sourceDatabases = ref<string[]>([]);
@@ -95,7 +97,8 @@ async function handleCompare() {
       sourceConfigId: sourceConfigId.value,
       sourceDatabase: sourceDatabase.value,
       targetConfigId: targetConfigId.value,
-      targetDatabase: targetDatabase.value
+      targetDatabase: targetDatabase.value,
+      isDrop: isDrop.value
     });
 
     const formattedData = String(data).replace(/;/g, ";\n");
@@ -180,6 +183,7 @@ function handleReset() {
   sqlContent.value = "";
   sourceDatabases.value = [];
   targetDatabases.value = [];
+  isDrop.value = false;
 }
 </script>
 
@@ -193,7 +197,7 @@ function handleReset() {
             v-model="sourceConfigId"
             placeholder="请选择源MySQL连接"
             filterable
-            style="width: 200px"
+            style="width: 300px"
           >
             <el-option
               v-for="conn in sourceConnections"
@@ -210,7 +214,7 @@ function handleReset() {
             v-model="targetConfigId"
             placeholder="请选择目标MySQL连接"
             filterable
-            style="width: 200px"
+            style="width: 300px"
           >
             <el-option
               v-for="conn in targetConnections"
@@ -254,6 +258,14 @@ function handleReset() {
               :value="db"
             />
           </el-select>
+        </el-form-item>
+
+        <el-form-item label="删除差异">
+          <el-switch
+            v-model="isDrop"
+            active-text="开启"
+            inactive-text="关闭"
+          />
         </el-form-item>
 
         <!-- 操作按钮 -->

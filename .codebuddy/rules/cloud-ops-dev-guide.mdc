@@ -28,8 +28,8 @@ provider:
 
 | 项目 | 角色 |
 |------|------|
-| `monitor-collector` | 采集端（处理 agent 采集的消息），在同级目录 |
 | `monitor-server` | 用户端（用户指令的来源），在同级目录 |
+| `cloud-ops-py` | Python 后端，接口以 `/pyApi/` 为前缀，在同级目录 |
 
 ## 项目架构
 

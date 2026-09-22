@@ -17,6 +17,7 @@ export function syncTableStructure(params: {
   sourceDatabase: string;
   targetConfigId: number;
   targetDatabase: string;
+  isDrop?: boolean;
 }): AxiosPromise<string> {
   return request({
     url: "/pyApi/db/syncTableStructure",

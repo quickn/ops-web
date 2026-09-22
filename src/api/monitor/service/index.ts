@@ -35,3 +35,15 @@ export function addData(data?: ServiceInfo) {
     data: data
   });
 }
+
+/**
+ * 删除服务
+ *
+ * @param ids
+ */
+export function deleteData(ids: string) {
+  return request({
+    url: "/serviceInfo/delete/" + ids,
+    method: "delete"
+  });
+}

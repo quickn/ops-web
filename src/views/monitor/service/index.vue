@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { addData, listPage } from "@/api/monitor/service";
+import { addData, deleteData, listPage } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 
 const queryFormRef = ref(ElForm);
@@ -92,6 +92,26 @@ async function handleSubmit() {
         })
         .finally(() => (loading.value = false));
     }
+  });
+}
+
+/** 删除数据 */
+function handleDelete(id?: number) {
+  const serviceIds = [id || ids.value].join(",");
+  if (!serviceIds) {
+    ElMessage.warning("请勾选删除项");
+    return;
+  }
+
+  ElMessageBox.confirm("确认删除该服务?", "警告", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(function () {
+    deleteData(serviceIds).then(() => {
+      ElMessage.success("删除成功");
+      handleQuery();
+    });
   });
 }
 
