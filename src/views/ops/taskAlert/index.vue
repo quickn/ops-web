@@ -209,34 +209,22 @@
         label-width="100px"
       >
         <!-- 任务公共参数 -->
+        <ServiceSelect
+          v-model="formData.serviceId"
+          @change="handleServiceChange"
+        />
+
         <CommonForm
           :form-data="formData"
           @task-type-change="handleTaskTypeChange"
         />
 
-        <!-- 特有字段 -->
-        <el-form-item label="关联主机" prop="agentId">
-          <el-select
-            v-model="formData.agentId"
-            placeholder="请选择主机"
-            filterable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="item in agentList"
-              :key="item.id"
-              :label="item.hostname"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="脚本内容" prop="script">
+        <el-form-item label="任务参数" prop="taskParams">
           <el-input
-            v-model="formData.script"
+            v-model="formData.taskParams"
             type="textarea"
             :rows="4"
-            placeholder="请输入脚本内容"
+            placeholder="请输入任务参数"
           />
         </el-form-item>
       </el-form>
@@ -264,13 +252,20 @@
       :edit-id="syncJarEditId"
       @success="handleDeploySuccess"
     />
+
+    <!-- Shell脚本编辑弹框 -->
+    <ShellScriptEdit
+      v-model="shellDialogVisible"
+      :edit-id="shellEditId"
+      @success="handleDeploySuccess"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { Bell, CaretRight, Delete, Edit, Plus, Refresh, Search, VideoPause, VideoPlay } from "@element-plus/icons-vue";
 import { deleteTaskAlert, executeTaskAlert, listTaskAlertPage, saveTaskAlert, taskAlertCheck } from "@/api/ops/taskAlert";
-import { TASK_TYPE_DEPLOY, TASK_TYPE_SYNC_JAR, TaskAlert, TaskAlertQuery } from "@/api/ops/taskAlert/types";
+import { TASK_TYPE_DEPLOY, TASK_TYPE_SHELL, TASK_TYPE_SYNC_JAR, TaskAlert, TaskAlertQuery } from "@/api/ops/taskAlert/types";
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { originServerList } from "@/api/monitor/agent";
@@ -278,6 +273,8 @@ import { Agent } from "@/api/monitor/agent/types";
 import { getDictOptions } from "@/api/dict";
 import DeployEdit from "./deployEdit.vue";
 import SyncJarEdit from "./syncJarEdit.vue";
+import ShellScriptEdit from "./shellScript.vue";
+import ServiceSelect from "./serviceSelect.vue";
 import CommonForm from "./commonForm.vue";
 
 defineOptions({
@@ -317,6 +314,10 @@ const deployEditId = ref<number | undefined>(undefined);
 // 预发布Jar同步编辑弹框状态
 const syncJarDialogVisible = ref(false);
 const syncJarEditId = ref<number | undefined>(undefined);
+
+// Shell脚本编辑弹框状态
+const shellDialogVisible = ref(false);
+const shellEditId = ref<number | undefined>(undefined);
 
 const formData = reactive<TaskAlert>({
   isEnabled: true,
@@ -387,6 +388,12 @@ function openDialog(data?: TaskAlert) {
     syncJarDialogVisible.value = true;
     return;
   }
+  // Shell脚本类型改用Shell脚本编辑弹框
+  if (data && data.taskType === TASK_TYPE_SHELL) {
+    shellEditId.value = data.id;
+    shellDialogVisible.value = true;
+    return;
+  }
   dialogEdit.title = data ? "编辑任务告警" : "新增任务告警";
   if (data) {
     Object.assign(formData, data);
@@ -396,15 +403,28 @@ function openDialog(data?: TaskAlert) {
   dialogEdit.visible = true;
 }
 
-/** 任务类型切换：定时部署/预发布Jar同步 切换为对应编辑弹框 */
+/** 服务切换：同步服务名称 */
+function handleServiceChange(service?: ServiceInfo) {
+  formData.serviceName = service?.name;
+}
+
+/** 任务类型切换：定时部署/预发布Jar同步/Shell脚本 切换为对应编辑弹框 */
 function handleTaskTypeChange(type?: string | number) {
   const typeStr = String(type);
-  if (typeStr !== TASK_TYPE_DEPLOY && typeStr !== TASK_TYPE_SYNC_JAR) {
+  if (
+    typeStr !== TASK_TYPE_DEPLOY &&
+    typeStr !== TASK_TYPE_SYNC_JAR &&
+    typeStr !== TASK_TYPE_SHELL
+  ) {
     return;
   }
-  const isDeploy = typeStr === TASK_TYPE_DEPLOY;
   dialogEdit.visible = false;
-  if (isDeploy) {
+  if (typeStr === TASK_TYPE_SHELL) {
+    shellEditId.value = undefined;
+    shellDialogVisible.value = true;
+    return;
+  }
+  if (typeStr === TASK_TYPE_DEPLOY) {
     deployEditId.value = undefined;
     deployDialogVisible.value = true;
   } else {

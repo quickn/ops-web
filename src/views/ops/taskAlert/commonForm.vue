@@ -1,29 +1,10 @@
 <template>
   <!--
     任务告警公共参数表单（仅 el-form-item，需置于父组件 el-form 内使用）
-    公共字段：任务名称、所属服务、任务类型(可选)、cron、启动状态、失败阈值、启用告警、邮件告警、备注
+    公共字段：任务名称、任务类型(可选)、cron、启动状态、失败阈值、启用告警、邮件告警、备注
+    所属服务选择见 ServiceSelect 组件，由父组件自行放置
   -->
   <div>
-    <el-form-item label="任务名称" prop="taskName">
-      <el-input v-model="formData.taskName" placeholder="请输入任务名称" />
-    </el-form-item>
-
-    <el-form-item label="所属服务" prop="serviceId">
-      <el-select
-        v-model="formData.serviceId"
-        placeholder="请选择服务"
-        filterable
-        style="width: 100%"
-        @change="handleServiceChange"
-      >
-        <el-option
-          v-for="item in serviceList"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id"
-        />
-      </el-select>
-    </el-form-item>
 
     <el-form-item v-if="showTaskType" label="任务类型" prop="taskType">
       <dictionary
@@ -32,6 +13,10 @@
         placeholder="请选择任务类型"
         @change="handleTaskTypeChange"
       />
+    </el-form-item>
+
+    <el-form-item label="任务名称" prop="taskName">
+      <el-input v-model="formData.taskName" placeholder="请输入任务名称" />
     </el-form-item>
 
     <el-form-item label="cron 表达式" prop="cron">
@@ -96,15 +81,13 @@
 </template>
 
 <script setup lang="ts">
-import { listAll } from "@/api/monitor/service";
-import { ServiceInfo } from "@/api/monitor/service/types";
 import { TaskAlert } from "@/api/ops/taskAlert/types";
 
 defineOptions({
   name: "TaskAlertCommonForm",
 });
 
-const props = defineProps({
+defineProps({
   /** 父组件的表单数据对象（reactive，直接双向绑定字段） */
   formData: {
     type: Object as () => TaskAlert,
@@ -118,36 +101,15 @@ const props = defineProps({
 });
 
 const emit = defineEmits<{
-  (e: "serviceChange", serviceId?: number): void;
   (e: "taskTypeChange", type?: string | number): void;
 }>();
 
-const serviceList = ref<ServiceInfo[]>([]);
 const showCronHelp = ref(false);
-
-/** 加载服务列表 */
-function loadServiceList() {
-  listAll().then(({ data }) => {
-    serviceList.value = data || [];
-  });
-}
-
-/** 服务切换 */
-function handleServiceChange(serviceId?: number) {
-  // 同步服务名称，提交时一并保存
-  const service = serviceList.value.find((item) => item.id === serviceId);
-  props.formData.serviceName = service?.name;
-  emit("serviceChange", serviceId);
-}
 
 /** 任务类型切换 */
 function handleTaskTypeChange(type?: string | number) {
   emit("taskTypeChange", type);
 }
-
-onMounted(() => {
-  loadServiceList();
-});
 </script>
 
 <style scoped>

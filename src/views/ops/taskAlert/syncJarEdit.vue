@@ -29,7 +29,6 @@
             <CommonForm
               :form-data="formData"
               :show-task-type="false"
-              @service-change="handleServiceChange"
             />
           </el-tab-pane>
 
@@ -41,6 +40,11 @@
               </el-icon>
               同步内容
             </template>
+
+            <ServiceSelect
+              v-model="formData.serviceId"
+              @change="handleServiceChange"
+            />
 
             <el-row :gutter="16">
               <el-col :span="5" class="left-col">
@@ -167,8 +171,10 @@ import {
 } from "@/api/ops/taskAlert/types";
 import { getListByServiceId } from "@/api/docker";
 import { originServerList } from "@/api/monitor/agent";
+import { ServiceInfo } from "@/api/monitor/service/types";
 import Sortable from "sortablejs";
 import type { SortableEvent } from "sortablejs";
+import ServiceSelect from "./serviceSelect.vue";
 import CommonForm from "./commonForm.vue";
 
 defineOptions({
@@ -214,7 +220,7 @@ const formData = reactive<TaskAlert>({
   failThreshold: 1,
 } as TaskAlert);
 
-/** 同步配置（提交时序列化到 script） */
+/** 同步配置（提交时序列化到 taskParams） */
 const syncJarConfig = reactive<SyncJarConfig>({
   projectNames: "",
   interval: 0,
@@ -334,10 +340,10 @@ function loadSourceServiceList() {
     });
 }
 
-/** 加载项目列表（可传入已有 script 用于回显勾选状态，keepSelected 表示保留已选中的项目） */
-function loadProjects(serviceId: number, script?: string, keepSelected = false) {
+/** 加载项目列表（可传入已有 taskParams 用于回显勾选状态，keepSelected 表示保留已选中的项目） */
+function loadProjects(serviceId: number, taskParams?: string, keepSelected = false) {
   projectOptions.value = [];
-  // 只有回显（传入 script）时才清空选中项，切换服务时保留
+  // 只有回显（传入 taskParams）时才清空选中项，切换服务时保留
   if (!keepSelected) {
     selectedProjects.value = [];
   }
@@ -345,8 +351,8 @@ function loadProjects(serviceId: number, script?: string, keepSelected = false) 
     .then(({ data }) => {
       projectOptions.value = data || [];
       // 回显已有勾选状态
-      if (script) {
-        parseSyncJarConfig(script);
+      if (taskParams) {
+        parseSyncJarConfig(taskParams);
       } else if (keepSelected) {
         // 切换服务时，过滤掉新列表中不存在的已选项
         selectedProjects.value = selectedProjects.value.filter((n) =>
@@ -360,14 +366,14 @@ function loadProjects(serviceId: number, script?: string, keepSelected = false) 
     });
 }
 
-/** 从 script 中解析同步配置（已选项目、间隔时间） */
-function parseSyncJarConfig(script?: string) {
-  if (!script) {
+/** 从 taskParams 中解析同步配置（已选项目、间隔时间） */
+function parseSyncJarConfig(taskParams?: string) {
+  if (!taskParams) {
     selectedProjects.value = [];
     return;
   }
   try {
-    const obj = JSON.parse(script);
+    const obj = JSON.parse(taskParams);
     const names = obj?.projectNames as string;
     selectedProjects.value = names
       ? names
@@ -392,7 +398,7 @@ function loadDetail(id: number) {
         Object.assign(formData, data);
         isEdit.value = true;
         if (data.serviceId) {
-          loadProjects(data.serviceId, data.script);
+          loadProjects(data.serviceId, data.taskParams);
         }
       } else {
         ElMessage.warning("未找到该任务");
@@ -427,15 +433,15 @@ function handleSubmit() {
     }
     submitLoading.value = true;
 
-    // 将同步配置序列化为 script
-    const scriptConfig: SyncJarConfig = {
+    // 将同步配置序列化为 taskParams
+    const taskParamsConfig: SyncJarConfig = {
       projectNames: selectedProjects.value.join(","),
       interval: syncJarConfig.interval,
     };
 
     const payload: TaskAlert = {
       ...formData,
-      script: JSON.stringify(scriptConfig),
+      taskParams: JSON.stringify(taskParamsConfig),
     };
 
     saveTaskAlert(payload)
@@ -450,10 +456,11 @@ function handleSubmit() {
   });
 }
 
-/** 选择服务变化（切换服务时保留已选中的项目） */
-function handleServiceChange(serviceId?: number) {
-  if (serviceId) {
-    loadProjects(serviceId, undefined, true);
+/** 选择服务变化（同步服务名称，切换服务时保留已选中的项目） */
+function handleServiceChange(service?: ServiceInfo) {
+  formData.serviceName = service?.name;
+  if (service?.id) {
+    loadProjects(service.id, undefined, true);
   } else {
     projectOptions.value = [];
     selectedProjects.value = [];
@@ -496,7 +503,7 @@ watch(
       Object.assign(formData, props.editData);
       isEdit.value = true;
       if (props.editData.serviceId) {
-        loadProjects(props.editData.serviceId, props.editData.script);
+        loadProjects(props.editData.serviceId, props.editData.taskParams);
       }
     }
   }

@@ -29,7 +29,6 @@
             <CommonForm
               :form-data="formData"
               :show-task-type="false"
-              @service-change="handleServiceChange"
             />
           </el-tab-pane>
 
@@ -41,6 +40,11 @@
               </el-icon>
               部署内容
             </template>
+
+            <ServiceSelect
+              v-model="formData.serviceId"
+              @change="handleServiceChange"
+            />
 
             <el-form-item label="选择项目" prop="projectNames">
               <div class="project-select">
@@ -110,6 +114,8 @@ import {
 } from "@/api/ops/taskAlert";
 import { DeployConfig, TaskAlert, TASK_TYPE_DEPLOY } from "@/api/ops/taskAlert/types";
 import { getListByServiceId } from "@/api/docker";
+import { ServiceInfo } from "@/api/monitor/service/types";
+import ServiceSelect from "./serviceSelect.vue";
 import CommonForm from "./commonForm.vue";
 
 defineOptions({
@@ -152,7 +158,7 @@ const formData = reactive<TaskAlert>({
   failThreshold: 1,
 } as TaskAlert);
 
-/** 部署配置（提交时序列化到 script） */
+/** 部署配置（提交时序列化到 taskParams） */
 const deployConfig = reactive<DeployConfig>({
   deployType: 2,
   sync: true,
@@ -198,19 +204,20 @@ function loadProjects(serviceId?: number) {
   });
 }
 
-/** 选择服务变化 */
-function handleServiceChange(serviceId?: number) {
-  loadProjects(serviceId);
+/** 选择服务变化：同步服务名称并加载项目列表 */
+function handleServiceChange(service?: ServiceInfo) {
+  formData.serviceName = service?.name;
+  loadProjects(service?.id);
 }
 
-/** 从 script 解析部署配置 */
-function parseDeployConfig(script?: string) {
+/** 从 taskParams 解析部署配置 */
+function parseDeployConfig(taskParams?: string) {
   selectedProjects.value = [];
-  if (!script) {
+  if (!taskParams) {
     return;
   }
   try {
-    const obj = JSON.parse(script);
+    const obj = JSON.parse(taskParams);
     if (obj.projectNames) {
       selectedProjects.value = obj.projectNames
         .split(",")
@@ -240,7 +247,7 @@ function loadDetail(id: number) {
         Object.assign(formData, data);
         isEdit.value = true;
         loadProjects(data.serviceId);
-        parseDeployConfig(data.script);
+        parseDeployConfig(data.taskParams);
       } else {
         ElMessage.warning("未找到该任务");
       }
@@ -274,8 +281,8 @@ function handleSubmit() {
     }
     submitLoading.value = true;
 
-    // 将部署配置序列化为 script
-    const scriptConfig: DeployConfig = {
+    // 将部署配置序列化为 taskParams
+    const taskParamsConfig: DeployConfig = {
       projectNames: selectedProjects.value.join(","),
       deployType: deployConfig.deployType,
       sync: deployConfig.sync,
@@ -284,7 +291,7 @@ function handleSubmit() {
 
     const payload: TaskAlert = {
       ...formData,
-      script: JSON.stringify(scriptConfig),
+      taskParams: JSON.stringify(taskParamsConfig),
     };
 
     saveTaskAlert(payload)
@@ -318,7 +325,7 @@ watch(
       Object.assign(formData, props.editData);
       isEdit.value = true;
       loadProjects(props.editData.serviceId);
-      parseDeployConfig(props.editData.script);
+      parseDeployConfig(props.editData.taskParams);
     }
   }
 );

@@ -9,7 +9,12 @@ export const TASK_TYPE_DEPLOY = "deploy";
 export const TASK_TYPE_SYNC_JAR = "syncJar";
 
 /**
- * 定时部署配置（存于 script 字段的 JSON 结构）
+ * 任务类型：Shell脚本
+ */
+export const TASK_TYPE_SHELL = "shell";
+
+/**
+ * 定时部署配置（存于 taskParams 字段的 JSON 结构）
  */
 export interface DeployConfig {
   /** 项目名称列表，逗号分隔 */
@@ -23,13 +28,23 @@ export interface DeployConfig {
 }
 
 /**
- * 预发布Jar同步配置（存于 script 字段的 JSON 结构）
+ * 预发布Jar同步配置（存于 taskParams 字段的 JSON 结构）
  */
 export interface SyncJarConfig {
   /** 项目名称列表，逗号分隔 */
   projectNames?: string;
   /** 时间间隔(秒)，多个项目同步时每完成一个后的等待时间 */
   interval?: number;
+}
+
+/**
+ * Shell脚本任务配置（存于 taskParams 字段的 JSON 结构）
+ */
+export interface ShellConfig {
+  /** 执行主机ID列表 */
+  agentIds?: number[];
+  /** 脚本内容 */
+  script?: string;
 }
 
 /**
@@ -46,10 +61,8 @@ export interface TaskAlert extends PageQuery {
   taskName?: string;
   /** 任务类型: shell脚本 / 接口检测 / 数据库备份 等 */
   taskType?: string;
-  /** 执行命令 */
-  command?: string;
-  /** 脚本内容 */
-  script?: string;
+  /** 任务参数 */
+  taskParams?: string;
   /** cron 表达式 */
   cron?: string;
   /** 关联主机Id */
