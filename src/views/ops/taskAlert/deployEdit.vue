@@ -154,7 +154,6 @@ const formData = reactive<TaskAlert>({
   taskType: TASK_TYPE_DEPLOY,
   isEnabled: true,
   status: 1,
-  isEmail: false,
   failThreshold: 1,
 } as TaskAlert);
 
@@ -180,7 +179,6 @@ function resetForm() {
   formData.taskType = TASK_TYPE_DEPLOY;
   formData.isEnabled = true;
   formData.status = 1;
-  formData.isEmail = false;
   formData.failThreshold = 1;
   deployConfig.deployType = 2;
   deployConfig.sync = true;

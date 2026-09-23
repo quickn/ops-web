@@ -71,8 +71,8 @@ export interface TaskAlert extends PageQuery {
   isEnabled?: boolean;
   /** 状态: 1-启动 0-停止 */
   status?: number;
-  /** 是否发送邮件告警 */
-  isEmail?: boolean;
+  /** 关联预警规则ID */
+  ruleId?: number;
   /** 连续失败次数阈值，超过则告警 */
   failThreshold?: number;
   /** 备注 */

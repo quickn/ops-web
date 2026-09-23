@@ -112,13 +112,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="邮件告警" width="90" align="center">
-          <template #default="scope">
-            <el-tag :type="scope.row.isEmail ? 'warning' : 'info'" size="small">
-              {{ scope.row.isEmail ? "开启" : "关闭" }}
-            </el-tag>
-          </template>
-        </el-table-column>
         <el-table-column label="失败阈值" prop="failThreshold" width="90" align="center" />
         <el-table-column label="备注" prop="remark" min-width="120" show-overflow-tooltip />
         <el-table-column label="创建时间" prop="createTime" width="170" align="center" />
@@ -322,7 +315,6 @@ const shellEditId = ref<number | undefined>(undefined);
 const formData = reactive<TaskAlert>({
   isEnabled: true,
   status: 1,
-  isEmail: false,
   failThreshold: 1
 } as TaskAlert);
 
@@ -446,7 +438,6 @@ function resetForm() {
   });
   formData.isEnabled = true;
   formData.status = 1;
-  formData.isEmail = false;
   formData.failThreshold = 1;
 }
 

@@ -216,7 +216,6 @@ const formData = reactive<TaskAlert>({
   taskType: TASK_TYPE_SYNC_JAR,
   isEnabled: true,
   status: 1,
-  isEmail: false,
   failThreshold: 1,
 } as TaskAlert);
 
@@ -279,7 +278,6 @@ function resetForm() {
   formData.taskType = TASK_TYPE_SYNC_JAR;
   formData.isEnabled = true;
   formData.status = 1;
-  formData.isEmail = false;
   formData.failThreshold = 1;
   syncJarConfig.projectNames = "";
   syncJarConfig.interval = 0;

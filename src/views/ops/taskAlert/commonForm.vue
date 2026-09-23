@@ -59,15 +59,35 @@
         v-model="formData.isEnabled"
         :active-value="true"
         :inactive-value="false"
+        @change="handleEnabledChange"
       />
     </el-form-item>
 
-    <el-form-item label="邮件告警" prop="isEmail">
-      <el-switch
-        v-model="formData.isEmail"
-        :active-value="true"
-        :inactive-value="false"
-      />
+    <el-form-item v-if="formData.isEnabled" label="告警规则" prop="ruleId">
+      <div class="rule-select-wrapper">
+        <el-select
+          v-model="formData.ruleId"
+          placeholder="请选择告警规则"
+          clearable
+          filterable
+          style="flex: 1"
+        >
+          <el-option
+            v-for="item in ruleList"
+            :key="item.id"
+            :label="item.ruleName"
+            :value="item.id!"
+          />
+        </el-select>
+        <el-button
+          type="primary"
+          :disabled="!formData.ruleId"
+          @click="handleViewRule"
+        >
+          <el-icon><View /></el-icon>
+          查看编辑
+        </el-button>
+      </div>
     </el-form-item>
 
     <el-form-item label="备注" prop="remark">
@@ -77,17 +97,24 @@
         placeholder="请输入备注"
       />
     </el-form-item>
+
+    <!-- 告警规则查看/编辑弹窗 -->
+    <RuleEditDialog v-model="ruleDialogVisible" :rule-id="formData.ruleId" @saved="handleRuleSaved" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { View } from "@element-plus/icons-vue";
 import { TaskAlert } from "@/api/ops/taskAlert/types";
+import { listAlertRulePage } from "@/api/ops/alert";
+import { AlertRule } from "@/api/ops/alert/types";
+import RuleEditDialog from "@/views/ops/alert/ruleEditDialog.vue";
 
 defineOptions({
   name: "TaskAlertCommonForm",
 });
 
-defineProps({
+const props = defineProps({
   /** 父组件的表单数据对象（reactive，直接双向绑定字段） */
   formData: {
     type: Object as () => TaskAlert,
@@ -106,13 +133,63 @@ const emit = defineEmits<{
 
 const showCronHelp = ref(false);
 
+/** 告警规则列表 */
+const ruleList = ref<AlertRule[]>([]);
+
+/** 规则查看/编辑弹窗 */
+const ruleDialogVisible = ref(false);
+
+/** 加载告警规则列表（仅启用状态） */
+function loadRuleList() {
+  listAlertRulePage({ pageNum: 1, pageSize: 999, isEnabled: true } as any).then(({ data }) => {
+    ruleList.value = data?.records || [];
+  });
+}
+
+/** 启用告警切换 */
+function handleEnabledChange(val: boolean | string | number) {
+  if (!val) {
+    props.formData.ruleId = undefined;
+  } else if (!ruleList.value.length) {
+    loadRuleList();
+  }
+}
+
+/** 查看编辑选中的规则 */
+function handleViewRule() {
+  if (!props.formData.ruleId) return;
+  ruleDialogVisible.value = true;
+}
+
+/** 规则保存成功 */
+function handleRuleSaved() {
+  loadRuleList();
+}
+
 /** 任务类型切换 */
 function handleTaskTypeChange(type?: string | number) {
   emit("taskTypeChange", type);
 }
+
+watch(
+  () => props.formData.isEnabled,
+  (val) => {
+    if (val && !ruleList.value.length) {
+      loadRuleList();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
+.rule-select-wrapper {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  align-items: center;
+}
+
 .cron-help {
   width: 100%;
   padding: 12px 16px;
