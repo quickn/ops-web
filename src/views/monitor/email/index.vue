@@ -97,11 +97,11 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-form-item label="发送邮箱密码" prop="name">
+        <el-form-item label="发送邮箱授权码" prop="name">
           <el-input
             v-model="formData.fromPwd"
             type="password"
-            placeholder="发送邮箱密码"
+            placeholder="发送邮箱授权码"
           />
         </el-form-item>
 
@@ -119,15 +119,8 @@ onMounted(() => {
           />
         </el-form-item>
 
-        <el-form-item label="接受邮件,多个邮件用;隔开" prop="name">
+        <el-form-item label="测试接受邮件,多个邮件用;隔开" prop="name">
           <el-input v-model="formData.toMail" placeholder="接受邮件" />
-        </el-form-item>
-
-        <el-form-item label="接口预警最大时间间隔" prop="name">
-          <el-input
-            v-model="formData.timeInterval"
-            placeholder="接口预警最大时间间隔"
-          />
         </el-form-item>
 
         <el-form-item label="是否开启邮件通知" prop="isSendMail">
