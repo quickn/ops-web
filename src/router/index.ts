@@ -27,6 +27,21 @@ export const constantRoutes: RouteRecordRaw[] = [
     meta: { hidden: true },
   },
 
+  // MySQL 数据查询页面（隐藏路由，从表列表页跳转进入）
+  {
+    path: "/mysql/data",
+    component: Layout,
+    meta: { hidden: true },
+    children: [
+      {
+        path: "",
+        name: "MysqlData",
+        component: () => import("@/views/mysql/data.vue"),
+        meta: { hidden: true, title: "数据查询", keepAlive: false },
+      },
+    ],
+  },
+
   {
     path: "/",
     name: "/",

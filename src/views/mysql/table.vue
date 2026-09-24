@@ -6,13 +6,11 @@ import {
   getTableStructure,
   listDatabases,
   listTables,
-  queryTableData,
   truncateTable,
 } from "@/api/mysql";
 import type {
   ColumnDef,
   ColumnInfo,
-  TableDataResult,
   TableInfo,
   TableStructure,
 } from "@/api/mysql/types";
@@ -65,31 +63,288 @@ const createForm = reactive({
   comment: "",
 });
 
-// ---- 修改表（添加/删除列） ----
-const alterVisible = ref(false);
-const alterTableName = ref("");
-const alterAction = ref<"add_column" | "drop_column" | "modify_column">(
-  "add_column"
-);
-const alterColumn = reactive<ColumnDef>({
-  name: "",
-  type: "VARCHAR",
-  length: 255,
-  nullable: true,
-  default: undefined,
-  comment: "",
-  auto_increment: false,
-  primary_key: false,
-});
-const alterDropColumnName = ref("");
+// ---- 设计表（仿 Navicat） ----
+const designVisible = ref(false);
+const designTableName = ref("");
+const designSaving = ref(false);
+const designActiveTab = ref("columns");
 
-// ---- 数据浏览 ----
-const dataVisible = ref(false);
-const dataLoading = ref(false);
-const dataTableName = ref("");
-const dataResult = ref<TableDataResult | null>(null);
-const dataPage = ref(1);
-const dataPageSize = ref(20);
+/** 可用数据类型 */
+const columnTypes = [
+  "INT", "BIGINT", "TINYINT", "SMALLINT",
+  "VARCHAR", "CHAR", "TEXT", "LONGTEXT",
+  "DATE", "DATETIME", "TIMESTAMP",
+  "DECIMAL", "FLOAT", "DOUBLE",
+  "JSON",
+];
+
+/** 设计器字段行 */
+interface DesignColumn {
+  /** 列名（已有列不可改） */
+  Field: string;
+  type: string;
+  length: number | undefined;
+  nullable: boolean;
+  comment: string;
+  isPk: boolean;
+  /** 是否新增列 */
+  isNew: boolean;
+  /** 标记删除（已有列删除时标记而非移除，便于 diff） */
+  deleted: boolean;
+  /** 原始字段（识别修改用） */
+  orig: ColumnInfo | null;
+}
+
+/** 设计器索引行 */
+interface DesignIndex {
+  name: string;
+  columns: string[];
+  unique: boolean;
+  isNew: boolean;
+  /** 标记删除 */
+  deleted: boolean;
+}
+
+const designColumns = ref<DesignColumn[]>([]);
+const designIndexes = ref<DesignIndex[]>([]);
+/** 选中的字段行（用于插入/删除） */
+const selectedDesignColumn = ref<DesignColumn | null>(null);
+const selectedDesignIndex = ref<DesignIndex | null>(null);
+
+/** 解析 "varchar(255)" → { type, length } */
+function parseColType(typeStr: string): { type: string; length?: number } {
+  const m = /^(\w+)\((\d+)(?:,\d+)?\)/.exec(typeStr);
+  if (m) return { type: m[1].toUpperCase(), length: Number(m[2]) };
+  return { type: typeStr.toUpperCase(), length: undefined };
+}
+
+/** 打开设计表对话框 */
+async function openDesigner(tableName: string) {
+  designTableName.value = tableName;
+  designActiveTab.value = "columns";
+  designColumns.value = [];
+  designIndexes.value = [];
+  selectedDesignColumn.value = null;
+  selectedDesignIndex.value = null;
+  designVisible.value = true;
+  structureLoading.value = true;
+  try {
+    const res: any = await getTableStructure(
+      connectionId,
+      currentDatabase.value,
+      tableName
+    );
+    const structure: TableStructure = res.data;
+    designColumns.value = (structure.columns || []).map((c) => {
+      const parsed = parseColType(c.Type);
+      return {
+        Field: c.Field,
+        type: parsed.type,
+        length: parsed.length,
+        nullable: c.Null === "YES",
+        comment: c.Comment || "",
+        isPk: c.Key === "PRI",
+        isNew: false,
+        deleted: false,
+        orig: c,
+      };
+    });
+    designIndexes.value = (structure.indexes || []).map((idx) => ({
+      name: idx.name,
+      columns: [...idx.columns],
+      unique: idx.unique,
+      isNew: false,
+      deleted: false,
+    }));
+  } catch (e: any) {
+    ElMessage.error(e?.message || "获取表结构失败");
+    designVisible.value = false;
+  } finally {
+    structureLoading.value = false;
+  }
+}
+
+/** 新建空字段行 */
+function newDesignColumn(): DesignColumn {
+  return {
+    Field: "",
+    type: "VARCHAR",
+    length: 255,
+    nullable: true,
+    comment: "",
+    isPk: false,
+    isNew: true,
+    deleted: false,
+    orig: null,
+  };
+}
+
+/** 添加字段（末尾追加） */
+function addDesignColumn() {
+  const row = newDesignColumn();
+  designColumns.value.push(row);
+  selectedDesignColumn.value = row;
+}
+
+/** 在选中行后插入字段 */
+function insertDesignColumn() {
+  const row = newDesignColumn();
+  const idx = designColumns.value.indexOf(selectedDesignColumn.value!);
+  if (idx >= 0) {
+    designColumns.value.splice(idx + 1, 0, row);
+  } else {
+    designColumns.value.push(row);
+  }
+  selectedDesignColumn.value = row;
+}
+
+/** 删除选中字段（标记删除，新增行直接移除） */
+function removeDesignColumn() {
+  const row = selectedDesignColumn.value;
+  if (!row) return;
+  if (row.isNew) {
+    designColumns.value.splice(designColumns.value.indexOf(row), 1);
+  } else {
+    if (row.isPk) {
+      ElMessage.warning("主键列不允许在此删除");
+      return;
+    }
+    row.deleted = true;
+  }
+  selectedDesignColumn.value = null;
+}
+
+/** 添加索引 */
+function addDesignIndex() {
+  const row: DesignIndex = {
+    name: "",
+    columns: [],
+    unique: false,
+    isNew: true,
+    deleted: false,
+  };
+  designIndexes.value.push(row);
+  selectedDesignIndex.value = row;
+}
+
+/** 删除选中索引（标记删除，新增行直接移除） */
+function removeDesignIndex() {
+  const row = selectedDesignIndex.value;
+  if (!row) return;
+  if (row.isNew) {
+    designIndexes.value.splice(designIndexes.value.indexOf(row), 1);
+  } else {
+    row.deleted = true;
+  }
+  selectedDesignIndex.value = null;
+}
+
+/** 已有列是否有修改（用于字段名高亮） */
+function isColumnChanged(col: DesignColumn): boolean {
+  if (col.isNew || !col.orig) return false;
+  const origParsed = parseColType(col.orig.Type);
+  return (
+    origParsed.type !== col.type ||
+    origParsed.length !== col.length ||
+    (col.orig.Null === "YES") !== col.nullable ||
+    (col.orig.Comment || "") !== col.comment
+  );
+}
+
+/** 保存设计（diff 生成 ALTER 操作批量执行） */
+async function saveDesign() {
+  const operations: any[] = [];
+
+  // 1. 删除列（被标记删除的已有列）
+  for (const col of designColumns.value.filter((c) => c.deleted && c.orig)) {
+    operations.push({ action: "drop_column", column_name: col.orig!.Field });
+  }
+
+  // 2. 新增列
+  for (const col of designColumns.value.filter((c) => c.isNew && !c.deleted)) {
+    if (!col.Field) {
+      ElMessage.warning("新增列的列名不能为空");
+      return;
+    }
+    operations.push({
+      action: "add_column",
+      column: {
+        name: col.Field,
+        type: col.type,
+        length: col.length,
+        nullable: col.nullable,
+        comment: col.comment,
+        primary_key: col.isPk,
+      },
+    });
+  }
+
+  // 3. 修改列（类型/长度/非空/注释 与原结构对比）
+  for (const col of designColumns.value) {
+    if (col.isNew || col.deleted || !col.orig) continue;
+    const orig = col.orig;
+    const origParsed = parseColType(orig.Type);
+    const changed =
+      origParsed.type !== col.type ||
+      origParsed.length !== col.length ||
+      (orig.Null === "YES") !== col.nullable ||
+      (orig.Comment || "") !== col.comment;
+    if (changed) {
+      operations.push({
+        action: "modify_column",
+        column: {
+          name: col.Field,
+          type: col.type,
+          length: col.length,
+          nullable: col.nullable,
+          comment: col.comment,
+        },
+      });
+    }
+  }
+
+  // 4. 删除索引（被标记删除的已有索引）
+  for (const idx of designIndexes.value.filter((i) => i.deleted && !i.isNew)) {
+    operations.push({ action: "drop_index", index_name: idx.name });
+  }
+
+  // 5. 新增索引
+  for (const idx of designIndexes.value.filter((i) => i.isNew && !i.deleted)) {
+    if (!idx.name || idx.columns.length === 0) {
+      ElMessage.warning("索引需要名称且至少选择一个字段");
+      return;
+    }
+    operations.push({
+      action: "add_index",
+      index_name: idx.name,
+      columns: idx.columns,
+      unique: idx.unique,
+    });
+  }
+
+  if (operations.length === 0) {
+    ElMessage.info("没有变更");
+    designVisible.value = false;
+    return;
+  }
+
+  designSaving.value = true;
+  try {
+    const res: any = await alterTable(
+      connectionId,
+      currentDatabase.value,
+      designTableName.value,
+      operations
+    );
+    ElMessage.success(res.msg || "表结构修改成功");
+    designVisible.value = false;
+    await fetchTables();
+  } catch (e: any) {
+    ElMessage.error(e?.message || "修改失败");
+  } finally {
+    designSaving.value = false;
+  }
+}
 
 // ==================== 方法 ====================
 
@@ -228,103 +483,17 @@ async function handleDropTable(tableName: string) {
     .catch(() => {});
 }
 
-// ---- 修改表 ----
-function showAlterAddColumn(tableName: string) {
-  alterTableName.value = tableName;
-  alterAction.value = "add_column";
-  Object.assign(alterColumn, {
-    name: "",
-    type: "VARCHAR",
-    length: 255,
-    nullable: true,
-    comment: "",
-    auto_increment: false,
-    primary_key: false,
+// ---- 打开数据查询页面 ----
+function openDataPage(tableName: string) {
+  router.push({
+    path: "/mysql/data",
+    query: {
+      configId: connectionId,
+      configName: configName,
+      database: currentDatabase.value,
+      table: tableName,
+    },
   });
-  alterDropColumnName.value = "";
-  alterVisible.value = true;
-}
-
-function showAlterDropColumn(tableName: string) {
-  alterTableName.value = tableName;
-  alterAction.value = "drop_column";
-  alterDropColumnName.value = "";
-  alterVisible.value = true;
-}
-
-async function handleAlterTable() {
-  let operations: any[] = [];
-  if (alterAction.value === "add_column") {
-    if (!alterColumn.name) {
-      ElMessage.warning("请输入列名");
-      return;
-    }
-    operations = [{ action: "add_column", column: { ...alterColumn } }];
-  } else if (alterAction.value === "drop_column") {
-    if (!alterDropColumnName.value) {
-      ElMessage.warning("请输入要删除的列名");
-      return;
-    }
-    // 二次确认
-    try {
-      await ElMessageBox.confirm(
-        `确定要删除表 "${alterTableName.value}" 中的列 "${alterDropColumnName.value}" 吗？此操作不可恢复！`,
-        "危险操作",
-        {
-          confirmButtonText: "确定删除",
-          cancelButtonText: "取消",
-          type: "error",
-        }
-      );
-    } catch {
-      return;
-    }
-    operations = [
-      { action: "drop_column", column_name: alterDropColumnName.value },
-    ];
-  } else if (alterAction.value === "modify_column") {
-    if (!alterColumn.name) {
-      ElMessage.warning("请输入列名");
-      return;
-    }
-    operations = [{ action: "modify_column", column: { ...alterColumn } }];
-  }
-
-  try {
-    const res: any = await alterTable(
-      connectionId,
-      currentDatabase.value,
-      alterTableName.value,
-      operations
-    );
-    ElMessage.success(res.msg);
-    alterVisible.value = false;
-    await fetchTables();
-  } catch (e: any) {
-    ElMessage.error(e?.message || "修改失败");
-  }
-}
-
-// ---- 浏览数据 ----
-async function viewData(tableName: string, page = 1) {
-  dataTableName.value = tableName;
-  dataVisible.value = true;
-  dataLoading.value = true;
-  dataPage.value = page;
-  try {
-    const res: any = await queryTableData(
-      connectionId,
-      currentDatabase.value,
-      tableName,
-      page,
-      dataPageSize.value
-    );
-    dataResult.value = res.data;
-  } catch (e: any) {
-    ElMessage.error(e?.message || "查询失败");
-  } finally {
-    dataLoading.value = false;
-  }
 }
 
 // ---- 清空表 ----
@@ -377,7 +546,6 @@ async function loadDatabases() {
 
 /** 切换数据库 */
 function onDatabaseChange() {
-  dataPage.value = 1;
   fetchTables();
 }
 
@@ -452,7 +620,14 @@ onMounted(async () => {
             <el-icon style="margin-right: 6px; color: #409eff">
               <Grid />
             </el-icon>
-            <span style="font-weight: 500">{{ scope.row.name }}</span>
+            <el-link
+              type="primary"
+              :underline="false"
+              style="font-weight: 500"
+              @click="openDataPage(scope.row.name)"
+            >
+              {{ scope.row.name }}
+            </el-link>
           </template>
         </el-table-column>
         <el-table-column label="引擎" prop="engine" width="100" />
@@ -477,30 +652,11 @@ onMounted(async () => {
               </el-icon>
               结构
             </el-button>
-            <el-button
-              type="success"
-              size="small"
-              @click="viewData(scope.row.name, 1)"
-            >
+            <el-button size="small" @click="openDesigner(scope.row.name)">
               <el-icon>
-                <DataAnalysis />
+                <EditPen />
               </el-icon>
-              数据
-            </el-button>
-            <el-button size="small" @click="showAlterAddColumn(scope.row.name)">
-              <el-icon>
-                <Plus />
-              </el-icon>
-              加列
-            </el-button>
-            <el-button
-              size="small"
-              @click="showAlterDropColumn(scope.row.name)"
-            >
-              <el-icon>
-                <Minus />
-              </el-icon>
-              删列
+              设计表
             </el-button>
             <el-button
               type="warning"
@@ -755,132 +911,200 @@ onMounted(async () => {
       </template>
     </el-dialog>
 
-    <!-- ============ 修改表对话框 ============ -->
+    <!-- ============ 设计表对话框（仿 Navicat） ============ -->
     <el-dialog
-      v-model="alterVisible"
-      :title="`修改表 - ${alterTableName}`"
-      width="500px"
-      :close-on-click-modal="false"
-    >
-      <el-radio-group v-model="alterAction" style="margin-bottom: 16px">
-        <el-radio-button value="add_column">添加列</el-radio-button>
-        <el-radio-button value="drop_column">删除列</el-radio-button>
-        <el-radio-button value="modify_column">修改列</el-radio-button>
-      </el-radio-group>
-
-      <template v-if="alterAction === 'drop_column'">
-        <el-form label-width="100px">
-          <el-form-item label="要删除的列名">
-            <el-input v-model="alterDropColumnName" placeholder="输入列名" />
-          </el-form-item>
-        </el-form>
-      </template>
-      <template v-else>
-        <el-form label-width="80px">
-          <el-form-item label="列名" required>
-            <el-input v-model="alterColumn.name" placeholder="列名" />
-          </el-form-item>
-          <el-form-item label="类型">
-            <el-select v-model="alterColumn.type" style="width: 160px">
-              <el-option
-                v-for="t in [
-                  'INT',
-                  'BIGINT',
-                  'VARCHAR',
-                  'TEXT',
-                  'DATE',
-                  'DATETIME',
-                  'DECIMAL',
-                  'FLOAT',
-                  'TINYINT',
-                ]"
-                :key="t"
-                :label="t"
-                :value="t"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="长度">
-            <el-input-number
-              v-model="alterColumn.length"
-              :min="0"
-              controls-position="right"
-            />
-          </el-form-item>
-          <el-form-item label="允许空">
-            <el-switch v-model="alterColumn.nullable" />
-          </el-form-item>
-          <el-form-item label="注释">
-            <el-input v-model="alterColumn.comment" placeholder="列注释" />
-          </el-form-item>
-        </el-form>
-      </template>
-
-      <template #footer>
-        <el-button @click="alterVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAlterTable">确定修改</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- ============ 数据浏览对话框 ============ -->
-    <el-dialog
-      v-model="dataVisible"
-      :title="`数据浏览 - ${dataTableName}`"
-      width="95%"
+      v-model="designVisible"
+      :title="`设计表 - ${designTableName}`"
+      width="900px"
       top="3vh"
       :close-on-click-modal="false"
     >
-      <div v-loading="dataLoading">
-        <template v-if="dataResult">
-          <div style="margin-bottom: 8px; font-size: 13px; color: #909399">
-            共 {{ dataResult.total }} 条记录，第 {{ dataResult.page }}/{{
-              Math.ceil(dataResult.total / dataResult.page_size) || 1
-            }}
-            页
-          </div>
-          <div class="table-data-wrapper">
+      <div v-loading="structureLoading">
+        <el-tabs v-model="designActiveTab">
+          <!-- ======== 字段 ======== -->
+          <el-tab-pane label="字段" name="columns">
+            <div class="design-toolbar">
+              <el-button size="small" type="primary" plain @click="addDesignColumn">
+                <el-icon><Plus /></el-icon>
+                添加字段
+              </el-button>
+              <el-button
+                size="small"
+                plain
+                :disabled="!selectedDesignColumn"
+                @click="insertDesignColumn"
+              >
+                <el-icon><ArrowRight /></el-icon>
+                插入字段
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                :disabled="!selectedDesignColumn"
+                @click="removeDesignColumn"
+              >
+                <el-icon><Minus /></el-icon>
+                删除字段
+              </el-button>
+            </div>
             <el-table
-              :data="dataResult.records"
+              :data="designColumns.filter((c) => !c.deleted)"
               border
               size="small"
-              max-height="450"
-              stripe
+              max-height="420"
+              highlight-current-row
+              @current-change="
+                (row: any) => (selectedDesignColumn = row)
+              "
             >
-              <el-table-column
-                v-for="col in dataResult.columns"
-                :key="col"
-                :label="col"
-                :prop="col"
-                min-width="120"
-                show-overflow-tooltip
-              >
+              <el-table-column label="键" width="40" align="center">
+                <template #default="scope">
+                  <span v-if="scope.row.isPk" title="主键">🔑</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="字段名" width="150">
                 <template #default="scope">
                   <span
-                    v-if="scope.row[col] === null"
-                    style="font-style: italic; color: #ccc"
-                    >NULL</span
+                    v-if="!scope.row.isNew"
+                    :class="{ 'col-changed': isColumnChanged(scope.row) }"
                   >
-                  <span v-else>{{ scope.row[col] }}</span>
+                    {{ scope.row.Field }}
+                  </span>
+                  <el-input v-else v-model="scope.row.Field" size="small" placeholder="字段名" />
+                </template>
+              </el-table-column>
+              <el-table-column label="类型" width="130">
+                <template #default="scope">
+                  <el-select
+                    v-model="scope.row.type"
+                    size="small"
+                    filterable
+                    allow-create
+                  >
+                    <el-option
+                      v-for="t in columnTypes"
+                      :key="t"
+                      :label="t"
+                      :value="t"
+                    />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="长度" width="90">
+                <template #default="scope">
+                  <el-input-number
+                    v-model="scope.row.length"
+                    :min="0"
+                    size="small"
+                    controls-position="right"
+                    style="width: 80px"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="非空" width="55" align="center">
+                <template #default="scope">
+                  <el-checkbox
+                    :model-value="!scope.row.nullable"
+                    @update:model-value="
+                      (v: any) => (scope.row.nullable = !v)
+                    "
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="主键" width="55" align="center">
+                <template #default="scope">
+                  <el-checkbox
+                    v-model="scope.row.isPk"
+                    :disabled="!scope.row.isNew"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="注释" min-width="150">
+                <template #default="scope">
+                  <el-input v-model="scope.row.comment" size="small" placeholder="注释" />
                 </template>
               </el-table-column>
             </el-table>
-          </div>
-          <div style="margin-top: 12px; text-align: center">
-            <el-pagination
-              v-model:current-page="dataPage"
-              v-model:page-size="dataPageSize"
-              :total="dataResult.total"
-              :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next, jumper"
-              small
-              @current-change="(p: number) => viewData(dataTableName, p)"
-              @size-change="(s: number) => { dataPageSize = s; viewData(dataTableName, 1) }"
-            />
-          </div>
-        </template>
-        <el-empty v-else description="无数据" />
+          </el-tab-pane>
+
+          <!-- ======== 索引 ======== -->
+          <el-tab-pane label="索引" name="indexes">
+            <div class="design-toolbar">
+              <el-button size="small" type="primary" plain @click="addDesignIndex">
+                <el-icon><Plus /></el-icon>
+                添加索引
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                :disabled="!selectedDesignIndex"
+                @click="removeDesignIndex"
+              >
+                <el-icon><Minus /></el-icon>
+                删除索引
+              </el-button>
+            </div>
+            <el-table
+              :data="designIndexes.filter((i) => !i.deleted)"
+              border
+              size="small"
+              max-height="420"
+              highlight-current-row
+              @current-change="
+                (row: any) => (selectedDesignIndex = row)
+              "
+            >
+              <el-table-column label="索引名" width="160">
+                <template #default="scope">
+                  <el-input
+                    v-if="scope.row.isNew"
+                    v-model="scope.row.name"
+                    size="small"
+                    placeholder="索引名"
+                  />
+                  <span v-else>{{ scope.row.name }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="字段" min-width="200">
+                <template #default="scope">
+                  <el-select
+                    v-if="scope.row.isNew"
+                    v-model="scope.row.columns"
+                    size="small"
+                    multiple
+                    placeholder="选择字段"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="c in designColumns.filter((c) => !c.deleted)"
+                      :key="c.Field"
+                      :label="c.Field"
+                      :value="c.Field"
+                    />
+                  </el-select>
+                  <span v-else>{{ scope.row.columns.join(", ") }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="唯一" width="70" align="center">
+                <template #default="scope">
+                  <el-checkbox v-model="scope.row.unique" :disabled="!scope.row.isNew" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
       </div>
+
+      <template #footer>
+        <el-button @click="designVisible = false">取消</el-button>
+        <el-button type="primary" :loading="designSaving" @click="saveDesign">
+          保存
+        </el-button>
+      </template>
     </el-dialog>
+
   </div>
 </template>
 
@@ -904,7 +1128,15 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
-.table-data-wrapper {
-  overflow-x: auto;
+/* ---------- 设计表 ---------- */
+.design-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.col-changed {
+  font-weight: 600;
+  color: #409eff;
 }
 </style>
