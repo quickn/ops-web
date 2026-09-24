@@ -111,6 +111,13 @@ const designIndexes = ref<DesignIndex[]>([]);
 const selectedDesignColumn = ref<DesignColumn | null>(null);
 const selectedDesignIndex = ref<DesignIndex | null>(null);
 
+/** 设计表内表格自适应最大高度：
+ *  视口高度 - 弹框上下留白(6vh) - 标题(54) - tabs 头(55) - 工具栏(40) - 表头(40) - 底部按钮(62) - 余量 */
+const { height: winHeight } = useWindowSize();
+const designTableMaxHeight = computed(() =>
+  Math.max(winHeight.value - 0.06 * winHeight.value - 251, 240)
+);
+
 /** 解析 "varchar(255)" → { type, length } */
 function parseColType(typeStr: string): { type: string; length?: number } {
   const m = /^(\w+)\((\d+)(?:,\d+)?\)/.exec(typeStr);
@@ -916,6 +923,7 @@ onMounted(async () => {
       v-model="designVisible"
       :title="`设计表 - ${designTableName}`"
       width="900px"
+      class="design-dialog"
       top="3vh"
       :close-on-click-modal="false"
     >
@@ -952,7 +960,7 @@ onMounted(async () => {
               :data="designColumns.filter((c) => !c.deleted)"
               border
               size="small"
-              max-height="420"
+              :max-height="designTableMaxHeight"
               highlight-current-row
               @current-change="
                 (row: any) => (selectedDesignColumn = row)
@@ -1050,7 +1058,7 @@ onMounted(async () => {
               :data="designIndexes.filter((i) => !i.deleted)"
               border
               size="small"
-              max-height="420"
+              :max-height="designTableMaxHeight"
               highlight-current-row
               @current-change="
                 (row: any) => (selectedDesignIndex = row)
@@ -1138,5 +1146,17 @@ onMounted(async () => {
 .col-changed {
   font-weight: 600;
   color: #409eff;
+}
+</style>
+
+<style lang="scss">
+/* 设计表弹框：高度随视口自适应（dialog 挂在 body 下，scoped 无法选中） */
+.design-dialog {
+  max-height: calc(100vh - 6vh);
+
+  .el-dialog__body {
+    max-height: calc(100vh - 6vh - 116px);
+    overflow-y: auto;
+  }
 }
 </style>

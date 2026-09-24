@@ -532,7 +532,20 @@ onMounted(async () => {
         <!-- 工具栏 -->
         <div class="toolbar">
           <div class="toolbar-left">
-
+            <span class="table-title">
+              <el-icon style="color: #409eff"><Grid /></el-icon>
+              {{ currentDatabase }}.
+              <span class="table-title-name">{{ currentTable || "未选择表" }}</span>
+              <el-tag
+                v-if="result"
+                size="small"
+                type="info"
+                effect="plain"
+                style="margin-left: 8px"
+              >
+                {{ result.total }} 条
+              </el-tag>
+            </span>
           </div>
           <div class="toolbar-right">
             <!-- 批量删除 -->
@@ -652,13 +665,6 @@ onMounted(async () => {
                 <el-table-column
                   type="selection"
                   width="45"
-                  align="center"
-                  fixed
-                />
-                <el-table-column
-                  type="index"
-                  label="#"
-                  width="55"
                   align="center"
                   fixed
                 />
