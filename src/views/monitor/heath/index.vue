@@ -164,7 +164,7 @@
             <el-option :value="false" label="否" />
           </el-select>
         </el-form-item>
-        <el-form-item label="超时预警时间(秒)" prop="timeoutWarnTime">
+        <el-form-item label="超时预警时间(毫秒)" prop="timeoutWarnTime">
           <el-input
             v-model="formData.timeoutWarnTime"
             placeholder="超时预警时间"

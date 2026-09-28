@@ -252,13 +252,20 @@
       :edit-id="shellEditId"
       @success="handleDeploySuccess"
     />
+
+    <!-- 接口检测编辑弹框 -->
+    <ApiCheck
+      v-model="apiDialogVisible"
+      :edit-id="apiEditId"
+      @success="handleDeploySuccess"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { Bell, CaretRight, Delete, Edit, Plus, Refresh, Search, VideoPause, VideoPlay } from "@element-plus/icons-vue";
 import { deleteTaskAlert, executeTaskAlert, listTaskAlertPage, saveTaskAlert, taskAlertCheck } from "@/api/ops/taskAlert";
-import { TASK_TYPE_DEPLOY, TASK_TYPE_SHELL, TASK_TYPE_SYNC_JAR, TaskAlert, TaskAlertQuery } from "@/api/ops/taskAlert/types";
+import { TASK_TYPE_API, TASK_TYPE_DEPLOY, TASK_TYPE_SHELL, TASK_TYPE_SYNC_JAR, TaskAlert, TaskAlertQuery } from "@/api/ops/taskAlert/types";
 import { listAll } from "@/api/monitor/service";
 import { ServiceInfo } from "@/api/monitor/service/types";
 import { originServerList } from "@/api/monitor/agent";
@@ -267,6 +274,7 @@ import { getDictOptions } from "@/api/dict";
 import DeployEdit from "./deployEdit.vue";
 import SyncJarEdit from "./syncJarEdit.vue";
 import ShellScriptEdit from "./shellScript.vue";
+import ApiCheck from "./apiCheck.vue";
 import ServiceSelect from "./serviceSelect.vue";
 import CommonForm from "./commonForm.vue";
 
@@ -311,6 +319,10 @@ const syncJarEditId = ref<number | undefined>(undefined);
 // Shell脚本编辑弹框状态
 const shellDialogVisible = ref(false);
 const shellEditId = ref<number | undefined>(undefined);
+
+// 接口检测编辑弹框状态
+const apiDialogVisible = ref(false);
+const apiEditId = ref<number | undefined>(undefined);
 
 const formData = reactive<TaskAlert>({
   isEnabled: true,
@@ -386,6 +398,12 @@ function openDialog(data?: TaskAlert) {
     shellDialogVisible.value = true;
     return;
   }
+  // 接口检测类型改用接口检测编辑弹框
+  if (data && data.taskType === TASK_TYPE_API) {
+    apiEditId.value = data.id;
+    apiDialogVisible.value = true;
+    return;
+  }
   dialogEdit.title = data ? "编辑任务告警" : "新增任务告警";
   if (data) {
     Object.assign(formData, data);
@@ -400,13 +418,14 @@ function handleServiceChange(service?: ServiceInfo) {
   formData.serviceName = service?.name;
 }
 
-/** 任务类型切换：定时部署/预发布Jar同步/Shell脚本 切换为对应编辑弹框 */
+/** 任务类型切换：定时部署/预发布Jar同步/Shell脚本/接口检测 切换为对应编辑弹框 */
 function handleTaskTypeChange(type?: string | number) {
   const typeStr = String(type);
   if (
     typeStr !== TASK_TYPE_DEPLOY &&
     typeStr !== TASK_TYPE_SYNC_JAR &&
-    typeStr !== TASK_TYPE_SHELL
+    typeStr !== TASK_TYPE_SHELL &&
+    typeStr !== TASK_TYPE_API
   ) {
     return;
   }
@@ -414,6 +433,11 @@ function handleTaskTypeChange(type?: string | number) {
   if (typeStr === TASK_TYPE_SHELL) {
     shellEditId.value = undefined;
     shellDialogVisible.value = true;
+    return;
+  }
+  if (typeStr === TASK_TYPE_API) {
+    apiEditId.value = undefined;
+    apiDialogVisible.value = true;
     return;
   }
   if (typeStr === TASK_TYPE_DEPLOY) {

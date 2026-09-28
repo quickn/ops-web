@@ -14,6 +14,11 @@ export const TASK_TYPE_SYNC_JAR = "syncJar";
 export const TASK_TYPE_SHELL = "shell";
 
 /**
+ * 任务类型：接口检测
+ */
+export const TASK_TYPE_API = "apiCheck";
+
+/**
  * 定时部署配置（存于 taskParams 字段的 JSON 结构）
  */
 export interface DeployConfig {
@@ -45,6 +50,28 @@ export interface ShellConfig {
   agentIds?: number[];
   /** 脚本内容 */
   script?: string;
+}
+
+/**
+ * 接口检测任务配置（存于 taskParams 字段的 JSON 结构）
+ */
+export interface ApiConfig {
+  /** 请求方法：GET / POST / PUT / DELETE / HEAD */
+  method?: string;
+  /** 检测地址（以 http(s):// 开头） */
+  url?: string;
+  /** Content-Type 媒体类型（如 application/json），最终会合并到请求头 */
+  contentType?: string;
+  /** 自定义请求头（JSON 字符串，不含 Content-Type） */
+  headers?: string;
+  /** 请求体（JSON 字符串） */
+  body?: string;
+  /** 超时时间（毫秒） */
+  timeout?: number;
+  /** 断言方式：status-响应码 / body-响应内容 / json-响应JSON字段 */
+  assertType?: string;
+  /** 断言期望值：响应码 或 包含的字符串 或 JSON字段路径 */
+  expectValue?: string;
 }
 
 /**

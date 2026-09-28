@@ -801,8 +801,8 @@ onMounted(async () => {
           <el-col :span="6">
             <el-form-item label="字符集">
               <el-select v-model="createForm.charset">
-                <el-option label="utf8mb4" value="utf8mb4" />
                 <el-option label="utf8" value="utf8" />
+                <el-option label="utf8mb4" value="utf8mb4" />
               </el-select>
             </el-form-item>
           </el-col>
