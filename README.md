@@ -47,10 +47,6 @@
     <td><img alt="PC预览6" width="400" src="./docs/images/preview/deploy.png"></td>
   </tr>
   <tr>
-    <td><img alt="PC预览5" width="400" src="./docs/images/preview/cmd.png"></td>
-    <td><img alt="PC预览6" width="400" src="./docs/images/preview/deploy.png"></td>
-  </tr>
-  <tr>
     <td><img alt="PC预览5" width="400" src="./docs/images/preview/docker.png"></td>
     <td><img alt="PC预览6" width="400" src="./docs/images/preview/log.png"></td>
   </tr>
