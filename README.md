@@ -28,6 +28,42 @@
 | **[ops-agent](https://gitee.com/quickn/ops-agent)**       | 运维终端 ，采集服务器信息，执行远程命令                 |  |
 前端通过 **双后端代理** 同时对接 Java 与 Python 两个后端，见下文 [双后端架构](#双后端架构)。
 
+
+## 系统预览
+
+**PC 端**
+
+<table align="center">
+  <tr>
+    <td><img alt="PC预览1" width="400" src="./docs/images/preview/login.png"></td>
+    <td><img alt="PC预览2" width="400" src="./docs/images/preview/menu.png"></td>
+  </tr>
+  <tr>
+    <td><img alt="PC预览3" width="400" src="./docs/images/preview/alert.png"></td>
+    <td><img alt="PC预览4" width="400" src="./docs/images/preview/app.png"></td>
+  </tr>
+  <tr>
+    <td><img alt="PC预览5" width="400" src="./docs/images/preview/cmd.png"></td>
+    <td><img alt="PC预览6" width="400" src="./docs/images/preview/deploy.png"></td>
+  </tr>
+  <tr>
+    <td><img alt="PC预览5" width="400" src="./docs/images/preview/cmd.png"></td>
+    <td><img alt="PC预览6" width="400" src="./docs/images/preview/deploy.png"></td>
+  </tr>
+  <tr>
+    <td><img alt="PC预览5" width="400" src="./docs/images/preview/docker.png"></td>
+    <td><img alt="PC预览6" width="400" src="./docs/images/preview/log.png"></td>
+  </tr>
+  <tr>
+    <td><img alt="PC预览5" width="400" src="./docs/images/preview/mysql_query.png"></td>
+    <td><img alt="PC预览6" width="400" src="./docs/images/preview/nacos.png"></td>
+  </tr>
+  <tr>
+    <td><img alt="PC预览5" width="400" src="./docs/images/preview/shell.png"></td>
+    <td><img alt="PC预览6" width="400" src="./docs/images/preview/sync.png"></td>
+  </tr>
+</table>
+
 ## 核心特性
 
 - **实时监控**：CPU / 内存 / 磁盘 / 进程 / 系统信息 / 服务健康检查，ECharts 可视化大屏
@@ -248,25 +284,18 @@ pnpm run commit   # 唤起交互式提交（cz-git）
 
 遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/)，配合 Husky + lint-staged 在提交前自动执行 ESLint / Prettier / Stylelint 校验。
 
-## 常见问题
+## 技术合作
+本项目采用 [Apache License 2.0](LICENSE) 开源，可免费商用。 如需技术支持、商务合作、二次开发、项目定制或私有化部署，可联系作者微信（见下方二维码）。
 
-- **页面访问空白**：升级浏览器，低版本内核不支持可选链等新语法
-- **组件/函数引用爆红**：重启 VSCode（自动导入类型提示偶发失效）
-- **接口 404 / WebSocket 连不上**：确认两个后端均已启动，且 `.env.development` 中代理地址正确
-- **依赖安装失败**：项目限制仅能使用 pnpm，请勿使用 npm / yarn
-
-## 参与贡献
-
-欢迎 Issue 与 PR：
-
-1. Fork 本仓库并克隆到本地
-2. 新建分支：`git checkout -b feat/xxx`
-3. 提交代码：`pnpm run commit`
-4. 推送并创建 Pull Request
-
-## 开源协议
-
-本项目基于 [MIT License](LICENSE) 开源。
+<table align="center">
+  <tr>
+    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+    <td align="center">
+      <img src="./docs/images/qrcode/wechat-personal.png" height="180" alt="添加作者微信"><br>
+      <sub>添加作者微信</sub>
+    </td>
+  </tr>
+</table>
 
 ## 致谢
 
