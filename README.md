@@ -1,179 +1,273 @@
 <p align="center">
-    <img src="https://img.shields.io/badge/Vue-3.3.4-brightgreen.svg"/>
-    <img src="https://img.shields.io/badge/Vite-4.4.3-green.svg"/>
-    <img src="https://img.shields.io/badge/Element Plus-2.3.12-blue.svg"/>
-    <img src="https://img.shields.io/badge/license-MIT-green.svg"/>
-    <a href="https://gitee.com/youlaiorg" target="_blank">
-        <img src="https://img.shields.io/badge/Author-有来开源组织-orange.svg"/>
-    </a>
-</p>
-<p align="center">
- <a target="_blank" href="https://juejin.cn/post/7228990409909108793">vue3-element-admin官方文档</a> |  <a target="_blank" href="http://vue3.youlai.tech">在线预览</a> 
+  <h1 align="center">Cloud-OPS 运维监控管理平台</h1>
+  <p align="center">轻量级一体化运维监控平台 · 前端</p>
 </p>
 
+<p align="center">
+    <img src="https://img.shields.io/badge/Vue-3.3-brightgreen.svg"/>
+    <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg"/>
+    <img src="https://img.shields.io/badge/Vite-4.x-green.svg"/>
+    <img src="https://img.shields.io/badge/Element%20Plus-2.x-blue.svg"/>
+    <img src="https://img.shields.io/badge/Pinia-2.x-critical.svg"/>
+    <img src="https://img.shields.io/badge/ECharts-5.x-orange.svg"/>
+    <img src="https://img.shields.io/badge/xterm-6-black.svg"/>
+    <img src="https://img.shields.io/badge/license-MIT-green.svg"/>
+</p>
 
 ## 项目介绍
 
-[vue3-element-admin](https://gitee.com/youlaiorg/vue3-element-admin) 是基于 Vue3 + Vite4+ TypeScript5 + Element-Plus + Pinia 等最新主流技术栈构建的后台管理前端模板（配套后端源码）。
+**Cloud-OPS** 是一套面向中小团队的一体化运维监控管理平台，覆盖 **服务器监控、数据库管理、中间件管理、Web 终端、定时任务、告警通知、AI 智能助手** 等日常运维场景。
 
-项目有以下特性：
+平台采用前后端分离架构，由三个工程组成：
 
-- 基于 vue-element-admin 升级到 vue3 版本，无自定义封装，易上手，减少学习成本。
-- 提供了配套的 Java 后端接口，真实的接口数据，而非使用 Mock 数据。您可以访问在[线接口文档](https://www.apifox.cn/apidoc/shared-195e783f-4d85-4235-a038-eec696de4ea5)查看接口详情。
-- 权限系统功能齐全，包括用户管理、角色管理、菜单管理、字典管理和部门管理等，以满足您对权限管理的需求。
-- 项目还提供了基础设施支持，包括动态路由、按钮级别的权限控制、国际化支持、代码规范、Git 提交规范以及常用组件的封装，以便开发人员更高效地开发和维护项目。
+| 工程 | 说明 | 端口 |
+| ---- | ---- | ---- |
+| **ops-web**（本仓库） | 前端，Vue 3 + TypeScript + Element Plus | 3000 |
+| **ops-server** | Java 后端（Spring Boot），主要业务接口 | 8989 |
+| **ops-py** | Python 后端，运维能力与 WebSocket 实时通道 | 18080 |
 
-## 项目预览
+前端通过 **双后端代理** 同时对接 Java 与 Python 两个后端，见下文 [双后端架构](#双后端架构)。
 
-- **在线预览**： [https://vue3.youlai.tech/](https://vue3.youlai.tech/)
+## 核心特性
 
-- **控制台**
+- **实时监控**：CPU / 内存 / 磁盘 / 进程 / 系统信息 / 服务健康检查，ECharts 可视化大屏
+- **Web 终端**：基于 xterm 6 的浏览器 SSH 终端，支持 WebSocket 代理
+- **运维作业**：指令库（脚本/命令管理）、定时任务调度、任务告警、文件同步分发
+- **数据库管理**：MySQL 连接管理、库/表浏览、数据控制台
+- **中间件管理**：Nginx 配置管理、Nacos 配置中心与服务列表
+- **应用运维**：JAR 部署、项目管理、Docker 容器统计、日志查询与解析
+- **AI 智能助手**：内置 AI Agent，多会话管理，支持 DeepSeek 系列模型，流式输出
+- **权限系统**：动态路由 + 按钮级权限（`v-hasPerm`）+ 角色权限（`v-hasRole`），用户/角色/菜单/部门/字典管理
+- **现代化前端工程**：UnoCSS 原子化样式、SCSS、自动导入（Vue API / Element Plus 组件与图标）、国际化、暗黑模式、多标签导航、布局切换（左侧/顶部/混合）
 
-  ![暗黑模式](https://foruda.gitee.com/images/1687755822903300961/a4d63e22_716974.png)
+## 功能模块
 
-- **接口文档**
+| 模块 | 内容 |
+| ---- | ---- |
+| Dashboard | 监控总览大盘 |
+| 监控中心 | CPU/内存、磁盘管理、进程统计、系统信息、服务状态、健康检查、容器统计、日志、邮件通知、外部链接、文件、指令、JAR、项目、Docker |
+| 运维作业 | 终端（Web SSH）、指令库、定时任务、任务告警、告警管理、文件管理、Agent 管理、账号配置 |
+| 数据库 | MySQL 连接 / 数据库 / 表 / 数据 / 控制台 |
+| 中间件 | Nginx 管理、Nacos 配置与服务 |
+| 部署管理 | 数据库变更脚本管理 |
+| AI 助手 | 多会话 AI Agent（DeepSeek） |
+| 系统管理 | 用户、角色、菜单、部门、字典、用户密钥 |
 
-  ![接口文档](https://foruda.gitee.com/images/1687755822857820115/96054330_716974.png)
- 
+## 技术栈
 
+| 类别 | 技术 |
+| ---- | ---- |
+| 框架 | Vue 3.3 + Composition API（`<script setup lang="ts">`） |
+| 语言 | TypeScript 5 |
+| 构建 | Vite 4 |
+| UI | Element Plus 2 + UnoCSS + SCSS |
+| 状态管理 | Pinia（setup function 语法） |
+| 路由 | Vue Router 4（Hash 路由 + 动态路由） |
+| HTTP | Axios（双后端代理） |
+| 图表 | ECharts 5 |
+| 终端 | xterm 6 |
+| 编辑器 | CodeMirror 6、WangEditor |
+| 代码规范 | ESLint + Prettier + Stylelint + Husky + Commitlint |
 
-- **权限管理系统**
+## 项目结构
 
-  |![在这里插入图片描述](https://foruda.gitee.com/images/1687755822816437081/b7620905_716974.png) | ![角色管理](https://foruda.gitee.com/images/1687755822852085747/c13a4d19_716974.png) |
-  | ------------------------------------------------------ | ------------------------------------------------------ |
-  | ![菜单管理](https://foruda.gitee.com/images/1687755822966247550/4d4f8118_716974.png) | ![在这里插入图片描述](https://foruda.gitee.com/images/1687755822828758939/8035a91f_716974.png)
+```
+ops-web
+├── mock/                        # Mock 数据
+├── public/                      # 静态资源
+├── src/
+│   ├── api/                     # API 层（按业务域划分）
+│   ├── assets/                  # 图标/图片
+│   ├── components/              # 通用组件（Pagination、Upload、SvgIcon...）
+│   ├── directive/               # 自定义指令（v-hasPerm、v-hasRole）
+│   ├── enums/                   # 枚举
+│   ├── lang/                    # 国际化
+│   ├── layout/                  # 布局
+│   ├── router/                  # 路由
+│   ├── store/                   # Pinia 状态
+│   ├── styles/                  # 全局样式
+│   ├── types/                   # 类型定义
+│   ├── utils/                   # 工具函数
+│   ├── views/                   # 页面（dashboard/monitor/ops/mysql/...）
+│   ├── permission.ts            # 路由守卫（动态路由 + 白名单）
+│   └── settings.ts              # 系统设置
+├── .env.development             # 开发环境变量
+├── .env.production              # 生产环境变量
+└── vite.config.ts               # Vite 配置（双代理 + 自动导入）
+```
 
-## 项目地址
+## 环境要求
 
-| 项目 | Gitee                                                        | Github                                                       | GitCode                                                      |
-| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 前端 | [vue3-element-admin](https://gitee.com/youlaiorg/vue3-element-admin) | [vue3-element-admin](https://github.com/youlaitech/vue3-element-admin) | [vue3-element-admin](https://gitcode.net/youlai/vue3-element-admin) |
-| 后端 | [youlai-boot](https://gitee.com/youlaiorg/youlai-boot)       | [youlai-boot](https://github.com/haoxianrui/youlai-boot.git) | [youlai-boot](https://gitcode.net/youlai/youlai-boot)        |
+| 环境 | 版本 | 备注 |
+| ---- | ---- | ---- |
+| Node.js | 16+ | 建议 18 LTS |
+| 包管理器 | pnpm | 项目强制使用 pnpm |
+| 开发工具 | VSCode | 安装 Vue Language Features (Volar)、TypeScript Vue Plugin |
 
-## 环境准备
-
-| 环境                 | 名称版本                                                     | 备注                                                         |
-| -------------------- | :----------------------------------------------------------- | ------------------------------------------------------------ |
-| **开发工具**         | VSCode                                                       | [下载地址](https://code.visualstudio.com/Download)           |
-| **运行环境**         | Node 16+                                                     | [下载地址](http://nodejs.cn/download)                        |
-| **VSCode插件(必装)** | 1. `Vue Language Features (Volar) ` <br/> 2. `TypeScript Vue Plugin (Volar) `  <br/>3. 禁用 Vetur | ![vscode-plugin](https://foruda.gitee.com/images/1687755823108948048/d0198b2d_716974.png) |
-
-
-## 项目启动
+## 快速开始
 
 ```bash
 # 克隆代码
-git clone https://gitee.com/youlaiorg/vue3-element-admin.git
+git clone https://gitee.com/quickn/ops-web.git
+cd ops-web
 
-# 切换目录
-cd vue3-element-admin
-
-# 安装 pnpm
+# 安装 pnpm（已安装可跳过）
 npm install pnpm -g
 
 # 安装依赖
 pnpm install
 
-# 启动运行
+# 启动（默认端口 3000，自动打开浏览器）
 pnpm run dev
 ```
 
-## 项目部署
+> 前端启动后需要同时启动两个后端服务，否则接口报错：
+>
+> - **ops-server**（Java）：默认 `http://localhost:8989`
+> - **ops-py**（Python）：默认 `http://localhost:18080`
+>
+> 后端启动方式请参考对应工程的 README。
+
+## 环境变量说明
+
+`.env.development`（开发环境）：
+
+```properties
+VITE_APP_TITLE = 'Cloud-OPS'
+VITE_APP_PORT = 3000
+
+# Java 后端代理：/dev-api → http://localhost:8989
+VITE_APP_BASE_API = '/dev-api'
+VITE_APP_TARGET_URL = 'http://localhost:8989'
+
+# Python 后端代理：/py-api → http://localhost:18080（含 WebSocket）
+VITE_APP_BASE_API_PY = '/py-api'
+VITE_APP_TARGET_URL_PY = 'http://localhost:18080'
+```
+
+`.env.production`（生产环境）：
+
+```properties
+VITE_BASE_PATH = '/m-web'        # 构建产物 base path
+VITE_APP_BASE_API = '/monitor'   # Java 后端接口前缀
+VITE_APP_BASE_API_PY = '/pyApi'  # Python 后端接口前缀
+```
+
+## 双后端架构
+
+前端通过 URL 前缀区分请求走向（见 `vite.config.ts` 与 Axios 实例逻辑）：
+
+```
+浏览器
+  ├── /dev-api/**  ──► Java 后端  (ops-server, localhost:8989)   # 业务接口
+  └── /py-api/**   ──► Python 后端 (ops-py, localhost:18080)   # 运维接口 / WebSocket
+```
+
+- 开发环境由 Vite `server.proxy` 代理（Python 代理开启 `ws: true` 支持 WebSocket）
+- **Python 后端接口一律以 `/pyApi/` 前缀调用**，其余走 Java 后端
+
+## 生产部署
 
 ```bash
-# 项目打包
-pnpm run build:prod
+# 打包（产物在 dist/ 目录，base path 为 /m-web）
+pnpm run build
+```
 
-# 上传文件至远程服务器
-将打包生成在 `dist` 目录下的文件拷贝至 `/usr/share/nginx/html` 目录
+将 `dist` 目录内容拷贝至服务器（如 `/usr/share/nginx/html/m-web`），Nginx 参考配置：
 
-# nginx.cofig 配置
+```nginx
 server {
-	listen     80;
-	server_name  localhost;
-	location / {
-			root /usr/share/nginx/html;
-			index index.html index.htm;
-	}
-	# 反向代理配置
-	location /prod-api/ {
-			proxy_pass http://vapi.youlai.tech/; # vapi.youlai.tech替换成你的后端API地址
-	}
+    listen       80;
+    server_name  localhost;
+
+    # 前端静态资源（hash 路由，无需 try_files 兜底也可，但推荐加上）
+    location /m-web/ {
+        alias  /usr/share/nginx/html/m-web/;
+        index  index.html index.htm;
+        try_files $uri $uri/ /m-web/index.html;
+    }
+
+    # Java 后端反向代理（业务接口）
+    location /monitor/ {
+        proxy_pass http://127.0.0.1:8989/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Python 后端反向代理（运维接口 + WebSocket，必须升级 Upgrade 头）
+    location /pyApi/ {
+        proxy_pass http://127.0.0.1:18080/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 3600s;   # WebSocket 长连接
+    }
 }
 ```
 
-## 注意事项
+## 开发指南
 
-- **自动导入插件自动生成默认关闭**
+### 组件编写
 
-  模板项目的组件类型声明已自动生成。如果添加和使用新的组件，请按照图示方法开启自动生成。在自动生成完成后，记得将其设置为 `false`，避免重复执行引发冲突。
+- 统一使用 `<script setup lang="ts">` → `<template>` → `<style lang="scss" scoped>` 顺序
+- 使用 `defineOptions({ name: "XxxYyy" })` 命名组件
+- Vue API（`ref`、`computed`、`watch`、`onMounted` 等）与 `@vueuse/core` 函数**自动导入，无需手动 import**
+- Element Plus 组件与图标**自动按需导入，无需注册**
 
-  ![](https://foruda.gitee.com/images/1687755823137387608/412ea803_716974.png)
+### API 请求规范
 
-- **项目启动浏览器访问空白**
+```typescript
+// GET 分页列表
+request({ url: BASE + "/page", method: "get", params: query });
+// POST 新增
+request({ url: BASE, method: "post", data: formData });
+// PUT 更新
+request({ url: BASE, method: "put", data: formData });
+// DELETE 删除
+request({ url: BASE + "/" + ids, method: "delete" });
+```
 
-  请升级浏览器尝试，低版本浏览器内核可能不支持某些新的 JavaScript 语法，比如可选链操作符 `?.`。
+统一响应格式：`{ code: "00000", data: ..., msg: "..." }`，`code === "00000"` 视为成功。
 
-- **项目同步仓库更新升级**
+### 权限控制
 
-  项目同步仓库更新升级之后，建议 `pnpm install` 安装更新依赖之后启动 。
+```html
+<el-button v-hasPerm="['sys:user:add']">新增</el-button>
+<el-button v-hasRole="['ADMIN']">管理员操作</el-button>
+```
 
-- **项目组件、函数和引用爆红**
+动态路由由后端 `/api/v1/menus/routes` 下发，`ROOT` 角色拥有全部权限；无权限时指令直接移除 DOM 元素。
 
-	重启 VSCode 尝试
+### 提交规范
 
-- **接口切换 Mock**
+```bash
+pnpm run commit   # 唤起交互式提交（cz-git）
+```
 
-	v2.5.0 版本支持 Mock , 修改 `.env.development` 的 `VITE_APP_TARGET_URL` 值为 `http://localhost:3000` 即可 。
+遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/)，配合 Husky + lint-staged 在提交前自动执行 ESLint / Prettier / Stylelint 校验。
 
-- **其他问题**
+## 常见问题
 
-  如果有其他问题或者建议，建议 [ISSUE](https://gitee.com/youlaiorg/vue3-element-admin/issues/new)
+- **页面访问空白**：升级浏览器，低版本内核不支持可选链等新语法
+- **组件/函数引用爆红**：重启 VSCode（自动导入类型提示偶发失效）
+- **接口 404 / WebSocket 连不上**：确认两个后端均已启动，且 `.env.development` 中代理地址正确
+- **依赖安装失败**：项目限制仅能使用 pnpm，请勿使用 npm / yarn
 
-## 接口支持
+## 参与贡献
 
-- **接口调用地址**：[https://vapi.youlai.tech](https://vapi.youlai.tech)
+欢迎 Issue 与 PR：
 
-- **接口文档地址**：[在线接口文档](https://www.apifox.cn/apidoc/shared-195e783f-4d85-4235-a038-eec696de4ea5)
+1. Fork 本仓库并克隆到本地
+2. 新建分支：`git checkout -b feat/xxx`
+3. 提交代码：`pnpm run commit`
+4. 推送并创建 Pull Request
 
-- **OpenAPI文档地址**：[http://vapi.youlai.tech/v3/api-docs](http://vapi.youlai.tech/v3/api-docs)
+## 开源协议
 
-- **本地接口**：默认使用线上接口，你可以通过以下步骤完成本地接口环境搭建：
+本项目基于 [MIT License](LICENSE) 开源。
 
-  > 1. 获取基于 `Java 、SpringBoot` 开发的后端 [youlai-boot](https://gitee.com/youlaiorg/youlai-boot.git) 源码 ;
-  > 2. 根据后端工程说明文档 [README.md](https://gitee.com/youlaiorg/youlai-boot#%E9%A1%B9%E7%9B%AE%E8%BF%90%E8%A1%8C) 完成本地启动; 
-  > 3. 替换 [.env.development](.env.development) 的代理目标地址 `VITE_APP_TARGET_URL` 的值  `vapi.youlai.tech` 为本地的 `localhost:8989`
+## 致谢
 
-
-
-## 项目文档
-
-- [基于 Vue3 + Vite4 + TypeScript + Element-Plus 从0到1搭建后台管理系统](https://blog.csdn.net/u013737132/article/details/130191394)
-
-- [ESLint+Prettier+Stylelint+EditorConfig 约束和统一前端代码规范](https://blog.csdn.net/u013737132/article/details/130190788)
-- [Husky + Lint-staged + Commitlint + Commitizen + cz-git 配置 Git 提交规范](https://blog.csdn.net/u013737132/article/details/130191363)
-
-
-
-
-## 提交规范
-
-执行 `pnpm run commit` 唤起 git commit 交互，根据提示完成信息的输入和选择。
-
-![](https://foruda.gitee.com/images/1687755823165218215/c1705416_716974.png)
-
-
-
-## 交流群🚀
-
-> 关注「运维技术」公众号，获取交流群二维码。
->
-> 如果交流群的二维码过期，加我微信，备注「前端」、「后端」或「全栈」即可。
->
-> 为了避免营销广告人群混入，此举无奈，望理解！
-
-
-| 公众号                                                       | 交流群                                                       |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| <img src="https://foruda.gitee.com/images/1687689212187063809/3c69eaee_716974.png" height="180px"/> | <img src="https://foruda.gitee.com/images/1687689212139273561/6a65ef69_716974.png" height="180px"/> |
-
+本项目前端工程基于开源模板 [vue3-element-admin](https://gitee.com/youlaiorg/vue3-element-admin)（有来开源组织）构建，感谢原作者及开源社区的贡献。
